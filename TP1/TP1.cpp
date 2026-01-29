@@ -26,7 +26,8 @@ using namespace glm;
 void processInput(GLFWwindow *window);
 
 #include <string>
-#include "TP1/imageLoader.h"
+
+#include "./ImageBase.h"
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -50,13 +51,17 @@ std::vector<unsigned short> indices; // Triangles concaténés dans une liste
 std::vector<std::vector<unsigned short>> triangles;
 std::vector<glm::vec3> indexed_vertices;
 
-void createPlaneGeometry(unsigned short width, unsigned short height, std::vector<glm::vec3>& indexed_vertices, std::vector<glm::vec2>& indexed_uvs, std::vector<unsigned short>& indices, std::vector<std::vector<unsigned short>>& triangles) {
+void createPlaneGeometry(unsigned short width, unsigned short height, std::vector<glm::vec3>& indexed_vertices,
+            std::vector<glm::vec2>& indexed_uvs, std::vector<unsigned short>& indices,
+            std::vector<std::vector<unsigned short>>& triangles, const ImageBase& heightmap) {
     for (unsigned short nY = 0; nY < height; nY++) {
+        float v = float(nY) / (height-1);
         for (unsigned short nX = 0; nX < width; nX++) {
+            float u = float(nX) / (width-1);
             glm::vec2 uv = glm::vec2(float(nX) / float(width), float(nY) / float(height));
             indexed_uvs.push_back(uv);
 
-            float altitude = 0.1*float(rand()) / float(RAND_MAX);
+            float altitude = float(heightmap.getPixel(u, v)[0]) / 255.;
             glm::vec3 vertex = glm::vec3(1. - 2.*uv.x, altitude, 1.-2.*uv.y);
             indexed_vertices.push_back(vertex);
         }
@@ -166,7 +171,10 @@ int main(void) {
     std::vector<glm::vec2> indexed_uvs;
 
     // Chargement du fichier de maillage
-    createPlaneGeometry(64, 64, indexed_vertices, indexed_uvs, indices, triangles);
+    ImageBase heightmap, image;
+    heightmap.load(std::string("heightmaps/Heightmap_Mountain.ppm"));
+    image.load(std::string("textures/rock.ppm"))
+    createPlaneGeometry(64, 64, indexed_vertices, indexed_uvs, indices, triangles, heightmap);
 
     // Load it into a VBO
     GLuint vertexbuffer;
@@ -190,7 +198,6 @@ int main(void) {
     GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
 
     // TEXTURES
-    ppmLoader::ImageRGB image = ppmLoader::load_ppm(std::string("128.ppm"));
     std::vector<float> image_data(image.w * image.h * 4);
     for (size_t j = 0; j < image.w * image.h; j++) {
         image_data[j * 4] = float(image.data[j].r) / 255.;
