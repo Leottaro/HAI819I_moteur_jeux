@@ -198,11 +198,12 @@ int main(void) {
     GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
 
     // TEXTURES
-    std::vector<float> image_data(image.w * image.h * 4);
-    for (size_t j = 0; j < image.w * image.h; j++) {
-        image_data[j * 4] = float(image.data[j].r) / 255.;
-        image_data[j * 4 + 1] = float(image.data[j].g) / 255.;
-        image_data[j * 4 + 2] = float(image.data[j].b) / 255.;
+    std::vector<float> image_data(image.getWidth() * image.getHeight() * 4);
+    for (size_t j = 0; j < image.getWidth() * image.getHeight(); j++) {
+        const unsigned char* pixel = image.getPixel(j);
+        image_data[j * 4] = float(pixel[0]) / 255.;
+        image_data[j * 4 + 1] = float(pixel[1]) / 255.;
+        image_data[j * 4 + 2] = float(pixel[2]) / 255.;
         image_data[j * 4 + 3] = 1.;
     }
 
@@ -214,7 +215,7 @@ int main(void) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image_data.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.getWidth(), image.getHeight(), 0, GL_RGBA, GL_FLOAT, image_data.data());
     glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
 

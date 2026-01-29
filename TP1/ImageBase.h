@@ -66,6 +66,9 @@ class ImageBase {
 
     unsigned char* operator[](int l);
 
+    const unsigned char* getPixel(int i) const {
+        return data + i * (color ? 3 : 1);
+    }
     unsigned char* getPixel(int x, int y) const {
         return data + y * width * (color ? 3 : 1) + x * (color ? 3 : 1);
     }
