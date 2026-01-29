@@ -26,6 +26,7 @@ using namespace glm;
 void processInput(GLFWwindow *window);
 
 #include <string>
+#include <vector>
 
 #include "./ImageBase.h"
 
@@ -47,16 +48,16 @@ float angle = 0.;
 float zoom = 1.;
 /*******************************************************************************/
 
-std::vector<unsigned short> indices; // Triangles concaténés dans une liste
-std::vector<std::vector<unsigned short>> triangles;
+std::vector<unsigned int> indices; // Triangles concaténés dans une liste
+std::vector<std::vector<unsigned int>> triangles;
 std::vector<glm::vec3> indexed_vertices;
 
-void createPlaneGeometry(unsigned short width, unsigned short height, std::vector<glm::vec3>& indexed_vertices,
-            std::vector<glm::vec2>& indexed_uvs, std::vector<unsigned short>& indices,
-            std::vector<std::vector<unsigned short>>& triangles, const ImageBase& heightmap) {
-    for (unsigned short nY = 0; nY < height; nY++) {
+void createPlaneGeometry(unsigned int width, unsigned int height, std::vector<glm::vec3>& indexed_vertices,
+            std::vector<glm::vec2>& indexed_uvs, std::vector<unsigned int>& indices,
+            std::vector<std::vector<unsigned int>>& triangles, const ImageBase& heightmap) {
+    for (unsigned int nY = 0; nY < height; nY++) {
         float v = float(nY) / (height-1);
-        for (unsigned short nX = 0; nX < width; nX++) {
+        for (unsigned int nX = 0; nX < width; nX++) {
             float u = float(nX) / (width-1);
             glm::vec2 uv = glm::vec2(float(nX) / float(width), float(nY) / float(height));
             indexed_uvs.push_back(uv);
@@ -67,14 +68,14 @@ void createPlaneGeometry(unsigned short width, unsigned short height, std::vecto
         }
     }
 
-    for (unsigned short nY = 0; nY < width-1; nY++) {
-        for (unsigned short nX = 0; nX < height-1; nX++) {
-            unsigned short i1 = nY*width+nX;
-            unsigned short i2 = (nY+1)*width+nX;
-            unsigned short i3 = nY*width+(nX+1);
-            unsigned short i4 = (nY+1)*width+(nX+1);
-            std::vector<unsigned short> triangle1 = {i1, i2, i3};
-            std::vector<unsigned short> triangle2 = {i2, i4, i3};
+    for (unsigned int nY = 0; nY < width-1; nY++) {
+        for (unsigned int nX = 0; nX < height-1; nX++) {
+            unsigned int i1 = nY*width+nX;
+            unsigned int i2 = (nY+1)*width+nX;
+            unsigned int i3 = nY*width+(nX+1);
+            unsigned int i4 = (nY+1)*width+(nX+1);
+            std::vector<unsigned int> triangle1 = {i1, i2, i3};
+            std::vector<unsigned int> triangle2 = {i2, i4, i3};
 
             indices.push_back(i1);
             indices.push_back(i2);
@@ -89,11 +90,11 @@ void createPlaneGeometry(unsigned short width, unsigned short height, std::vecto
     }
 }
 
-void drawPlane(std::vector<glm::vec3>& indexed_vertices, std::vector<unsigned short>& indices) {
+void drawPlane(std::vector<glm::vec3>& indexed_vertices, std::vector<unsigned int>& indices) {
     glDrawElements(
         GL_TRIANGLES,      // mode
         indices.size(),    // count
-        GL_UNSIGNED_SHORT, // type
+        GL_UNSIGNED_INT, // type
         (void *)0          // element array buffer offset
     );
 }
@@ -165,16 +166,22 @@ int main(void) {
     // Get a handle for our "Model View Projection" matrices uniforms
 
     /****************************************/
-    std::vector<unsigned short> indices; // Triangles concaténés dans une liste
-    std::vector<std::vector<unsigned short>> triangles;
+    std::vector<unsigned int> indices; // Triangles concaténés dans une liste
+    std::vector<std::vector<unsigned int>> triangles;
     std::vector<glm::vec3> indexed_vertices;
     std::vector<glm::vec2> indexed_uvs;
 
+    // Chargement des textures
+    std::vector<ImageBase> textures = std::vector<ImageBase>(6);
+    textures[0].load("textures/grass.ppm");
+    textures[1].load("textures/rock.ppm");
+    textures[2].load("textures/snowrocks.ppm");
+    textures[3].load("textures/heightmap-mountain.pgm");
+    textures[4].load("textures/heightmap-rocky.pgm");
+    textures[5].load("textures/heightmap-test.pgm");
+
     // Chargement du fichier de maillage
-    ImageBase heightmap, image;
-    heightmap.load(std::string("heightmaps/Heightmap_Mountain.ppm"));
-    image.load(std::string("textures/rock.ppm"))
-    createPlaneGeometry(64, 64, indexed_vertices, indexed_uvs, indices, triangles, heightmap);
+    createPlaneGeometry(512, 512, indexed_vertices, indexed_uvs, indices, triangles, textures[3]);
 
     // Load it into a VBO
     GLuint vertexbuffer;
@@ -191,32 +198,50 @@ int main(void) {
     GLuint elementbuffer;
     glGenBuffers(1, &elementbuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
     // Get a handle for our "LightPosition" uniform
     glUseProgram(programID);
     GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+    glUniform1i(glGetUniformLocation(programID, "grass"), 0);
+    glUniform1i(glGetUniformLocation(programID, "rock"), 1);
+    glUniform1i(glGetUniformLocation(programID, "snowrocks"), 2);
+    glUniform1i(glGetUniformLocation(programID, "heightmap_mountain"), 3);
+    glUniform1i(glGetUniformLocation(programID, "heightmap_rocky"), 4);
+    glUniform1i(glGetUniformLocation(programID, "heightmap_test"), 5);
 
     // TEXTURES
-    std::vector<float> image_data(image.getWidth() * image.getHeight() * 4);
-    for (size_t j = 0; j < image.getWidth() * image.getHeight(); j++) {
-        const unsigned char* pixel = image.getPixel(j);
-        image_data[j * 4] = float(pixel[0]) / 255.;
-        image_data[j * 4 + 1] = float(pixel[1]) / 255.;
-        image_data[j * 4 + 2] = float(pixel[2]) / 255.;
-        image_data[j * 4 + 3] = 1.;
-    }
+    for(int i = 0; i < textures.size(); i++) {
+        GLuint texture;
+        glGenTextures(1, &texture);
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.getWidth(), image.getHeight(), 0, GL_RGBA, GL_FLOAT, image_data.data());
-    glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        if (textures[i].getColor()) {
+            std::vector<float> image_data(textures[i].getWidth() * textures[i].getHeight() * 4);
+            for (size_t j = 0; j < textures[i].getWidth() * textures[i].getHeight(); j++) {
+                const unsigned char* pixel = textures[i].getPixel(j);
+                image_data[j * 4] = float(pixel[0]) / 255.;
+                image_data[j * 4 + 1] = float(pixel[1]) / 255.;
+                image_data[j * 4 + 2] = float(pixel[2]) / 255.;
+                image_data[j * 4 + 3] = 1.;
+            }
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, textures[i].getWidth(), textures[i].getHeight(), 0, GL_RGBA, GL_FLOAT, image_data.data());
+            glBindImageTexture(i, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        } else {
+            std::vector<float> image_data(textures[i].getWidth() * textures[i].getHeight());
+            for (size_t j = 0; j < textures[i].getWidth() * textures[i].getHeight(); j++) {
+                const unsigned char* pixel = textures[i].getPixel(j);
+                image_data[j] = float(pixel[0]) / 255.;
+            }
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, textures[i].getWidth(), textures[i].getHeight(), 0, GL_RED, GL_FLOAT, image_data.data());
+            glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+        }
+    }
 
 
     // For speed computation

@@ -73,7 +73,7 @@ class ImageBase {
         return data + y * width * (color ? 3 : 1) + x * (color ? 3 : 1);
     }
     unsigned char* getPixel(float u, float v) const {
-        return getPixel(int(u*width), int(v*height));
+        return getPixel(int(u*(width-1)), int(v*(height-1)));
     }
 
     glm::vec3 RGBtoYCrCb(int x, int y) const;

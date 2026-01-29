@@ -36,6 +36,8 @@ include_directories(
 	external/glfw-3.1.2/include/
 	external/glm-0.9.7.1/
 	external/glew-1.13.0/include/
+        common
+        TP1
 	.
 )
 
@@ -56,8 +58,8 @@ add_definitions(
 # TP1
 add_executable(TP1
         TP1/TP1.cpp
-        TP1/imageLoader.cpp
-        TP1/imageLoader.h
+        TP1/ImageBase.cpp
+        TP1/ImageBase.h
 
 	common/shader.cpp
 	common/shader.hpp
