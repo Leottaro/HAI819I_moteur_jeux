@@ -17,18 +17,18 @@ GLFWwindow *window;
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
-using namespace glm;
-
 #include <common/objloader.hpp>
 #include <common/shader.hpp>
 #include <common/vboindexer.hpp>
 
-void processInput(GLFWwindow *window);
-
 #include <string>
 #include <vector>
-
 #include "./ImageBase.h"
+
+using namespace glm;
+using namespace std;
+
+void processInput(GLFWwindow *window);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -48,34 +48,49 @@ float angle = 0.;
 float zoom = 1.;
 /*******************************************************************************/
 
-std::vector<unsigned int> indices; // Triangles concaténés dans une liste
-std::vector<std::vector<unsigned int>> triangles;
-std::vector<glm::vec3> indexed_vertices;
+// Chargement des textures
+vector<ImageBase> textures = vector<ImageBase>(3);
+vector<ImageBase> heightmaps = vector<ImageBase>(3);
 
-void createPlaneGeometry(unsigned int width, unsigned int height, std::vector<glm::vec3>& indexed_vertices,
-            std::vector<glm::vec2>& indexed_uvs, std::vector<unsigned int>& indices,
-            std::vector<std::vector<unsigned int>>& triangles, const ImageBase& heightmap) {
-    for (unsigned int nY = 0; nY < height; nY++) {
-        float v = float(nY) / (height-1);
-        for (unsigned int nX = 0; nX < width; nX++) {
-            float u = float(nX) / (width-1);
-            glm::vec2 uv = glm::vec2(float(nX) / float(width), float(nY) / float(height));
+unsigned int plane_size = 10;
+unsigned int current_heightmap = 0;
+
+vector<unsigned int> indices; // Triangles concaténés dans une liste
+vector<vector<unsigned int>> triangles;
+vector<glm::vec3> indexed_vertices;
+vector<glm::vec2> indexed_uvs;
+
+GLuint vertexbuffer;
+GLuint uvbuffer;
+GLuint elementbuffer;
+
+void createPlaneGeometry() {
+    indexed_vertices.resize(0);
+    indexed_uvs.resize(0);
+    indices.resize(0);
+    triangles.resize(0);
+
+    for (unsigned int nY = 0; nY < plane_size; nY++) {
+        float v = float(nY) / (plane_size - 1);
+        for (unsigned int nX = 0; nX < plane_size; nX++) {
+            float u = float(nX) / (plane_size - 1);
+            glm::vec2 uv = glm::vec2(float(nX) / float(plane_size), float(nY) / float(plane_size));
             indexed_uvs.push_back(uv);
 
-            float altitude = float(heightmap.getPixel(u, v)[0]) / 255.;
-            glm::vec3 vertex = glm::vec3(1. - 2.*uv.x, altitude, 1.-2.*uv.y);
+            float altitude = float(heightmaps[current_heightmap].getPixel(u, v)[0]) / 255.;
+            glm::vec3 vertex = glm::vec3(1. - 2. * uv.x, altitude, 1. - 2. * uv.y);
             indexed_vertices.push_back(vertex);
         }
     }
 
-    for (unsigned int nY = 0; nY < width-1; nY++) {
-        for (unsigned int nX = 0; nX < height-1; nX++) {
-            unsigned int i1 = nY*width+nX;
-            unsigned int i2 = (nY+1)*width+nX;
-            unsigned int i3 = nY*width+(nX+1);
-            unsigned int i4 = (nY+1)*width+(nX+1);
-            std::vector<unsigned int> triangle1 = {i1, i2, i3};
-            std::vector<unsigned int> triangle2 = {i2, i4, i3};
+    for (unsigned int nY = 0; nY < plane_size - 1; nY++) {
+        for (unsigned int nX = 0; nX < plane_size - 1; nX++) {
+            unsigned int i1 = nY * plane_size + nX;
+            unsigned int i2 = (nY + 1) * plane_size + nX;
+            unsigned int i3 = nY * plane_size + (nX + 1);
+            unsigned int i4 = (nY + 1) * plane_size + (nX + 1);
+            vector<unsigned int> triangle1 = {i1, i2, i3};
+            vector<unsigned int> triangle2 = {i2, i4, i3};
 
             indices.push_back(i1);
             indices.push_back(i2);
@@ -88,18 +103,27 @@ void createPlaneGeometry(unsigned int width, unsigned int height, std::vector<gl
             triangles.push_back(triangle2);
         }
     }
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+    glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 }
 
-void drawPlane(std::vector<glm::vec3>& indexed_vertices, std::vector<unsigned int>& indices) {
+void drawPlane(vector<glm::vec3> &indexed_vertices, vector<unsigned int> &indices) {
     glDrawElements(
-        GL_TRIANGLES,      // mode
-        indices.size(),    // count
+        GL_TRIANGLES,    // mode
+        indices.size(),  // count
         GL_UNSIGNED_INT, // type
-        (void *)0          // element array buffer offset
+        (void *)0        // element array buffer offset
     );
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 
 int main(void) {
     // Initialise GLFW
@@ -153,7 +177,7 @@ int main(void) {
     glDepthFunc(GL_LESS);
 
     // Cull triangles which normal is not towards the camera
-     glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -165,40 +189,21 @@ int main(void) {
     /*****************TODO***********************/
     // Get a handle for our "Model View Projection" matrices uniforms
 
-    /****************************************/
-    std::vector<unsigned int> indices; // Triangles concaténés dans une liste
-    std::vector<std::vector<unsigned int>> triangles;
-    std::vector<glm::vec3> indexed_vertices;
-    std::vector<glm::vec2> indexed_uvs;
-
     // Chargement des textures
-    std::vector<ImageBase> textures = std::vector<ImageBase>(6);
     textures[0].load("textures/grass.ppm");
     textures[1].load("textures/rock.ppm");
     textures[2].load("textures/snowrocks.ppm");
-    textures[3].load("textures/heightmap-mountain.pgm");
-    textures[4].load("textures/heightmap-rocky.pgm");
-    textures[5].load("textures/heightmap-test.pgm");
-
-    // Chargement du fichier de maillage
-    createPlaneGeometry(512, 512, indexed_vertices, indexed_uvs, indices, triangles, textures[3]);
+    heightmaps[0].load("textures/heightmap-mountain.pgm");
+    heightmaps[1].load("textures/heightmap-rocky.pgm");
+    heightmaps[2].load("textures/heightmap-test.pgm");
 
     // Load it into a VBO
-    GLuint vertexbuffer;
     glGenBuffers(1, &vertexbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
-
-    GLuint uvbuffer;
     glGenBuffers(1, &uvbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-    glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
-
-    // Generate a buffer for the indices as well
-    GLuint elementbuffer;
     glGenBuffers(1, &elementbuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+    // Chargement du fichier de maillage
+    createPlaneGeometry();
 
     // Get a handle for our "LightPosition" uniform
     glUseProgram(programID);
@@ -211,7 +216,7 @@ int main(void) {
     glUniform1i(glGetUniformLocation(programID, "heightmap_test"), 5);
 
     // TEXTURES
-    for(int i = 0; i < textures.size(); i++) {
+    for (int i = 0; i < textures.size(); i++) {
         GLuint texture;
         glGenTextures(1, &texture);
         glActiveTexture(GL_TEXTURE0 + i);
@@ -222,9 +227,9 @@ int main(void) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
         if (textures[i].getColor()) {
-            std::vector<float> image_data(textures[i].getWidth() * textures[i].getHeight() * 4);
+            vector<float> image_data(textures[i].getWidth() * textures[i].getHeight() * 4);
             for (size_t j = 0; j < textures[i].getWidth() * textures[i].getHeight(); j++) {
-                const unsigned char* pixel = textures[i].getPixel(j);
+                const unsigned char *pixel = textures[i].getPixel(j);
                 image_data[j * 4] = float(pixel[0]) / 255.;
                 image_data[j * 4 + 1] = float(pixel[1]) / 255.;
                 image_data[j * 4 + 2] = float(pixel[2]) / 255.;
@@ -233,16 +238,15 @@ int main(void) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, textures[i].getWidth(), textures[i].getHeight(), 0, GL_RGBA, GL_FLOAT, image_data.data());
             glBindImageTexture(i, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         } else {
-            std::vector<float> image_data(textures[i].getWidth() * textures[i].getHeight());
+            vector<float> image_data(textures[i].getWidth() * textures[i].getHeight());
             for (size_t j = 0; j < textures[i].getWidth() * textures[i].getHeight(); j++) {
-                const unsigned char* pixel = textures[i].getPixel(j);
+                const unsigned char *pixel = textures[i].getPixel(j);
                 image_data[j] = float(pixel[0]) / 255.;
             }
             glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, textures[i].getWidth(), textures[i].getHeight(), 0, GL_RED, GL_FLOAT, image_data.data());
             glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
         }
     }
-
 
     // For speed computation
     double lastTime = glfwGetTime();
@@ -275,7 +279,7 @@ int main(void) {
         glm::mat4 view = glm::lookAt(camera_position, camera_target, camera_up);
 
         // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
-        glm::mat4 projection = glm::perspective(M_PI / 4., 4./3., 0.1, 100.);
+        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
 
         // Send our transformation to the currently bound shader,
         // in the "Model View Projection" to the shader uniforms
@@ -358,6 +362,15 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         camera_position -= cameraSpeed * camera_right;
 
+    // Resolution change
+    if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
+        plane_size++;
+        createPlaneGeometry();
+    } else if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
+        plane_size = std::max(2, int(plane_size - 1));
+        createPlaneGeometry();
+    }
+
     // TODO add translations
 }
 
@@ -369,10 +382,8 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    float cameraSpeed = 2.5 * deltaTime;
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+    float cameraSpeed = 2.5 * deltaTime * yoffset;
     glm::vec3 camera_front = glm::normalize(camera_target - camera_position);
-    camera_position += cameraSpeed * yoffset * camera_front;
-
+    camera_position += cameraSpeed * camera_front;
 }
-
