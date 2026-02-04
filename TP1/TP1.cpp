@@ -36,7 +36,7 @@ const unsigned int SCR_HEIGHT = 600;
 
 // camera
 glm::vec3 camera_position = glm::vec3(0.0f, 3.0f, 0.0f);
-glm::vec3 camera_target = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 camera_front = glm::vec3(0.0f, -1.0f, 0.0f);
 glm::vec3 camera_up = glm::vec3(0.0f, 0.0f, 1.0f);
 
 // timing
@@ -124,6 +124,7 @@ void drawPlane(vector<glm::vec3> &indexed_vertices, vector<unsigned int> &indice
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+void cursor_pos_callback(GLFWwindow *window, double x, double y);
 
 int main(void) {
     // Initialise GLFW
@@ -167,6 +168,7 @@ int main(void) {
     glfwPollEvents();
     glfwSetCursorPos(window, 1024 / 2, 768 / 2);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetCursorPosCallback(window, cursor_pos_callback);
 
     // Dark blue background
     glClearColor(0.8f, 0.8f, 0.8f, 0.0f);
@@ -276,7 +278,7 @@ int main(void) {
         // Model matrix : an identity matrix (model will be at the origin) then change
         glm::mat4 model = glm::mat4();
 
-        glm::mat4 view = glm::lookAt(camera_position, camera_target, camera_up);
+        glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
 
         // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
         glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
@@ -350,17 +352,21 @@ void processInput(GLFWwindow *window) {
 
     // Camera zoom in and out
     float cameraSpeed = 2.5 * deltaTime;
-    glm::vec3 camera_front = glm::normalize(camera_target - camera_position);
     glm::vec3 camera_right = glm::cross(camera_front, camera_up);
-    glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        camera_position += cameraSpeed * real_camera_up;
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        camera_position -= cameraSpeed * real_camera_up;
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        camera_position += cameraSpeed * camera_right;
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        camera_position -= cameraSpeed * camera_right;
+    // glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        camera_position += camera_front * cameraSpeed;
+    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        camera_position -= camera_front * cameraSpeed;
+    } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        camera_position -= camera_right * cameraSpeed;
+    } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        camera_position += camera_right * cameraSpeed;
+    } else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        camera_position += camera_up * cameraSpeed;
+    } else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        camera_position -= camera_up * cameraSpeed;
+    }
 
     // Resolution change
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
@@ -383,7 +389,9 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
-    float cameraSpeed = 2.5 * deltaTime * yoffset;
-    glm::vec3 camera_front = glm::normalize(camera_target - camera_position);
-    camera_position += cameraSpeed * camera_front;
+    // float cameraSpeed = 2.5 * deltaTime * yoffset;
+    // camera_position += cameraSpeed * camera_front;
+}
+
+void cursor_pos_callback(GLFWwindow *window, double x, double y) {
 }
