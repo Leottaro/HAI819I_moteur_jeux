@@ -25,27 +25,45 @@ GLFWwindow *window;
 #include <vector>
 #include "./ImageBase.h"
 
-using namespace glm;
 using namespace std;
 
+// helpers
 void processInput(GLFWwindow *window);
+float clipAnglePI(float _angle);
+glm::vec3 EulerToEuclidian(const glm::vec2 &_angles);
+glm::vec2 EuclidianToEuler(const glm::vec3 &xyz);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
+// window
+glm::vec2 cursor_pos, cursor_vel, scroll;
+int window_width = 1024;
+int window_height = 768;
+
 // camera
-glm::vec3 camera_position = glm::vec3(0.0f, 3.0f, 0.0f);
-glm::vec3 camera_front = glm::vec3(0.0f, -1.0f, 0.0f);
-glm::vec3 camera_up = glm::vec3(0.0f, 0.0f, 1.0f);
+#define M_PI_SAFE float(M_PI - 0.001)
+#define M_PI_2_SAFE float(M_PI_2 - 0.001)
+#define M_PI_4_SAFE float(M_PI_4 - 0.001)
+
+glm::vec3 camera_position = glm::vec3(1.0f, 1.0f, 1.0f);
+glm::vec2 camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.); // (pitch, yaw)
+glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 camera_front = EulerToEuclidian(camera_angles);
+
+bool camera_is_orbital = true;
+float camera_rotation_speed = 1.0f;
+float camera_translation_speed = 2.5f;
+
+// camera orbital
+glm::vec3 camera_center = glm::vec3(0.f, 0.5f, 0.f);
+float camera_distance_to_center = 3.;
 
 // timing
 float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
-// rotation
-float angle = 0.;
-float zoom = 1.;
 /*******************************************************************************/
 
 // Chargement des textures
@@ -65,6 +83,7 @@ GLuint uvbuffer;
 GLuint elementbuffer;
 
 void createPlaneGeometry() {
+    cout << "terrain size: " << plane_size << endl;
     indexed_vertices.resize(0);
     indexed_uvs.resize(0);
     indices.resize(0);
@@ -141,7 +160,7 @@ int main(void) {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Open a window and create its OpenGL context
-    window = glfwCreateWindow(1024, 768, "TP1 - GLFW", NULL, NULL);
+    window = glfwCreateWindow(window_width, window_height, "TP1 - GLFW", NULL, NULL);
     if (window == NULL) {
         fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
         getchar();
@@ -273,13 +292,9 @@ int main(void) {
         // Use our shader
         glUseProgram(programID);
 
-        /*****************TODO***********************/
-
         // Model matrix : an identity matrix (model will be at the origin) then change
         glm::mat4 model = glm::mat4();
-
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
-
         // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
         glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
 
@@ -323,6 +338,10 @@ int main(void) {
 
         glDisableVertexAttribArray(0);
 
+        // Reset some controls
+        scroll = glm::vec2(0.);
+        cursor_vel = glm::vec2(0.);
+
         // Swap buffers
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -344,28 +363,96 @@ int main(void) {
     return 0;
 }
 
+// helpers
+float clipAnglePI(float _angle) {
+    while (_angle < -M_PI)
+        _angle += 2. * M_PI;
+    while (_angle > M_PI)
+        _angle -= 2. * M_PI;
+    return _angle;
+}
+
+glm::vec3 EulerToEuclidian(const glm::vec2 &_angles) {
+    float sinPhi = cosf(_angles.x);
+    float x = sinPhi * sinf(_angles.y);
+    float y = sinf(_angles.x);
+    float z = sinPhi * cosf(_angles.y);
+
+    return glm::vec3(x, y, z);
+}
+
+glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
+    float angles_x = asin(xyz[1] / glm::length(xyz)); // polar angle from +y axis, 0..π
+
+    float angles_y = atan2(xyz[0], xyz[2]); // azimuth around y-axis, 0..2π
+    if (angles_y < 0.0f)
+        angles_y += 2.0f * M_PI;
+
+    return glm::vec2(angles_x, angles_y);
+}
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
+bool c_key_pressed = false;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // Camera zoom in and out
-    float cameraSpeed = 2.5 * deltaTime;
-    glm::vec3 camera_right = glm::cross(camera_front, camera_up);
-    // glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
-    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        camera_position += camera_front * cameraSpeed;
-    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        camera_position -= camera_front * cameraSpeed;
-    } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-        camera_position -= camera_right * cameraSpeed;
-    } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        camera_position += camera_right * cameraSpeed;
-    } else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        camera_position += camera_up * cameraSpeed;
-    } else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        camera_position -= camera_up * cameraSpeed;
+    // Change camera mode
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        if (!c_key_pressed) {
+            camera_is_orbital = !camera_is_orbital;
+            cout << "orbital: " << (camera_is_orbital ? "true" : "false") << endl;
+            c_key_pressed = true;
+            camera_distance_to_center = glm::distance(camera_position, camera_center);
+            camera_front = glm::normalize(camera_center - camera_position);
+            camera_angles = EuclidianToEuler(camera_front);
+        }
+    } else {
+        if (c_key_pressed) {
+            c_key_pressed = false;
+        }
+    }
+
+    // Change camera rotation speed
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        camera_rotation_speed += 1.f * deltaTime;
+        cout << "rotation speed: " << camera_rotation_speed << endl;
+    } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        camera_rotation_speed = max(camera_rotation_speed - 1.f * deltaTime, 0.f);
+        cout << "rotation speed: " << camera_rotation_speed << endl;
+    }
+
+    // Camera update
+    float rotation_speed = camera_rotation_speed * deltaTime;
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        camera_angles = glm::vec2(
+            glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
+            clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
+
+        camera_front = EulerToEuclidian(camera_angles);
+    }
+
+    float translation_speed = camera_translation_speed * deltaTime;
+    if (camera_is_orbital) {
+        camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, 1.f);
+        camera_position = camera_center - camera_distance_to_center * camera_front;
+    } else {
+        glm::vec3 camera_right = glm::cross(camera_front, camera_up);
+        // glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
+        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            camera_position += camera_front * translation_speed;
+        } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+            camera_position -= camera_front * translation_speed;
+        } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+            camera_position -= camera_right * translation_speed;
+        } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            camera_position += camera_right * translation_speed;
+        } else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            camera_position += camera_up * translation_speed;
+        } else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+            camera_position -= camera_up * translation_speed;
+        }
     }
 
     // Resolution change
@@ -386,12 +473,21 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+    window_width = width;
+    window_height = height;
+    // cout << "window: (" << window_width.x << "," << window_height.y << ")" << endl;
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
-    // float cameraSpeed = 2.5 * deltaTime * yoffset;
-    // camera_position += cameraSpeed * camera_front;
+    scroll.x = xoffset;
+    scroll.y = yoffset;
+    // cout << "scroll: (" << scroll.x << "," << scroll.y << ")" << endl;
 }
 
-void cursor_pos_callback(GLFWwindow *window, double x, double y) {
+void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos) {
+    cursor_vel.x = xpos - cursor_pos.x;
+    cursor_vel.y = ypos - cursor_pos.y;
+    cursor_pos.x = xpos;
+    cursor_pos.y = ypos;
+    // cout << "cursor: (" << cursor_pos.x << "," << cursor_pos.y << ")\tvelocity: (" << cursor_vel.x << "," << cursor_vel.y << ")" << endl;
 }
