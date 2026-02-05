@@ -43,6 +43,13 @@ int window_width = 1024;
 int window_height = 768;
 
 // camera
+#define NUMBER_OF_CAMERA_TYPE 3
+enum CameraType {
+    CameraOrbital,
+    CameraFree,
+    CameraAutoSpin,
+};
+
 #define M_PI_SAFE float(M_PI - 0.001)
 #define M_PI_2_SAFE float(M_PI_2 - 0.001)
 #define M_PI_4_SAFE float(M_PI_4 - 0.001)
@@ -52,7 +59,7 @@ glm::vec2 camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.); // (pitch, yaw)
 glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 camera_front = EulerToEuclidian(camera_angles);
 
-bool camera_is_orbital = true;
+CameraType camera_type = CameraOrbital;
 float camera_rotation_speed = 1.0f;
 float camera_translation_speed = 2.5f;
 
@@ -401,12 +408,21 @@ void processInput(GLFWwindow *window) {
     // Change camera mode
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
         if (!c_key_pressed) {
-            camera_is_orbital = !camera_is_orbital;
-            cout << "orbital: " << (camera_is_orbital ? "true" : "false") << endl;
+            camera_type = CameraType((int(camera_type) + 1) % NUMBER_OF_CAMERA_TYPE);
             c_key_pressed = true;
-            camera_distance_to_center = glm::distance(camera_position, camera_center);
-            camera_front = glm::normalize(camera_center - camera_position);
-            camera_angles = EuclidianToEuler(camera_front);
+
+            switch (camera_type) {
+            case CameraOrbital:
+                camera_distance_to_center = glm::distance(camera_position, camera_center);
+                camera_front = glm::normalize(camera_center - camera_position);
+                camera_angles = EuclidianToEuler(camera_front);
+                break;
+            case CameraFree:
+                break;
+            case CameraAutoSpin:
+                camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.);
+                break;
+            }
         }
     } else {
         if (c_key_pressed) {
@@ -425,21 +441,29 @@ void processInput(GLFWwindow *window) {
 
     // Camera update
     float rotation_speed = camera_rotation_speed * deltaTime;
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-        camera_angles = glm::vec2(
-            glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
-            clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
-
-        camera_front = EulerToEuclidian(camera_angles);
-    }
-
     float translation_speed = camera_translation_speed * deltaTime;
-    if (camera_is_orbital) {
+    glm::vec3 camera_right = glm::cross(camera_front, camera_up);
+    glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
+    switch (camera_type) {
+    case CameraOrbital:
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            camera_angles = glm::vec2(
+                glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
+                clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
+
+            camera_front = EulerToEuclidian(camera_angles);
+        }
         camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, 1.f);
         camera_position = camera_center - camera_distance_to_center * camera_front;
-    } else {
-        glm::vec3 camera_right = glm::cross(camera_front, camera_up);
-        glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
+        break;
+    case CameraFree:
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            camera_angles = glm::vec2(
+                glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
+                clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
+
+            camera_front = EulerToEuclidian(camera_angles);
+        }
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             camera_position += camera_front * translation_speed;
         } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
@@ -453,6 +477,13 @@ void processInput(GLFWwindow *window) {
         } else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
             camera_position -= real_camera_up * translation_speed;
         }
+        break;
+    case CameraAutoSpin:
+        camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, 1.f);
+        camera_angles.y = clipAnglePI(camera_angles.y + rotation_speed);
+        camera_front = EulerToEuclidian(camera_angles);
+        camera_position = camera_center - camera_distance_to_center * camera_front;
+        break;
     }
 
     // Resolution change
