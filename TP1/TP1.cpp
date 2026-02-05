@@ -33,9 +33,9 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-glm::vec3 camera_position = glm::vec3(0.0f, 3.0f, 0.0f);
+glm::vec3 camera_position = glm::vec3(1.0f, 1.0f, 1.0f);
 glm::vec3 camera_target = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 camera_up = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // timing
 float deltaTime = 0.0f; // time between current frame and last frame
@@ -50,24 +50,24 @@ std::vector<unsigned short> indices; // Triangles concaténés dans une liste
 std::vector<std::vector<unsigned short>> triangles;
 std::vector<glm::vec3> indexed_vertices;
 
-void createPlaneGeometry(unsigned short width, unsigned short height, std::vector<glm::vec3>& indexed_vertices, std::vector<glm::vec2>& indexed_uvs, std::vector<unsigned short>& indices, std::vector<std::vector<unsigned short>>& triangles) {
+void createPlaneGeometry(unsigned short width, unsigned short height, std::vector<glm::vec3> &indexed_vertices, std::vector<glm::vec2> &indexed_uvs, std::vector<unsigned short> &indices, std::vector<std::vector<unsigned short>> &triangles) {
     for (unsigned short nY = 0; nY < height; nY++) {
         for (unsigned short nX = 0; nX < width; nX++) {
             glm::vec2 uv = glm::vec2(float(nX) / float(width), float(nY) / float(height));
             indexed_uvs.push_back(uv);
 
-            float altitude = 0.1*float(rand()) / float(RAND_MAX);
-            glm::vec3 vertex = glm::vec3(1. - 2.*uv.x, altitude, 1.-2.*uv.y);
+            float altitude = 0.1 * float(rand()) / float(RAND_MAX);
+            glm::vec3 vertex = glm::vec3(1. - 2. * uv.x, altitude, 1. - 2. * uv.y);
             indexed_vertices.push_back(vertex);
         }
     }
 
-    for (unsigned short nY = 0; nY < width-1; nY++) {
-        for (unsigned short nX = 0; nX < height-1; nX++) {
-            unsigned short i1 = nY*width+nX;
-            unsigned short i2 = (nY+1)*width+nX;
-            unsigned short i3 = nY*width+(nX+1);
-            unsigned short i4 = (nY+1)*width+(nX+1);
+    for (unsigned short nY = 0; nY < width - 1; nY++) {
+        for (unsigned short nX = 0; nX < height - 1; nX++) {
+            unsigned short i1 = nY * width + nX;
+            unsigned short i2 = (nY + 1) * width + nX;
+            unsigned short i3 = nY * width + (nX + 1);
+            unsigned short i4 = (nY + 1) * width + (nX + 1);
             std::vector<unsigned short> triangle1 = {i1, i2, i3};
             std::vector<unsigned short> triangle2 = {i2, i4, i3};
 
@@ -84,7 +84,7 @@ void createPlaneGeometry(unsigned short width, unsigned short height, std::vecto
     }
 }
 
-void drawPlane(std::vector<glm::vec3>& indexed_vertices, std::vector<unsigned short>& indices) {
+void drawPlane(std::vector<glm::vec3> &indexed_vertices, std::vector<unsigned short> &indices) {
     glDrawElements(
         GL_TRIANGLES,      // mode
         indices.size(),    // count
@@ -93,7 +93,7 @@ void drawPlane(std::vector<glm::vec3>& indexed_vertices, std::vector<unsigned sh
     );
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 
 int main(void) {
     // Initialise GLFW
@@ -147,7 +147,7 @@ int main(void) {
     glDepthFunc(GL_LESS);
 
     // Cull triangles which normal is not towards the camera
-     glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -210,7 +210,6 @@ int main(void) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.w, image.h, 0, GL_RGBA, GL_FLOAT, image_data.data());
     glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
-
     // For speed computation
     double lastTime = glfwGetTime();
     int nbFrames = 0;
@@ -242,7 +241,7 @@ int main(void) {
         glm::mat4 view = glm::lookAt(camera_position, camera_target, camera_up);
 
         // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
-        glm::mat4 projection = glm::perspective(M_PI / 4., 4./3., 0.1, 100.);
+        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
 
         // Send our transformation to the currently bound shader,
         // in the "Model View Projection" to the shader uniforms
@@ -336,10 +335,8 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    float cameraSpeed = 2.5 * deltaTime;
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+    float cameraSpeed = 2.5 * yoffset * deltaTime;
     glm::vec3 camera_front = glm::normalize(camera_target - camera_position);
-    camera_position += cameraSpeed * yoffset * camera_front;
-
+    camera_position += cameraSpeed * camera_front;
 }
-
