@@ -73,7 +73,7 @@ public:
         return data + y * width * (color ? 3 : 1) + x * (color ? 3 : 1);
     }
     unsigned char *getPixel(float u, float v) const {
-        return getPixel(round(u * (width - 1)), round(v * (height - 1)));
+        return getPixel(int(roundl(u * (width - 1))), int(roundl(v * (height - 1))));
     }
 
     glm::vec3 RGBtoYCrCb(int x, int y) const;
