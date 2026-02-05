@@ -21,15 +21,15 @@
 
 class ImageBase {
     ///////////// Enumerations
-   public:
+public:
     typedef enum { PLAN_R,
                    PLAN_G,
                    PLAN_B } PLAN;
 
     ///////////// Attributs
-   protected:
-    unsigned char* data;
-    double* dataD;
+protected:
+    unsigned char *data;
+    double *dataD;
 
     bool color;
     int height;
@@ -38,47 +38,47 @@ class ImageBase {
     bool isValid;
 
     ///////////// Constructeurs/Destructeurs
-   protected:
+protected:
     void init();
     void reset();
 
-   public:
+public:
     ImageBase(void);
     ImageBase(int imWidth, int imHeight, bool isColor);
     ~ImageBase(void);
 
     ///////////// Methodes
-   protected:
-    void copy(const ImageBase& copy);
+protected:
+    void copy(const ImageBase &copy);
 
-   public:
+public:
     int getHeight() const { return height; };
     int getWidth() const { return width; };
     int getTotalSize() const { return nTaille; };
     int getValidity() const { return isValid; };
     bool getColor() const { return color; };
-    unsigned char* getData() { return data; };
+    unsigned char *getData() { return data; };
 
-    void load(const char* filename);
-    bool save(const char* filename);
+    void load(const char *filename);
+    bool save(const char *filename);
 
-    ImageBase* getPlan(PLAN plan);
+    ImageBase *getPlan(PLAN plan);
 
-    unsigned char* operator[](int l);
+    unsigned char *operator[](int l);
 
-    const unsigned char* getPixel(int i) const {
+    const unsigned char *getPixel(int i) const {
         return data + i * (color ? 3 : 1);
     }
-    unsigned char* getPixel(int x, int y) const {
+    unsigned char *getPixel(int x, int y) const {
         return data + y * width * (color ? 3 : 1) + x * (color ? 3 : 1);
     }
-    unsigned char* getPixel(float u, float v) const {
-        return getPixel(int(u*(width-1)), int(v*(height-1)));
+    unsigned char *getPixel(float u, float v) const {
+        return getPixel(round(u * (width - 1)), round(v * (height - 1)));
     }
 
     glm::vec3 RGBtoYCrCb(int x, int y) const;
 
-	static glm::u8vec3 YCrCbtoRGB(glm::vec3 YCrCb);
+    static glm::u8vec3 YCrCbtoRGB(glm::vec3 YCrCb);
 
-    static float PSNR(const ImageBase& im1, const ImageBase& im2);
+    static float PSNR(const ImageBase &im1, const ImageBase &im2);
 };
