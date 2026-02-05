@@ -439,7 +439,7 @@ void processInput(GLFWwindow *window) {
         camera_position = camera_center - camera_distance_to_center * camera_front;
     } else {
         glm::vec3 camera_right = glm::cross(camera_front, camera_up);
-        // glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
+        glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             camera_position += camera_front * translation_speed;
         } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
@@ -449,9 +449,9 @@ void processInput(GLFWwindow *window) {
         } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
             camera_position += camera_right * translation_speed;
         } else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            camera_position += camera_up * translation_speed;
+            camera_position += real_camera_up * translation_speed;
         } else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-            camera_position -= camera_up * translation_speed;
+            camera_position -= real_camera_up * translation_speed;
         }
     }
 
