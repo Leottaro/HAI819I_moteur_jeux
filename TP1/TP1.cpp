@@ -410,20 +410,25 @@ void processInput(GLFWwindow *window) {
         if (!c_key_pressed) {
             camera_type = CameraType((int(camera_type) + 1) % NUMBER_OF_CAMERA_TYPE);
             c_key_pressed = true;
-
+            string camera_type_str;
             switch (camera_type) {
             case CameraOrbital:
                 camera_distance_to_center = glm::distance(camera_position, camera_center);
                 camera_front = glm::normalize(camera_center - camera_position);
                 camera_angles = EuclidianToEuler(camera_front);
+                camera_type_str = "Orbital";
                 break;
             case CameraFree:
+                camera_type_str = "Free";
                 break;
             case CameraAutoSpin:
                 camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.);
+                camera_type_str = "AutoSpin";
                 break;
             }
+            glfwSetWindowTitle(window, ("TP1 - Camera mode: " + camera_type_str).c_str());
         }
+
     } else {
         if (c_key_pressed) {
             c_key_pressed = false;
