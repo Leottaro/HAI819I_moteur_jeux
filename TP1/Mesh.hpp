@@ -12,6 +12,52 @@
 #include <vector>
 #include "./ImageBase.h"
 
+class Transformation {
+private:
+    glm::vec3 m_translation = glm::vec3(0.);
+    glm::vec3 m_rotation = glm::vec3(0.);
+    glm::vec3 m_scale = glm::vec3(1.);
+
+public:
+    Transformation() {}
+    Transformation(const glm::vec3& _translation, const glm::vec3& _rotation, const glm::vec3& _scale) : m_translation(_translation), m_rotation(_rotation), m_scale(_scale) {}
+
+    inline const glm::vec3 getTranslation() const { return m_translation; }
+    inline void setTranslation(const glm::vec3 &t) { m_translation = t; }
+    
+    inline const glm::vec3 getRotation() const { return m_rotation; }
+    inline void setRotation(const glm::vec3 &r) { m_rotation = r; }
+    
+    inline glm::vec3 getScale() const { return m_scale; }
+    inline void setScale(glm::vec3 s) { m_scale = s; }
+    inline void setScale(float s) { m_scale = glm::vec3(s); }
+    inline void setScaleX(float sx) { m_scale.x = sx; }
+    inline void setScaleY(float sy) { m_scale.y = sy; }
+    inline void setScaleZ(float sz) { m_scale.z = sz; }
+    inline void setScaleXY(float s) { m_scale.x = m_scale.y = s; }
+    inline void setScaleXZ(float s) { m_scale.x = m_scale.z = s; }
+    inline void setScaleYZ(float s) { m_scale.y = m_scale.z = s; }
+    
+    inline glm::mat4 computeTransformationMatrix() const {
+        glm::mat4 scale_matrix = glm::scale(glm::mat4(), m_scale);
+        glm::mat4 rotation_scale_matrix = glm::rotate(scale_matrix, m_rotation[0], glm::vec3(1.0, 0.0, 0.0));
+        rotation_scale_matrix = glm::rotate(rotation_scale_matrix, m_rotation[1], glm::vec3(0.0, 1.0, 0.0));
+        rotation_scale_matrix = glm::rotate(rotation_scale_matrix, m_rotation[2], glm::vec3(0.0, 0.0, 1.0));
+        glm::mat4 transformation_matrix = glm::translate(rotation_scale_matrix, m_translation);
+        return transformation_matrix;
+    }
+
+    // static glm::mat4 operator*(const Transformation& a, const Transformation& b) {
+    //     return a.computeTransformationMatrix() * b.computeTransformationMatrix();
+    // }
+    // static glm::mat4 operator*(const glm::mat4& a, const Transformation& b) {
+    //     return a * b.computeTransformationMatrix();
+    // }
+    // static glm::mat4 operator*(const Transformation& a, const glm::mat4& b) {
+    //     return a.computeTransformationMatrix() * b;
+    // }
+};
+
 class Mesh {
 private:
     std::vector<glm::vec3> m_vertices = std::vector<glm::vec3>();
@@ -24,10 +70,6 @@ private:
     GLuint m_normals_VBO = 0;
     GLuint m_uvs_VBO = 0;
     GLuint m_triangles_EBO = 0;
-
-    glm::vec3 m_translation = glm::vec3(0.);
-    glm::vec3 m_rotation = glm::vec3(0.);
-    glm::vec3 m_scale = glm::vec3(1.);
 
     void centerAndScaleToUnit();
 
@@ -55,30 +97,6 @@ public:
     inline const std::vector<glm::uvec3> &triangleIndices() const { return m_triangles; }
     inline std::vector<glm::uvec3> &triangleIndices() { return m_triangles; }
 
-    // TRANSFORMATIONS
-    inline const glm::vec3 getTranslation() const { return m_translation; }
-    inline void setTranslation(const glm::vec3 &t) { m_translation = t; }
-    inline const glm::vec3 getRotation() const { return m_rotation; }
-    inline void setRotation(const glm::vec3 &r) { m_rotation = r; }
-    inline glm::vec3 getScale() const { return m_scale; }
-    inline void setScale(glm::vec3 s) { m_scale = s; }
-    inline void setScale(float s) { m_scale = glm::vec3(s); }
-    inline void setScaleX(float sx) { m_scale.x = sx; }
-    inline void setScaleY(float sy) { m_scale.y = sy; }
-    inline void setScaleZ(float sz) { m_scale.z = sz; }
-    inline void setScaleXY(float s) { m_scale.x = m_scale.y = s; }
-    inline void setScaleXZ(float s) { m_scale.x = m_scale.z = s; }
-    inline void setScaleYZ(float s) { m_scale.y = m_scale.z = s; }
-    inline glm::mat4 computeTransformationMatrix() const {
-        glm::mat4 identity(1.0);
-        glm::mat4 scale_matrix = glm::scale(identity, m_scale);
-        glm::mat4 rotation_scale_matrix = glm::rotate(scale_matrix, m_rotation[0], glm::vec3(1.0, 0.0, 0.0));
-        rotation_scale_matrix = glm::rotate(rotation_scale_matrix, m_rotation[1], glm::vec3(0.0, 1.0, 0.0));
-        rotation_scale_matrix = glm::rotate(rotation_scale_matrix, m_rotation[2], glm::vec3(0.0, 0.0, 1.0));
-        glm::mat4 transformation_matrix = glm::translate(rotation_scale_matrix, m_translation);
-        return transformation_matrix;
-    }
-
     /// Compute the parameters of a sphere which bounds the mesh
     void computeBoundingSphere(glm::vec3 &center, float &radius) const;
 
@@ -86,6 +104,6 @@ public:
     void recomputePerVertexTextureCoordinates();
 
     void init();
-    void render();
+    void render(GLuint programID, const glm::mat4 &_transfo) const;
     void clear();
 };

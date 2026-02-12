@@ -279,7 +279,8 @@ void Mesh::init() {
     glBindVertexArray(0);
 }
 
-void Mesh::render() {
+void Mesh::render(GLuint programID, const glm::mat4 &_transfo) const {
+    glUniformMatrix4fv(glGetUniformLocation(programID, "model"), 1, false, glm::value_ptr(_transfo));
     glBindVertexArray(m_VAO); // Activate the VAO storing geometry data
     glDrawElements(GL_TRIANGLES, m_triangles.size() * 3, GL_UNSIGNED_INT, 0);
 }

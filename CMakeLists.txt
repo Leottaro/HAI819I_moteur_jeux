@@ -62,6 +62,7 @@ add_executable(TP1
 	TP1/ImageBase.h
 	TP1/Mesh.cpp
 	TP1/Mesh.hpp
+	TP1/Scene.hpp
 
 	common/shader.cpp
 	common/shader.hpp

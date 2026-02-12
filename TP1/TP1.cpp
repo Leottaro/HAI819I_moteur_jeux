@@ -25,6 +25,7 @@ GLFWwindow *window;
 #include <vector>
 #include "./ImageBase.h"
 #include "./Mesh.hpp"
+#include "./Scene.hpp"
 
 using namespace std;
 
@@ -73,15 +74,6 @@ float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
 /*******************************************************************************/
-
-// Chargement des textures
-vector<ImageBase> textures = vector<ImageBase>(3);
-vector<ImageBase> heightmaps = vector<ImageBase>(3);
-
-unsigned int current_heightmap = 0;
-unsigned int plane_size = 10;
-
-Mesh plane;
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void cursor_pos_callback(GLFWwindow *window, double x, double y);
@@ -151,62 +143,20 @@ int main(void) {
     /*****************TODO***********************/
     // Get a handle for our "Model View Projection" matrices uniforms
 
-    // Chargement des textures
-    textures[0].load("textures/grass.ppm");
-    textures[1].load("textures/rock.ppm");
-    textures[2].load("textures/snowrocks.ppm");
-    heightmaps[0].load("textures/heightmap-mountain.pgm");
-    heightmaps[1].load("textures/heightmap-rocky.pgm");
-    heightmaps[2].load("textures/heightmap-test.pgm");
+    // Chargement des données
+    Mesh terre;
+    terre.setCubeSphere(20);
+    terre.init();
+    SceneNode terre_node(0);
+    
+    Mesh lune;
+    lune.setCubeSphere(20);
+    lune.init();
+    Transformation lune_transfo = Transformation(glm::vec3(5., 0., 0.), glm::vec3(0.), glm::vec3(.5));
+    SceneNode lune_node(1, lune_transfo);
 
-    // plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
-    plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
-    plane.setTranslation(glm::vec3(-0.5, 0., -0.5));
-    plane.setScaleXZ(2.f);
-    plane.init();
-
-    // Get a handle for our "LightPosition" uniform
-    glUseProgram(programID);
-    GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
-    glUniform1i(glGetUniformLocation(programID, "grass"), 0);
-    glUniform1i(glGetUniformLocation(programID, "rock"), 1);
-    glUniform1i(glGetUniformLocation(programID, "snowrocks"), 2);
-    glUniform1i(glGetUniformLocation(programID, "heightmap_mountain"), 3);
-    glUniform1i(glGetUniformLocation(programID, "heightmap_rocky"), 4);
-    glUniform1i(glGetUniformLocation(programID, "heightmap_test"), 5);
-
-    // TEXTURES
-    for (int i = 0; i < textures.size(); i++) {
-        GLuint texture;
-        glGenTextures(1, &texture);
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-        if (textures[i].getColor()) {
-            vector<float> image_data(textures[i].getWidth() * textures[i].getHeight() * 4);
-            for (size_t j = 0; j < textures[i].getWidth() * textures[i].getHeight(); j++) {
-                const unsigned char *pixel = textures[i].getPixel(j);
-                image_data[j * 4] = float(pixel[0]) / 255.;
-                image_data[j * 4 + 1] = float(pixel[1]) / 255.;
-                image_data[j * 4 + 2] = float(pixel[2]) / 255.;
-                image_data[j * 4 + 3] = 1.;
-            }
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, textures[i].getWidth(), textures[i].getHeight(), 0, GL_RGBA, GL_FLOAT, image_data.data());
-            glBindImageTexture(i, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        } else {
-            vector<float> image_data(textures[i].getWidth() * textures[i].getHeight());
-            for (size_t j = 0; j < textures[i].getWidth() * textures[i].getHeight(); j++) {
-                const unsigned char *pixel = textures[i].getPixel(j);
-                image_data[j] = float(pixel[0]) / 255.;
-            }
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, textures[i].getWidth(), textures[i].getHeight(), 0, GL_RED, GL_FLOAT, image_data.data());
-            glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
-        }
-    }
+    SceneNode terre_group({&terre_node, &lune_node});
+    Scene scene({&terre, &lune}, terre_group);
 
     // For speed computation
     double lastTime = glfwGetTime();
@@ -231,21 +181,19 @@ int main(void) {
         // Use our shader
         glUseProgram(programID);
 
+        /****************************************/
+
         // Model matrix : an identity matrix (model will be at the origin) then change
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
         // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
         glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
+        glUniformMatrix4fv(glGetUniformLocation(programID, "view"), 1, false, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, false, glm::value_ptr(projection));
 
         /****************************************/
 
         // Draw the triangles !
-        glm::mat4 model = plane.computeTransformationMatrix();
-        glm::mat4 model_view = view * model;
-        glm::mat4 normal_mat = glm::transpose(glm::inverse(model_view));
-        glUniformMatrix4fv(glGetUniformLocation(programID, "model_view"), 1, false, glm::value_ptr(model_view));
-        glUniformMatrix4fv(glGetUniformLocation(programID, "normal_mat"), 1, false, glm::value_ptr(normal_mat));
-        plane.render();
+        scene.render(programID);
 
         // Reset some controls
         scroll = glm::vec2(0.);
@@ -260,13 +208,8 @@ int main(void) {
            glfwWindowShouldClose(window) == 0);
 
     // Cleanup VBO and shader
-    plane.clear();
-    // glDeleteBuffers(1, &vertexbuffer);
-    // glDeleteBuffers(1, &uvbuffer);
-    // glDeleteBuffers(1, &elementbuffer);
-    // glDeleteProgram(programID);
-    // glDeleteVertexArrays(1, &VertexArrayID);
-
+    scene.clear();
+    
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
 
@@ -395,19 +338,19 @@ void processInput(GLFWwindow *window) {
     }
 
     // Resolution change
-    if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
-        plane_size++;
-        plane.clear();
-        plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
-        plane.init();
-        // createPlaneGeometry();
-    } else if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
-        plane_size = std::max(2, int(plane_size - 1));
-        plane.clear();
-        plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
-        plane.init();
-        // createPlaneGeometry();
-    }
+    // if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
+    //     plane_size++;
+    //     plane.clear();
+    //     plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
+    //     plane.init();
+    //     // createPlaneGeometry();
+    // } else if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
+    //     plane_size = std::max(2, int(plane_size - 1));
+    //     plane.clear();
+    //     plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
+    //     plane.init();
+    //     // createPlaneGeometry();
+    // }
 
     // TODO add translations
 }
