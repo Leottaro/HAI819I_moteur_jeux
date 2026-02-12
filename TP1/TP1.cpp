@@ -24,6 +24,7 @@ GLFWwindow *window;
 #include <string>
 #include <vector>
 #include "./ImageBase.h"
+#include "./Mesh.hpp"
 
 using namespace std;
 
@@ -77,77 +78,10 @@ float lastFrame = 0.0f;
 vector<ImageBase> textures = vector<ImageBase>(3);
 vector<ImageBase> heightmaps = vector<ImageBase>(3);
 
-unsigned int plane_size = 10;
 unsigned int current_heightmap = 0;
+unsigned int plane_size = 10;
 
-vector<unsigned int> indices; // Triangles concaténés dans une liste
-vector<vector<unsigned int>> triangles;
-vector<glm::vec3> indexed_vertices;
-vector<glm::vec2> indexed_uvs;
-
-GLuint vertexbuffer;
-GLuint uvbuffer;
-GLuint elementbuffer;
-
-void createPlaneGeometry() {
-    cout << "terrain size: " << plane_size << endl;
-    indexed_vertices.resize(0);
-    indexed_uvs.resize(0);
-    indices.resize(0);
-    triangles.resize(0);
-
-    for (unsigned int nY = 0; nY < plane_size; nY++) {
-        float v = float(nY) / (plane_size - 1);
-        for (unsigned int nX = 0; nX < plane_size; nX++) {
-            float u = float(nX) / (plane_size - 1);
-            glm::vec2 uv = glm::vec2(float(nX) / float(plane_size), float(nY) / float(plane_size));
-            indexed_uvs.push_back(uv);
-
-            float altitude = float(heightmaps[current_heightmap].getPixel(u, v)[0]) / 255.;
-            glm::vec3 vertex = glm::vec3(1. - 2. * uv.x, altitude, 1. - 2. * uv.y);
-            indexed_vertices.push_back(vertex);
-        }
-    }
-
-    for (unsigned int nY = 0; nY < plane_size - 1; nY++) {
-        for (unsigned int nX = 0; nX < plane_size - 1; nX++) {
-            unsigned int i1 = nY * plane_size + nX;
-            unsigned int i2 = (nY + 1) * plane_size + nX;
-            unsigned int i3 = nY * plane_size + (nX + 1);
-            unsigned int i4 = (nY + 1) * plane_size + (nX + 1);
-            vector<unsigned int> triangle1 = {i1, i2, i3};
-            vector<unsigned int> triangle2 = {i2, i4, i3};
-
-            indices.push_back(i1);
-            indices.push_back(i2);
-            indices.push_back(i3);
-            triangles.push_back(triangle1);
-
-            indices.push_back(i2);
-            indices.push_back(i4);
-            indices.push_back(i3);
-            triangles.push_back(triangle2);
-        }
-    }
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, indexed_vertices.size() * sizeof(glm::vec3), &indexed_vertices[0], GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-    glBufferData(GL_ARRAY_BUFFER, indexed_uvs.size() * sizeof(glm::vec2), &indexed_uvs[0], GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-}
-
-void drawPlane(vector<glm::vec3> &indexed_vertices, vector<unsigned int> &indices) {
-    glDrawElements(
-        GL_TRIANGLES,    // mode
-        indices.size(),  // count
-        GL_UNSIGNED_INT, // type
-        (void *)0        // element array buffer offset
-    );
-}
+Mesh plane;
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void cursor_pos_callback(GLFWwindow *window, double x, double y);
@@ -225,13 +159,11 @@ int main(void) {
     heightmaps[1].load("textures/heightmap-rocky.pgm");
     heightmaps[2].load("textures/heightmap-test.pgm");
 
-    // Load it into a VBO
-    glGenBuffers(1, &vertexbuffer);
-    glGenBuffers(1, &uvbuffer);
-    glGenBuffers(1, &elementbuffer);
-
-    // Chargement du fichier de maillage
-    createPlaneGeometry();
+    // plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
+    plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
+    plane.setTranslation(glm::vec3(-0.5, 0., -0.5));
+    plane.setScaleXZ(2.f);
+    plane.init();
 
     // Get a handle for our "LightPosition" uniform
     glUseProgram(programID);
@@ -300,50 +232,20 @@ int main(void) {
         glUseProgram(programID);
 
         // Model matrix : an identity matrix (model will be at the origin) then change
-        glm::mat4 model = glm::mat4();
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
         // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
         glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
-
-        // Send our transformation to the currently bound shader,
-        // in the "Model View Projection" to the shader uniforms
-        glm::mat4 MVP = projection * view * model;
-        glUniformMatrix4fv(glGetUniformLocation(programID, "MVP"), 1, false, glm::value_ptr(MVP));
-
-        glUniform1ui(glGetUniformLocation(programID, "sampler"), 0);
+        glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, false, glm::value_ptr(projection));
 
         /****************************************/
 
-        // 1rst attribute buffer : vertices
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-        glVertexAttribPointer(
-            0,        // attribute
-            3,        // size
-            GL_FLOAT, // type
-            GL_FALSE, // normalized?
-            0,        // stride
-            (void *)0 // array buffer offset
-        );
-
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-        glVertexAttribPointer(
-            1,        // attribute
-            2,        // size
-            GL_FLOAT, // type
-            GL_FALSE, // normalized?
-            0,        // stride
-            (void *)0 // array buffer offset
-        );
-
-        // Index buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-
         // Draw the triangles !
-        drawPlane(indexed_vertices, indices);
-
-        glDisableVertexAttribArray(0);
+        glm::mat4 model = plane.computeTransformationMatrix();
+        glm::mat4 model_view = view * model;
+        glm::mat4 normal_mat = glm::transpose(glm::inverse(model_view));
+        glUniformMatrix4fv(glGetUniformLocation(programID, "model_view"), 1, false, glm::value_ptr(model_view));
+        glUniformMatrix4fv(glGetUniformLocation(programID, "normal_mat"), 1, false, glm::value_ptr(normal_mat));
+        plane.render();
 
         // Reset some controls
         scroll = glm::vec2(0.);
@@ -358,11 +260,12 @@ int main(void) {
            glfwWindowShouldClose(window) == 0);
 
     // Cleanup VBO and shader
-    glDeleteBuffers(1, &vertexbuffer);
-    glDeleteBuffers(1, &uvbuffer);
-    glDeleteBuffers(1, &elementbuffer);
-    glDeleteProgram(programID);
-    glDeleteVertexArrays(1, &VertexArrayID);
+    plane.clear();
+    // glDeleteBuffers(1, &vertexbuffer);
+    // glDeleteBuffers(1, &uvbuffer);
+    // glDeleteBuffers(1, &elementbuffer);
+    // glDeleteProgram(programID);
+    // glDeleteVertexArrays(1, &VertexArrayID);
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
@@ -494,10 +397,16 @@ void processInput(GLFWwindow *window) {
     // Resolution change
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
         plane_size++;
-        createPlaneGeometry();
+        plane.clear();
+        plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
+        plane.init();
+        // createPlaneGeometry();
     } else if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
         plane_size = std::max(2, int(plane_size - 1));
-        createPlaneGeometry();
+        plane.clear();
+        plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
+        plane.init();
+        // createPlaneGeometry();
     }
 
     // TODO add translations

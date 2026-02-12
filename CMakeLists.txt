@@ -57,9 +57,11 @@ add_definitions(
 
 # TP1
 add_executable(TP1
-        TP1/TP1.cpp
-        TP1/ImageBase.cpp
-        TP1/ImageBase.h
+	TP1/TP1.cpp
+	TP1/ImageBase.cpp
+	TP1/ImageBase.h
+	TP1/Mesh.cpp
+	TP1/Mesh.hpp
 
 	common/shader.cpp
 	common/shader.hpp

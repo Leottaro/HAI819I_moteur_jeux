@@ -7,18 +7,20 @@ layout(location = 3) uniform sampler2D heightmap_mountain;
 layout(location = 4) uniform sampler2D heightmap_rocky;
 layout(location = 5) uniform sampler2D heightmap_test;
 
-in vec2 fragment_uv;
-in vec3 fragment_position_modelspace;
+in vec3 f_position;
+in vec3 f_position_world_space;
+in vec3 f_normal;
+in vec2 f_uv;
 
 // Ouput data
 out vec3 color;
 
 void main(){
-    if (fragment_position_modelspace.y < 0.3) {
-        color = texture(grass, fragment_uv).rgb;
-    } else if (fragment_position_modelspace.y < 0.6) {
-        color = texture(rock, fragment_uv).rgb;
+    if (f_position_world_space.y < 0.3) {
+        color = texture(grass, f_uv).rgb;
+    } else if (f_position_world_space.y < 0.6) {
+        color = texture(rock, f_uv).rgb;
     } else {
-        color = texture(snowrocks, fragment_uv).rgb;
+        color = texture(snowrocks, f_uv).rgb;
     }
 }
