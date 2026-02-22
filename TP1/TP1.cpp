@@ -66,8 +66,8 @@ float camera_rotation_speed = 1.0f;
 float camera_translation_speed = 2.5f;
 
 // camera orbital
-glm::vec3 camera_center = glm::vec3(0.f, 0.5f, 0.f);
-float camera_distance_to_center = 3.;
+glm::vec3 camera_center = glm::vec3(0.f, 0.f, 0.f);
+float camera_distance_to_center = 1.;
 
 // timing
 float deltaTime = 0.0f; // time between current frame and last frame
@@ -144,19 +144,35 @@ int main(void) {
     // Get a handle for our "Model View Projection" matrices uniforms
 
     // Chargement des données
-    Mesh terre;
-    terre.setCubeSphere(20);
-    terre.init();
-    SceneNode terre_node(0);
-    
-    Mesh lune;
-    lune.setCubeSphere(20);
-    lune.init();
-    Transformation lune_transfo = Transformation(glm::vec3(5., 0., 0.), glm::vec3(0.), glm::vec3(.5));
-    SceneNode lune_node(1, lune_transfo);
+    Mesh sphere;
+    sphere.setCubeSphere(50);
+    sphere.init();
 
-    SceneNode terre_group({&terre_node, &lune_node});
-    Scene scene({&terre, &lune}, terre_group);
+    float sun_radius = 1.f;
+
+    float earth_radius = 0.5f;
+    float earth_distance = 3.f;
+    float earth_translation_speed = 1.f / M_PIf;
+
+    float moon_radius = 0.1f;
+    float moon_distance = 1.2f;
+    float moon_translation_speed = 1.f;
+
+    SceneNode sun_node(0);
+    sun_node.setScale(sun_radius);
+
+    SceneNode earth_node(0);
+    earth_node.setScale(earth_radius);
+    SceneNode moon_node(0);
+    moon_node.setScale(moon_radius);
+    moon_node.setTranslation(glm::vec3(0., 0., -moon_distance));
+    SceneNode earth_group({&earth_node, &moon_node});
+    earth_group.setTranslation(glm::vec3(0., 0., -earth_distance));
+
+    SceneNode sun_group({&sun_node, &earth_group});
+    sun_group.setScale(glm::vec3(0.1));
+
+    Scene scene({&sphere}, sun_group);
 
     // For speed computation
     double lastTime = glfwGetTime();
@@ -183,10 +199,15 @@ int main(void) {
 
         /****************************************/
 
-        // Model matrix : an identity matrix (model will be at the origin) then change
+        float translation_timing = currentFrame * 2.f * M_PIf;
+
+        moon_node.setTranslation(glm::vec3(moon_distance * cos(moon_translation_speed * translation_timing), 0., moon_distance * sin(moon_translation_speed * translation_timing)));
+        earth_group.setTranslation(glm::vec3(earth_distance * cos(earth_translation_speed * translation_timing), 0., earth_distance * sin(earth_translation_speed * translation_timing)));
+
+        /****************************************/
+
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
-        // Projection matrix : 45 Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
-        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100.);
+        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100000.);
         glUniformMatrix4fv(glGetUniformLocation(programID, "view"), 1, false, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, false, glm::value_ptr(projection));
 
@@ -209,7 +230,7 @@ int main(void) {
 
     // Cleanup VBO and shader
     scene.clear();
-    
+
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
 
