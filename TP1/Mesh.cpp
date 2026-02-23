@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 
 #include "Mesh.hpp"
+#include "Transformation.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -136,7 +137,7 @@ void Mesh::setSimpleTerrain(size_t _nx, size_t _nz, glm::vec2 y_range) {
     recomputePerVertexNormals();
 }
 
-void Mesh::setSimpleTerrain(size_t _nx, size_t _nz, const ImageBase & _heightmap) {
+void Mesh::setSimpleTerrain(size_t _nx, size_t _nz, const ImageBase &_heightmap) {
     setSimpleGrid(_nx, _nz);
     for (size_t iz = 0; iz < _nz; iz++) {
         float z = float(iz) / (_nz - 1);
@@ -197,6 +198,44 @@ void Mesh::setCubeSphere(size_t _n) {
     for (size_t i = 0; i < n_vertices; i++) {
         m_normals[i] = glm::normalize(m_vertices[i] - glm::vec3(0.5));
         m_vertices[i] = m_normals[i];
+        glm::vec2 angles = Transformation::EuclidianToEuler(m_vertices[i]);
+
+        float nb_meridiens = (_n - 1) * 4;
+        m_uvs[i] = glm::vec2(
+            ((angles.y / (2.f * M_PIf)) * nb_meridiens - 1) / nb_meridiens,
+            0.5f - angles.x / M_PIf);
+    }
+}
+
+void Mesh::setSphere(size_t nTheta, size_t nPhi) {
+    m_vertices.resize(nTheta * nPhi);
+    m_normals.resize(nTheta * nPhi);
+    m_uvs.resize(nTheta * nPhi);
+    m_triangles.resize(2 * (nTheta - 1) * (nPhi - 1));
+
+    for (size_t thetaI = 0; thetaI < nTheta; ++thetaI) {
+        float u = (float)(thetaI) / (float)(nTheta - 1);
+        float theta = u * 2 * M_PIf;
+        for (size_t phiI = 0; phiI < nPhi; ++phiI) {
+            float v = (float)(phiI) / (float)(nPhi - 1);
+            float phi = v * M_PIf;
+
+            glm::vec3 coordinates = glm::vec3(sinf(phi) * sinf(theta), cosf(phi), sinf(phi) * cosf(theta));
+            size_t v0 = phiI * nTheta + thetaI;
+            m_vertices[v0] = coordinates;
+            m_normals[v0] = coordinates;
+            m_uvs[v0] = glm::vec2(u, v);
+
+            if (thetaI == nTheta - 1 || phiI == nPhi - 1)
+                continue;
+
+            size_t t0 = 2 * (phiI * (nTheta - 1) + thetaI);
+            size_t v1 = v0 + 1;
+            size_t v2 = v0 + nTheta;
+            size_t v3 = v2 + 1;
+            m_triangles[t0] = glm::uvec3(v0, v2, v1);
+            m_triangles[t0 + 1] = glm::uvec3(v1, v2, v3);
+        }
     }
 }
 
@@ -246,7 +285,7 @@ void Mesh::recomputePerVertexTextureCoordinates() {
     }
 }
 
-void Mesh::init() {
+void Mesh::initShaderData() {
     glGenVertexArrays(1, &m_VAO);
     glBindVertexArray(m_VAO);
 
@@ -279,8 +318,7 @@ void Mesh::init() {
     glBindVertexArray(0);
 }
 
-void Mesh::render(GLuint programID, const glm::mat4 &_transfo) const {
-    glUniformMatrix4fv(glGetUniformLocation(programID, "model"), 1, false, glm::value_ptr(_transfo));
+void Mesh::render() const {
     glBindVertexArray(m_VAO); // Activate the VAO storing geometry data
     glDrawElements(GL_TRIANGLES, m_triangles.size() * 3, GL_UNSIGNED_INT, 0);
 }

@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <GL/glew.h>
 #include <glm/glm.hpp>
 
 class ImageBase {
@@ -37,6 +38,11 @@ protected:
     int nTaille;
     bool isValid;
 
+    static GLuint locationCounter;
+
+    GLuint texture;
+    GLuint location;
+
     ///////////// Constructeurs/Destructeurs
 protected:
     void init();
@@ -45,6 +51,7 @@ protected:
 public:
     ImageBase(void);
     ImageBase(int imWidth, int imHeight, bool isColor);
+    ImageBase(const char *filename);
     ~ImageBase(void);
 
     ///////////// Methodes
@@ -62,10 +69,6 @@ public:
     void load(const char *filename);
     bool save(const char *filename);
 
-    ImageBase *getPlan(PLAN plan);
-
-    unsigned char *operator[](int l);
-
     const unsigned char *getPixel(int i) const {
         return data + i * (color ? 3 : 1);
     }
@@ -76,9 +79,6 @@ public:
         return getPixel(int(roundl(u * (width - 1))), int(roundl(v * (height - 1))));
     }
 
-    glm::vec3 RGBtoYCrCb(int x, int y) const;
-
-    static glm::u8vec3 YCrCbtoRGB(glm::vec3 YCrCb);
-
-    static float PSNR(const ImageBase &im1, const ImageBase &im2);
+    void initShaderData(GLuint _location);
+    void clearShaderData();
 };

@@ -40,6 +40,7 @@ public:
     void setSimpleTerrain(size_t _nx, size_t _nz, const ImageBase &_heightmap);           // Create a terrain where x and z varies in [0;1] and y varies in the heightmap
     void setCube(size_t _n);                                                              // Create a cube where x, y and z varies in [0;1]
     void setCubeSphere(size_t _n);                                                        // Create a CubeSphere of center (0,0,0) and radius 1
+    void setSphere(size_t nTheta, size_t nPhi);
 
     // GETTERS
     inline const std::vector<glm::vec3> &vertexPositions() const { return m_vertices; }
@@ -57,7 +58,7 @@ public:
     void recomputePerVertexNormals(bool angleBased = false);
     void recomputePerVertexTextureCoordinates();
 
-    void init();
-    void render(GLuint programID, const glm::mat4 &_transfo) const;
+    void initShaderData();
+    void render() const;
     void clear();
 };

@@ -70,7 +70,7 @@ glm::vec3 camera_center = glm::vec3(0.f, 0.f, 0.f);
 float camera_distance_to_center = 1.;
 
 // timing
-float deltaTime = 0.0f; // time between current frame and last frame
+float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 /*******************************************************************************/
@@ -144,26 +144,31 @@ int main(void) {
     // Get a handle for our "Model View Projection" matrices uniforms
 
     // Chargement des données
+    ImageBase sun_texture("textures/sun_texture.ppm");
+    ImageBase earth_texture("textures/earth_texture.ppm");
+    ImageBase moon_texture("textures/moon_texture.ppm");
+
     Mesh sphere;
-    sphere.setCubeSphere(50);
-    sphere.init();
+    sphere.setSphere(62, 31);
 
     float sun_radius = 1.f;
 
     float earth_radius = 0.5f;
     float earth_distance = 3.f;
-    float earth_translation_speed = 1.f / M_PIf;
+    float earth_rotation_speed = 1.f;
+    float earth_translation_speed = .1f / M_PIf;
 
     float moon_radius = 0.1f;
     float moon_distance = 1.2f;
-    float moon_translation_speed = 1.f;
+    float moon_rotation_speed = -1.f / (M_PIf * M_PIf);
+    float moon_translation_speed = .1f;
 
-    SceneNode sun_node(0);
+    SceneNode sun_node(0, 0);
     sun_node.setScale(sun_radius);
 
-    SceneNode earth_node(0);
+    SceneNode earth_node(0, 1);
     earth_node.setScale(earth_radius);
-    SceneNode moon_node(0);
+    SceneNode moon_node(0, 2);
     moon_node.setScale(moon_radius);
     moon_node.setTranslation(glm::vec3(0., 0., -moon_distance));
     SceneNode earth_group({&earth_node, &moon_node});
@@ -172,7 +177,8 @@ int main(void) {
     SceneNode sun_group({&sun_node, &earth_group});
     sun_group.setScale(glm::vec3(0.1));
 
-    Scene scene({&sphere}, sun_group);
+    Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture}, sun_group);
+    scene.initShaderData();
 
     // For speed computation
     double lastTime = glfwGetTime();
@@ -201,13 +207,19 @@ int main(void) {
 
         float translation_timing = currentFrame * 2.f * M_PIf;
 
+        earth_node.setEulerAngles(glm::vec3(glm::radians(23.44f), translation_timing, 0.f));
+        earth_node.updateRotation();
+
         moon_node.setTranslation(glm::vec3(moon_distance * cos(moon_translation_speed * translation_timing), 0., moon_distance * sin(moon_translation_speed * translation_timing)));
+        moon_node.setEulerAngles(glm::vec3(glm::radians(6.68f), moon_rotation_speed * translation_timing, 0.f));
+        moon_node.updateRotation();
+
         earth_group.setTranslation(glm::vec3(earth_distance * cos(earth_translation_speed * translation_timing), 0., earth_distance * sin(earth_translation_speed * translation_timing)));
 
         /****************************************/
 
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
-        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 0.1, 100000.);
+        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 1.e-4, 1.e8);
         glUniformMatrix4fv(glGetUniformLocation(programID, "view"), 1, false, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, false, glm::value_ptr(projection));
 
@@ -268,9 +280,14 @@ glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 bool c_key_pressed = false;
+bool w_key_pressed = false;
+int polygon_mode = GL_FILL;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    // Capture (or not) the cursor
+    glfwSetInputMode(window, GLFW_CURSOR, (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 
     // Change camera mode
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
@@ -302,6 +319,24 @@ void processInput(GLFWwindow *window) {
         }
     }
 
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (!w_key_pressed) {
+            if (polygon_mode == GL_FILL) {
+                polygon_mode = GL_LINE;
+            } else if (polygon_mode == GL_LINE) {
+                polygon_mode = GL_POINT;
+            } else if (polygon_mode == GL_POINT) {
+                polygon_mode = GL_FILL;
+            }
+            glPolygonMode(GL_FRONT_AND_BACK, polygon_mode);
+            w_key_pressed = true;
+        }
+    } else {
+        if (w_key_pressed) {
+            w_key_pressed = false;
+        }
+    }
+
     // Change camera rotation speed
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
         camera_rotation_speed += 1.f * deltaTime;
@@ -325,7 +360,7 @@ void processInput(GLFWwindow *window) {
 
             camera_front = EulerToEuclidian(camera_angles);
         }
-        camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, 1.f);
+        camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, .1f);
         camera_position = camera_center - camera_distance_to_center * camera_front;
         break;
     case CameraFree:

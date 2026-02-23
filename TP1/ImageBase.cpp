@@ -13,8 +13,10 @@
  *
  *******************************************************************************/
 
+#include <GL/glew.h>
 #include "ImageBase.h"
 #include "image_ppm.h"
+#include <vector>
 
 ImageBase::ImageBase(void) {
     isValid = false;
@@ -36,6 +38,12 @@ ImageBase::ImageBase(int imWidth, int imHeight, bool isColor) {
     allocation_tableau(data, OCTET, nTaille);
     dataD = (double *)malloc(sizeof(double) * nTaille);
     isValid = true;
+}
+
+ImageBase::ImageBase(const char *filename) {
+    isValid = false;
+    init();
+    load(filename);
 }
 
 ImageBase::~ImageBase(void) {
@@ -60,6 +68,7 @@ void ImageBase::reset() {
         free(dataD);
     }
     isValid = false;
+    clearShaderData();
 }
 
 void ImageBase::load(const char *filename) {
@@ -117,101 +126,42 @@ bool ImageBase::save(const char *filename) {
     return true;
 }
 
-ImageBase *ImageBase::getPlan(PLAN plan) {
-    if (!isValid || !color)
-        return 0;
+void ImageBase::initShaderData(GLuint _location) {
+    location = _location;
 
-    ImageBase *greyIm = new ImageBase(width, height, false);
+    glGenTextures(1, &texture);
+    glActiveTexture(GL_TEXTURE0 + location);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    switch (plan) {
-    case PLAN_R:
-        planR(greyIm->data, data, height * width);
-        break;
-    case PLAN_G:
-        planV(greyIm->data, data, height * width);
-        break;
-    case PLAN_B:
-        planB(greyIm->data, data, height * width);
-        break;
-    default:
-        printf("Il n'y a que 3 plans, les valeurs possibles ne sont donc que 'PLAN_R', 'PLAN_G', et 'PLAN_B'");
-        exit(0);
-        break;
-    }
-
-    return greyIm;
-}
-
-void ImageBase::copy(const ImageBase &copy) {
-    reset();
-
-    isValid = false;
-    init();
-
-    color = copy.color;
-    height = copy.height;
-    width = copy.width;
-    nTaille = copy.nTaille;
-    isValid = copy.isValid;
-
-    if (nTaille == 0)
-        return;
-
-    allocation_tableau(data, OCTET, nTaille);
-    dataD = (double *)malloc(sizeof(double) * nTaille);
-    isValid = true;
-
-    for (int i = 0; i < nTaille; ++i) {
-        data[i] = copy.data[i];
-        dataD[i] = copy.dataD[i];
-    }
-}
-
-unsigned char *ImageBase::operator[](int l) {
-    if (!isValid) {
-        printf("L'image courante n'est pas valide");
-        exit(0);
-    }
-
-    if ((!color && l >= height) || (color && l >= height * 3)) {
-        printf("L'indice se trouve en dehors des limites de l'image");
-        exit(0);
-    }
-
-    return data + l * width;
-}
-
-float ImageBase::PSNR(const ImageBase &im1, const ImageBase &im2) {
-    double MSE = 0.0;
-    for (int y = 0; y < im1.getHeight(); ++y) {
-        for (int x = 0; x < im1.getWidth(); ++x) {
-            double diff_r = im1.getPixel(x, y)[0] - im2.getPixel(x, y)[0];
-            double diff_g = im1.getPixel(x, y)[1] - im2.getPixel(x, y)[1];
-            double diff_b = im1.getPixel(x, y)[2] - im2.getPixel(x, y)[2];
-            MSE += diff_r * diff_r + diff_g * diff_g + diff_b * diff_b;
+    if (getColor()) {
+        std::vector<float> image_data(width * height * 4);
+        for (size_t j = 0; j < width * height; j++) {
+            const unsigned char *pixel = getPixel(j);
+            image_data[j * 4] = float(pixel[0]) / 255.;
+            image_data[j * 4 + 1] = float(pixel[1]) / 255.;
+            image_data[j * 4 + 2] = float(pixel[2]) / 255.;
+            image_data[j * 4 + 3] = 1.;
         }
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, image_data.data());
+        glBindImageTexture(location, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+    } else {
+        std::vector<float> image_data(width * height);
+        for (size_t j = 0; j < width * height; j++) {
+            const unsigned char *pixel = getPixel(j);
+            image_data[j] = float(pixel[0]) / 255.;
+        }
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, image_data.data());
+        glBindImageTexture(location, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
     }
-    MSE /= (3.0 * im1.getWidth() * im1.getHeight());
-
-    return 10.0f * log10f(255.0f * 255.0f / MSE);
 }
 
-glm::vec3 ImageBase::RGBtoYCrCb(int x, int y) const {
-    unsigned char R, G, B;
-    R = getPixel(x, y)[0];
-    G = getPixel(x, y)[1];
-    B = getPixel(x, y)[2];
-    glm::vec3 YCrCb;
-    YCrCb.x = 0.299 * R + 0.587 * G + 0.114 * B;
-    YCrCb.y = -0.1687 * R - 0.3313 * G + 0.5 * B + 128;
-    YCrCb.z = 0.5 * R - 0.4187 * G - 0.0813 * B + 128;
-    return YCrCb;
-}
-
-glm::u8vec3 ImageBase::YCrCbtoRGB(glm::vec3 YCrCb) {
-    glm::u8vec3 RGB;
-    RGB.r = YCrCb.x + 1.402 * (YCrCb.y - 128);
-    RGB.g = YCrCb.x - 0.34414 * (YCrCb.z - 128) - 0.714414 * (YCrCb.y - 128);
-    RGB.b = YCrCb.x + 1.772 * (YCrCb.z - 128);
-    return RGB;
+void ImageBase::clearShaderData() {
+    if (texture) {
+        glDeleteTextures(1, &texture);
+        texture = 0;
+    }
 }
