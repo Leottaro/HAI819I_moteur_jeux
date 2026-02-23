@@ -177,20 +177,28 @@ int main(void) {
     sun_node.setScale(sun_radius);
 
     SceneNode earth_node(0, 1);
+    earth_node.setPitch(glm::radians(23.44f));
     earth_node.setScale(earth_radius);
+
     SceneNode moon_node(0, 2);
+    moon_node.setPitch(glm::radians(6.68f));
     moon_node.setScale(moon_radius);
-    moon_node.setTranslation(glm::vec3(0., 0., -moon_distance));
-    SceneNode earth_group({&earth_node, &moon_node});
+
+    SceneNode moon_plane_group({&moon_node});
+    moon_plane_group.setPitch(glm::radians(5.14f));
+
+    SceneNode earth_group({&earth_node, &moon_plane_group});
     earth_group.setTranslation(glm::vec3(0., 0., -earth_distance));
 
+    SceneNode sun_group({&sun_node, &earth_group});
+    sun_group.setScale(0.1f);
+
     SceneNode skybox(0, 3);
-    skybox.setScale(-10000.f);
+    skybox.setScale(-1000.f);
 
-    SceneNode sun_group({&sun_node, &skybox, &earth_group});
-    sun_group.setScale(glm::vec3(0.1));
+    SceneNode root({&sun_group, &skybox});
 
-    Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture, &sky_texture}, sun_group);
+    Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture, &sky_texture}, &root);
     scene.initShaderData();
 
     // For speed computation
@@ -221,17 +229,19 @@ int main(void) {
         if (run_simulation) {
             simulation_timing += deltaTime * 2.f * M_PIf;
 
-            earth_node.setEulerAngles(glm::vec3(glm::radians(23.44f), simulation_timing, 0.f));
+            earth_node.setYaw(simulation_timing);
             earth_node.updateRotation();
 
-            float x = moon_distance * acosf(glm::radians(5.14));
-            float y = moon_distance * atanf(glm::radians(5.14));
-            moon_node.setTranslation(glm::vec3(x * cos(moon_translation_speed * simulation_timing), y, x * sin(moon_translation_speed * simulation_timing)));
-            moon_node.setEulerAngles(glm::vec3(glm::radians(6.68f), moon_rotation_speed * simulation_timing, 0.f));
+            moon_node.setTranslationX(moon_distance * cos(moon_translation_speed * simulation_timing));
+            moon_node.setTranslationZ(moon_distance * sin(moon_translation_speed * simulation_timing));
+            moon_node.setYaw(moon_rotation_speed * simulation_timing);
             moon_node.updateRotation();
 
-            earth_group.setTranslation(glm::vec3(earth_distance * cos(earth_translation_speed * simulation_timing), 0., earth_distance * sin(earth_translation_speed * simulation_timing)));
+            earth_group.setTranslationX(earth_distance * cos(earth_translation_speed * simulation_timing));
+            earth_group.setTranslationZ(earth_distance * sin(earth_translation_speed * simulation_timing));
         }
+
+        skybox.setTranslation(camera_position);
 
         /****************************************/
 
@@ -298,7 +308,7 @@ glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
 // ---------------------------------------------------------------------------------------------------------
 bool c_key_pressed = false;
 bool w_key_pressed = false;
-bool space_key_pressed = false;
+bool p_key_pressed = false;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -354,14 +364,14 @@ void processInput(GLFWwindow *window) {
         }
     }
 
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (!space_key_pressed) {
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+        if (!p_key_pressed) {
             run_simulation = !run_simulation;
-            space_key_pressed = true;
+            p_key_pressed = true;
         }
     } else {
-        if (space_key_pressed) {
-            space_key_pressed = false;
+        if (p_key_pressed) {
+            p_key_pressed = false;
         }
     }
 
