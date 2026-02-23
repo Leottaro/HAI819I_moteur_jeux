@@ -35,14 +35,22 @@ float clipAnglePI(float _angle);
 glm::vec3 EulerToEuclidian(const glm::vec2 &_angles);
 glm::vec2 EuclidianToEuler(const glm::vec3 &xyz);
 
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos);
+
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+int polygon_mode = GL_FILL;
+float simulation_timing = 0.f;
+bool run_simulation = true;
 
 // window
 glm::vec2 cursor_pos, cursor_vel, scroll;
 int window_width = 1024;
 int window_height = 768;
+double window_aspect_ratio = 4. / 3.;
 
 // camera
 #define NUMBER_OF_CAMERA_TYPE 3
@@ -119,6 +127,7 @@ int main(void) {
     // Set the mouse at the center of the screen
     glfwPollEvents();
     glfwSetCursorPos(window, 1024 / 2, 768 / 2);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetCursorPosCallback(window, cursor_pos_callback);
 
@@ -209,23 +218,25 @@ int main(void) {
 
         /****************************************/
 
-        float translation_timing = currentFrame * 2.f * M_PIf;
+        if (run_simulation) {
+            simulation_timing += deltaTime * 2.f * M_PIf;
 
-        earth_node.setEulerAngles(glm::vec3(glm::radians(23.44f), translation_timing, 0.f));
-        earth_node.updateRotation();
+            earth_node.setEulerAngles(glm::vec3(glm::radians(23.44f), simulation_timing, 0.f));
+            earth_node.updateRotation();
 
-        float x = moon_distance * acosf(glm::radians(5.14));
-        float y = moon_distance * atanf(glm::radians(5.14));
-        moon_node.setTranslation(glm::vec3(x * cos(moon_translation_speed * translation_timing), y, x * sin(moon_translation_speed * translation_timing)));
-        moon_node.setEulerAngles(glm::vec3(glm::radians(6.68f), moon_rotation_speed * translation_timing, 0.f));
-        moon_node.updateRotation();
+            float x = moon_distance * acosf(glm::radians(5.14));
+            float y = moon_distance * atanf(glm::radians(5.14));
+            moon_node.setTranslation(glm::vec3(x * cos(moon_translation_speed * simulation_timing), y, x * sin(moon_translation_speed * simulation_timing)));
+            moon_node.setEulerAngles(glm::vec3(glm::radians(6.68f), moon_rotation_speed * simulation_timing, 0.f));
+            moon_node.updateRotation();
 
-        earth_group.setTranslation(glm::vec3(earth_distance * cos(earth_translation_speed * translation_timing), 0., earth_distance * sin(earth_translation_speed * translation_timing)));
+            earth_group.setTranslation(glm::vec3(earth_distance * cos(earth_translation_speed * simulation_timing), 0., earth_distance * sin(earth_translation_speed * simulation_timing)));
+        }
 
         /****************************************/
 
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
-        glm::mat4 projection = glm::perspective(M_PI / 4., 4. / 3., 1.e-4, 1.e8);
+        glm::mat4 projection = glm::perspective(M_PI / 4., window_aspect_ratio, 1.e-4, 1.e8);
         glUniformMatrix4fv(glGetUniformLocation(programID, "view"), 1, false, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, false, glm::value_ptr(projection));
 
@@ -287,7 +298,7 @@ glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
 // ---------------------------------------------------------------------------------------------------------
 bool c_key_pressed = false;
 bool w_key_pressed = false;
-int polygon_mode = GL_FILL;
+bool space_key_pressed = false;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -340,6 +351,17 @@ void processInput(GLFWwindow *window) {
     } else {
         if (w_key_pressed) {
             w_key_pressed = false;
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (!space_key_pressed) {
+            run_simulation = !run_simulation;
+            space_key_pressed = true;
+        }
+    } else {
+        if (space_key_pressed) {
+            space_key_pressed = false;
         }
     }
 
@@ -398,23 +420,6 @@ void processInput(GLFWwindow *window) {
         camera_position = camera_center - camera_distance_to_center * camera_front;
         break;
     }
-
-    // Resolution change
-    // if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
-    //     plane_size++;
-    //     plane.clear();
-    //     plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
-    //     plane.init();
-    //     // createPlaneGeometry();
-    // } else if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
-    //     plane_size = std::max(2, int(plane_size - 1));
-    //     plane.clear();
-    //     plane.setSimpleTerrain(plane_size, plane_size, heightmaps[current_heightmap]);
-    //     plane.init();
-    //     // createPlaneGeometry();
-    // }
-
-    // TODO add translations
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -425,6 +430,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
     window_width = width;
     window_height = height;
+    window_aspect_ratio = float(width) / float(height);
     // cout << "window: (" << window_width.x << "," << window_height.y << ")" << endl;
 }
 
