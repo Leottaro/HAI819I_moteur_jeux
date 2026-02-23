@@ -134,8 +134,8 @@ void ImageBase::initShaderData(GLuint _location) {
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     if (getColor()) {
         std::vector<float> image_data(width * height * 4);
@@ -157,6 +157,7 @@ void ImageBase::initShaderData(GLuint _location) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, image_data.data());
         glBindImageTexture(location, texture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
     }
+    glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 void ImageBase::clearShaderData() {

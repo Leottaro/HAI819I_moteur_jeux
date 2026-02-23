@@ -147,6 +147,7 @@ int main(void) {
     ImageBase sun_texture("textures/sun_texture.ppm");
     ImageBase earth_texture("textures/earth_texture.ppm");
     ImageBase moon_texture("textures/moon_texture.ppm");
+    ImageBase sky_texture("textures/sky_texture.ppm");
 
     Mesh sphere;
     sphere.setSphere(62, 31);
@@ -174,10 +175,13 @@ int main(void) {
     SceneNode earth_group({&earth_node, &moon_node});
     earth_group.setTranslation(glm::vec3(0., 0., -earth_distance));
 
-    SceneNode sun_group({&sun_node, &earth_group});
+    SceneNode skybox(0, 3);
+    skybox.setScale(-10000.f);
+
+    SceneNode sun_group({&sun_node, &skybox, &earth_group});
     sun_group.setScale(glm::vec3(0.1));
 
-    Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture}, sun_group);
+    Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture, &sky_texture}, sun_group);
     scene.initShaderData();
 
     // For speed computation
@@ -373,11 +377,11 @@ void processInput(GLFWwindow *window) {
 
             camera_front = EulerToEuclidian(camera_angles);
         }
-        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             camera_position += camera_front * translation_speed;
         } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
             camera_position -= camera_front * translation_speed;
-        } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
             camera_position -= camera_right * translation_speed;
         } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
             camera_position += camera_right * translation_speed;
