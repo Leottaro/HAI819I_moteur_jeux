@@ -25,8 +25,7 @@ public:
     void render(GLuint programID, const vector<Mesh *> &_meshes, const glm::mat4 &_transfo = glm::mat4()) const {
         glm::mat4 render_transfo = _transfo * m_transfo.computeTransformationMatrix();
         if (m_mesh_i >= 0) {
-            std::cout << "rendering mesh " << m_mesh_i << " with texture " << m_texture_i << std::endl;
-            glUniform1ui(glGetUniformLocation(programID, "texture_sampler"), m_texture_i);
+            glUniform1i(glGetUniformLocation(programID, "texture_sampler"), m_texture_i);
             glUniformMatrix4fv(glGetUniformLocation(programID, "model"), 1, false, glm::value_ptr(render_transfo));
             _meshes[m_mesh_i]->render();
         }

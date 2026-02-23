@@ -123,7 +123,7 @@ int main(void) {
     glfwSetCursorPosCallback(window, cursor_pos_callback);
 
     // Dark blue background
-    glClearColor(0.8f, 0.8f, 0.8f, 0.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
@@ -210,7 +210,9 @@ int main(void) {
         earth_node.setEulerAngles(glm::vec3(glm::radians(23.44f), translation_timing, 0.f));
         earth_node.updateRotation();
 
-        moon_node.setTranslation(glm::vec3(moon_distance * cos(moon_translation_speed * translation_timing), 0., moon_distance * sin(moon_translation_speed * translation_timing)));
+        float x = moon_distance * acosf(glm::radians(5.14));
+        float y = moon_distance * atanf(glm::radians(5.14));
+        moon_node.setTranslation(glm::vec3(x * cos(moon_translation_speed * translation_timing), y, x * sin(moon_translation_speed * translation_timing)));
         moon_node.setEulerAngles(glm::vec3(glm::radians(6.68f), moon_rotation_speed * translation_timing, 0.f));
         moon_node.updateRotation();
 
@@ -319,7 +321,7 @@ void processInput(GLFWwindow *window) {
         }
     }
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
         if (!w_key_pressed) {
             if (polygon_mode == GL_FILL) {
                 polygon_mode = GL_LINE;
