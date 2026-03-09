@@ -64,6 +64,7 @@ add_executable(TP1
     TP1/Mesh.hpp
     TP1/Scene.hpp
     TP1/Transformation.hpp
+    TP1/Octree.hpp
 
     common/shader.cpp
     common/shader.hpp

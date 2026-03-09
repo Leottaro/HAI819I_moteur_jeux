@@ -338,6 +338,88 @@ glm::vec3 Mesh::computeheight(const glm::uvec2& _grid_resolution, const glm::mat
     return glm::vec3(point.x, point.y, point.z)/point.w;
 }
 
+Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
+        if (max_vert_per_leaf == 0) {
+            return Mesh();
+        }
+
+        // calculer min et max
+        glm::vec3 min = glm::vec3(FLT_MAX);
+        glm::vec3 max = glm::vec3(-FLT_MAX);
+        for (const glm::vec3& v : m_vertices) {
+            if (v[0] < min[0])
+                min[0] = v[0];
+            if (v[1] < min[1])
+                min[1] = v[1];
+            if (v[2] < min[2])
+                min[2] = v[2];
+
+            if (v[0] > max[0])
+                max[0] = v[0];
+            if (v[1] > max[1])
+                max[1] = v[1];
+            if (v[2] > max[2])
+                max[2] = v[2];
+        }
+        min -= glm::vec3(1., 1., 1.);
+        max += glm::vec3(1., 1., 1.);
+
+        // Constreuire l'octree et y ajouter les points.
+        Octree octree(max_vert_per_leaf, min, max);
+        for (size_t i = 0; i < m_vertices.size(); i++) {
+            octree.pushVertex(i, m_vertices[i], m_normals[i]);
+        }
+        octree.calcRepresentants();
+
+        // récupérer les représentants
+        vector<vector<size_t>> representant_i_to_is;
+        vector<glm::vec3> new_vertices;
+        vector<glm::vec3> new_normals;
+        octree.fillRepresentantsData(representant_i_to_is, new_vertices, new_normals);
+
+        // en déduire les i -> representant_i pour la réindexion
+        vector<size_t> i_to_representant_i(m_vertices.size(), 0);
+        for (size_t representant_i = 0; representant_i < new_vertices.size(); representant_i++) {
+            for (size_t i : representant_i_to_is[representant_i]) {
+                i_to_representant_i[i] = representant_i;
+            }
+        }
+
+        // reindexer les triangles
+        vector<glm::uvec3> new_triangles;
+        for (glm::uvec3 triangle : m_triangles) {
+            unsigned int v0 = triangle[0];
+            unsigned int v1 = triangle[1];
+            unsigned int v2 = triangle[2];
+
+            unsigned int new_v0 = i_to_representant_i[v0];
+            unsigned int new_v1 = i_to_representant_i[v1];
+            unsigned int new_v2 = i_to_representant_i[v2];
+            glm::uvec3 new_triangle = glm::uvec3(new_v0, new_v1, new_v2);
+
+            if (new_v0 != new_v1 && new_v0 != new_v2 && new_v1 != new_v2) {
+                glm::vec3 normal = glm::normalize(glm::cross(m_vertices[v1] - m_vertices[v0], m_vertices[v2] - m_vertices[v0]));
+                glm::vec3 new_normal = glm::normalize(glm::cross(new_vertices[new_v1] - new_vertices[new_v0], new_vertices[new_v2] - new_vertices[new_triangle[0]]));
+
+                // si les normales des deux triangles ne sont pas dans le même sens, inverser ses deux premiers points du nouveau triangle
+                if (glm::dot(normal, new_normal) < 0) {
+                    new_triangle[0] = new_v1;
+                    new_triangle[1] = new_v0;
+                }
+                new_triangles.push_back(new_triangle);
+            }
+        }
+
+        Mesh new_mesh;
+        new_mesh.m_vertices = new_vertices;
+        new_mesh.m_normals = new_normals;
+        new_mesh.m_triangles = new_triangles;
+        new_mesh.m_uvs.resize(m_vertices.size());
+        new_mesh.m_octree = octree;
+
+        return new_mesh;
+    }
+
 void Mesh::initShaderData() {
     glGenVertexArrays(1, &m_VAO);
     glBindVertexArray(m_VAO);
@@ -369,11 +451,17 @@ void Mesh::initShaderData() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindVertexArray(0);
+
+    m_octree.initShaderData();
 }
 
 void Mesh::render() const {
     glBindVertexArray(m_VAO); // Activate the VAO storing geometry data
     glDrawElements(GL_TRIANGLES, m_triangles.size() * 3, GL_UNSIGNED_INT, 0);
+}
+
+void Mesh::renderOctree() const {
+    m_octree.render();
 }
 
 void Mesh::clear() {
@@ -401,4 +489,6 @@ void Mesh::clear() {
         glDeleteBuffers(1, &m_triangles_EBO);
         m_triangles_EBO = 0;
     }
+
+    m_octree.clear();
 }

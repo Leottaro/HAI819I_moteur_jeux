@@ -15,12 +15,12 @@ GLFWwindow *window;
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
 
 #include <common/objloader.hpp>
 #include <common/shader.hpp>
 #include <common/vboindexer.hpp>
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include "./ImageBase.h"
@@ -160,20 +160,23 @@ int main(void) {
     Mesh terrain;
     glm::uvec2 terrain_resolution(5, 5);
     terrain.setSimpleTerrain(terrain_resolution, heightmap);
+
     Mesh klown("models/Klown.off");
-    vector<Mesh *> meshes{&terrain, &klown};
+    Mesh klown2 = klown.adaptiveSimplify(1024); // TODO: préparer plusieurs niveaux de détails (genre 4)
+
+    vector<Mesh *> meshes{&terrain, &klown2};
     
     SceneNode terrain_node(0, 0);
-    terrain_node.setScale(glm::vec3(4.f, 2.f, 4.f));
-    terrain_node.setTranslation(glm::vec3(-2.f, -1.f, -2.f));
+    terrain_node.m_transfo.setScale(glm::vec3(4.f, 2.f, 4.f));
+    terrain_node.m_transfo.setTranslation(glm::vec3(-2.f, -1.f, -2.f));
     SceneNode terrain_group({&terrain_node});
 
     SceneNode klown1_node(1, -1);
-    klown1_node.setScale(0.3f);
-    klown1_node.setTranslationY(1.f);
+    klown1_node.m_transfo.setScale(0.3f);
+    klown1_node.m_transfo.setTranslationY(1.f);
     
     SceneNode klown2_node(1, -1);
-    klown2_node.setScale(0.3f);
+    klown2_node.m_transfo.setScale(0.3f);
 
     SceneNode root({&terrain_group, &klown1_node, &klown2_node});
     Scene scene(meshes, textures, &root);
@@ -207,11 +210,11 @@ int main(void) {
         if (run_simulation) {
             simulation_timing += deltaTime * 2.f * M_PIf;
 
-            klown1_node.setTranslationX(cos(0.1f * simulation_timing));
-            klown1_node.setTranslationZ(sin(0.1f * simulation_timing));
+            klown1_node.m_transfo.setTranslationX(cos(0.1f * simulation_timing));
+            klown1_node.m_transfo.setTranslationZ(sin(0.1f * simulation_timing));
 
-            glm::vec3 point_on_terrain = meshes[terrain_node.getMeshI()]->computeheight(terrain_resolution, terrain_node.getTransfo().computeTransformationMatrix(), klown1_node.getTranslation());
-            klown2_node.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
+            glm::vec3 point_on_terrain = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), klown1_node.m_transfo.getTranslation());
+            klown2_node.m_transfo.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
         }
 
         /****************************************/

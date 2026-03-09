@@ -11,6 +11,7 @@
 #include <memory>
 #include <vector>
 #include "./ImageBase.h"
+#include "./Octree.hpp"
 
 class Mesh {
 private:
@@ -18,6 +19,7 @@ private:
     std::vector<glm::vec3> m_normals = std::vector<glm::vec3>();
     std::vector<glm::vec2> m_uvs = std::vector<glm::vec2>();
     std::vector<glm::uvec3> m_triangles = std::vector<glm::uvec3>();
+    Octree m_octree;
 
     GLuint m_VAO = 0;
     GLuint m_vertices_VBO = 0;
@@ -61,8 +63,10 @@ public:
     // TP4
     glm::vec3 computeheight(const glm::uvec2& _grid_resolution, float _x, float _z) const;
     glm::vec3 computeheight(const glm::uvec2& _grid_resolution, const glm::mat4& _transfo, const glm::vec3& _p) const;
+    Mesh adaptiveSimplify(size_t max_vert_per_leaf) const;
 
     void initShaderData();
     void render() const;
+    void renderOctree() const;
     void clear();
 };
