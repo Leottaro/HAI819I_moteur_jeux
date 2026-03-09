@@ -75,7 +75,7 @@ float camera_translation_speed = 2.5f;
 
 // camera orbital
 glm::vec3 camera_center = glm::vec3(0.f, 0.f, 0.f);
-float camera_distance_to_center = 1.;
+float camera_distance_to_center = 5.f;
 
 // timing
 float deltaTime = 0.0f;
@@ -153,52 +153,30 @@ int main(void) {
     // Get a handle for our "Model View Projection" matrices uniforms
 
     // Chargement des données
-    ImageBase sun_texture("textures/sun_texture.ppm");
-    ImageBase earth_texture("textures/earth_texture.ppm");
-    ImageBase moon_texture("textures/moon_texture.ppm");
-    ImageBase sky_texture("textures/sky_texture.ppm");
+    ImageBase grass("textures/grass.ppm");
+    ImageBase heightmap("textures/Heightmap_Mountain.ppm");
+    vector<ImageBase *> textures{&grass};
 
-    Mesh sphere;
-    sphere.setSphere(62, 31);
+    Mesh terrain;
+    glm::uvec2 terrain_resolution(5, 5);
+    terrain.setSimpleTerrain(terrain_resolution, heightmap);
+    Mesh klown("models/Klown.off");
+    vector<Mesh *> meshes{&terrain, &klown};
+    
+    SceneNode terrain_node(0, 0);
+    terrain_node.setScale(glm::vec3(4.f, 2.f, 4.f));
+    terrain_node.setTranslation(glm::vec3(-2.f, -1.f, -2.f));
+    SceneNode terrain_group({&terrain_node});
 
-    float sun_radius = 1.f;
+    SceneNode klown1_node(1, -1);
+    klown1_node.setScale(0.3f);
+    klown1_node.setTranslationY(1.f);
+    
+    SceneNode klown2_node(1, -1);
+    klown2_node.setScale(0.3f);
 
-    float earth_radius = 0.5f;
-    float earth_distance = 3.f;
-    float earth_rotation_speed = 1.f;
-    float earth_translation_speed = .1f / M_PIf;
-
-    float moon_radius = 0.1f;
-    float moon_distance = 1.2f;
-    float moon_rotation_speed = -1.f / (M_PIf * M_PIf);
-    float moon_translation_speed = .1f;
-
-    SceneNode sun_node(0, 0);
-    sun_node.setScale(sun_radius);
-
-    SceneNode earth_node(0, 1);
-    earth_node.setPitch(glm::radians(23.44f));
-    earth_node.setScale(earth_radius);
-
-    SceneNode moon_node(0, 2);
-    moon_node.setPitch(glm::radians(6.68f));
-    moon_node.setScale(moon_radius);
-
-    SceneNode moon_plane_group({&moon_node});
-    moon_plane_group.setPitch(glm::radians(5.14f));
-
-    SceneNode earth_group({&earth_node, &moon_plane_group});
-    earth_group.setTranslation(glm::vec3(0., 0., -earth_distance));
-
-    SceneNode sun_group({&sun_node, &earth_group});
-    sun_group.setScale(0.1f);
-
-    SceneNode skybox(0, 3);
-    skybox.setScale(-1000.f);
-
-    SceneNode root({&sun_group, &skybox});
-
-    Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture, &sky_texture}, &root);
+    SceneNode root({&terrain_group, &klown1_node, &klown2_node});
+    Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
     // For speed computation
@@ -229,19 +207,12 @@ int main(void) {
         if (run_simulation) {
             simulation_timing += deltaTime * 2.f * M_PIf;
 
-            earth_node.setYaw(simulation_timing);
-            earth_node.updateRotation();
+            klown1_node.setTranslationX(cos(0.1f * simulation_timing));
+            klown1_node.setTranslationZ(sin(0.1f * simulation_timing));
 
-            moon_node.setTranslationX(moon_distance * cos(moon_translation_speed * simulation_timing));
-            moon_node.setTranslationZ(moon_distance * sin(moon_translation_speed * simulation_timing));
-            moon_node.setYaw(moon_rotation_speed * simulation_timing);
-            moon_node.updateRotation();
-
-            earth_group.setTranslationX(earth_distance * cos(earth_translation_speed * simulation_timing));
-            earth_group.setTranslationZ(earth_distance * sin(earth_translation_speed * simulation_timing));
+            glm::vec3 point_on_terrain = meshes[terrain_node.getMeshI()]->computeheight(terrain_resolution, terrain_node.getTransfo().computeTransformationMatrix(), klown1_node.getTranslation());
+            klown2_node.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
         }
-
-        skybox.setTranslation(camera_position);
 
         /****************************************/
 

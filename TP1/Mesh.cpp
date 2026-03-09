@@ -94,31 +94,31 @@ void Mesh::setSingleTriangle() {
     recomputePerVertexTextureCoordinates();
 }
 
-void Mesh::setSimpleGrid(size_t _nx, size_t _nz) {
-    m_vertices.resize(_nx * _nz);
-    m_normals.resize(_nx * _nz);
-    m_uvs.resize(_nx * _nz);
-    m_triangles.resize(_nx * _nz * 2);
+void Mesh::setSimpleGrid(const glm::uvec2& _resolution) {
+    m_vertices.resize(_resolution[0] * _resolution[1]);
+    m_normals.resize(_resolution[0] * _resolution[1]);
+    m_uvs.resize(_resolution[0] * _resolution[1]);
+    m_triangles.resize(_resolution[0] * _resolution[1] * 2);
 
     glm::vec3 normal = glm::vec3(0., 1., 0.);
-    for (size_t iz = 0; iz < _nz; iz++) {
-        float z = float(iz) / (_nz - 1);
-        for (size_t ix = 0; ix < _nx; ix++) {
-            float x = float(ix) / (_nx - 1);
+    for (size_t iz = 0; iz < _resolution[1]; iz++) {
+        float z = float(iz) / (_resolution[1] - 1);
+        for (size_t ix = 0; ix < _resolution[0]; ix++) {
+            float x = float(ix) / (_resolution[0] - 1);
             glm::vec3 vertex = glm::vec3(x, 0., z);
             glm::vec2 uv = glm::vec2(x, z);
 
-            size_t v0 = iz * _nx + ix;
+            size_t v0 = iz * _resolution[0] + ix;
             m_vertices[v0] = vertex;
             m_normals[v0] = normal;
             m_uvs[v0] = uv;
 
-            if (ix == (_nx - 1) || iz == (_nz - 1))
+            if (ix == (_resolution[0] - 1) || iz == (_resolution[1] - 1))
                 continue;
 
-            size_t v1 = iz * _nx + (ix + 1);
-            size_t v2 = (iz + 1) * _nx + ix;
-            size_t v3 = (iz + 1) * _nx + (ix + 1);
+            size_t v1 = iz * _resolution[0] + (ix + 1);
+            size_t v2 = (iz + 1) * _resolution[0] + ix;
+            size_t v3 = (iz + 1) * _resolution[0] + (ix + 1);
             glm::uvec3 triangle1 = glm::uvec3(v0, v2, v1);
             glm::uvec3 triangle2 = glm::uvec3(v1, v2, v3);
 
@@ -128,22 +128,22 @@ void Mesh::setSimpleGrid(size_t _nx, size_t _nz) {
     }
 }
 
-void Mesh::setSimpleTerrain(size_t _nx, size_t _nz, glm::vec2 y_range) {
-    setSimpleGrid(_nx, _nz);
-    for (size_t i = 0; i < _nx * _nz; i++) {
+void Mesh::setSimpleTerrain(const glm::uvec2& _resolution, glm::vec2 y_range) {
+    setSimpleGrid(_resolution);
+    for (size_t i = 0; i < _resolution[0] * _resolution[1]; i++) {
         float rng = float(rand()) / RAND_MAX;
         m_vertices[i].y = y_range[0] + rng * (y_range[1] - y_range[0]);
     }
     recomputePerVertexNormals();
 }
 
-void Mesh::setSimpleTerrain(size_t _nx, size_t _nz, const ImageBase &_heightmap) {
-    setSimpleGrid(_nx, _nz);
-    for (size_t iz = 0; iz < _nz; iz++) {
-        float z = float(iz) / (_nz - 1);
-        for (size_t ix = 0; ix < _nx; ix++) {
-            float x = float(ix) / (_nx - 1);
-            size_t i = iz * _nx + ix;
+void Mesh::setSimpleTerrain(const glm::uvec2& _resolution, const ImageBase &_heightmap) {
+    setSimpleGrid(_resolution);
+    for (size_t iz = 0; iz < _resolution[1]; iz++) {
+        float z = float(iz) / (_resolution[1] - 1);
+        for (size_t ix = 0; ix < _resolution[0]; ix++) {
+            float x = float(ix) / (_resolution[0] - 1);
+            size_t i = iz * _resolution[0] + ix;
             m_vertices[i].y = float(_heightmap.getPixel(x, z)[0]) / 255.f;
         }
     }
@@ -283,6 +283,59 @@ void Mesh::recomputePerVertexTextureCoordinates() {
     for (unsigned int pIt = 0; pIt < m_uvs.size(); ++pIt) {
         m_uvs[pIt] = glm::vec2((m_vertices[pIt][0] - xMin) / (xMax - xMin), (m_vertices[pIt][1] - yMin) / (yMax - yMin));
     }
+}
+
+bool computeBarycentrics(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &normal, const glm::vec3 &p, glm::vec3 &barycentrics) {
+    double total_area = glm::length(normal); // this is actually the 2 times the area but it doesn't matter for the barycentric coordinates
+    barycentrics.x = glm::length(glm::cross(v1 - p, v2 - p)) / total_area - 1.e-8;
+    barycentrics.y = glm::length(glm::cross(p - v0, v2 - v0)) / total_area - 1.e-8;
+    barycentrics.z = glm::length(glm::cross(v1 - v0, p - v0)) / total_area - 1.e-8;
+    if (barycentrics.x < 0. || 1. < barycentrics.x ||
+        barycentrics.y < 0. || 1. < barycentrics.y ||
+        barycentrics.z < 0. || 1. < barycentrics.z ||
+        barycentrics.x + barycentrics.y + barycentrics.z < 0. || 1. < barycentrics.x + barycentrics.y + barycentrics.z) {
+        return false;
+    }
+
+    return true;
+}
+
+glm::vec3 Mesh::computeheight(const glm::uvec2& _grid_resolution, float _x, float _z) const {
+    // On part du principe que le terrain est une "grille" régulière et va de (0,0,0) à (1,0,1)
+
+    uint iz = _z * (_grid_resolution[1] - 1);
+    uint ix = _x * (_grid_resolution[0] - 1);
+    for(uint j = 0; j < 2; j++) { 
+        uint i = 2 * (iz * _grid_resolution[0] + ix) + j;
+
+        if (i > m_triangles.size()-1)
+            return glm::vec3(0.f);
+        
+        glm::vec3 v0 = m_vertices[m_triangles[i][0]];
+        glm::vec3 v1 = m_vertices[m_triangles[i][1]];
+        glm::vec3 v2 = m_vertices[m_triangles[i][2]];
+        v0.y = 0.;
+        v1.y = 0.;
+        v2.y = 0.;
+        
+        glm::vec3 normal = glm::cross(v1-v0, v2-v0);
+        glm::vec3 barycentrics;
+        if (computeBarycentrics(v0, v1, v2, normal, glm::vec3(_x, 0.f, _z), barycentrics)) {
+            return barycentrics[0]* m_vertices[m_triangles[i][0]] + barycentrics[1]* m_vertices[m_triangles[i][1]] + barycentrics[2]* m_vertices[m_triangles[i][2]];
+        }
+    }
+
+    return glm::vec3(0.f);
+}
+
+glm::vec3 Mesh::computeheight(const glm::uvec2& _grid_resolution, const glm::mat4& _transfo, const glm::vec3& _p) const {
+    glm::mat4 inverse = glm::inverse(_transfo);
+    glm::vec4 p_terrain = inverse * glm::vec4(_p, 1.f);
+
+    glm::vec3 point_on_terrain = computeheight(_grid_resolution, p_terrain.x/p_terrain.w, p_terrain.z/p_terrain.w);
+    glm::vec4 point = _transfo *glm::vec4(point_on_terrain, 1.f);
+
+    return glm::vec3(point.x, point.y, point.z)/point.w;
 }
 
 void Mesh::initShaderData() {

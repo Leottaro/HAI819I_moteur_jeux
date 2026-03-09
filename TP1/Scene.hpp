@@ -20,13 +20,21 @@ public:
     SceneNode(const vector<SceneNode *> &_children) : m_transfo(), m_children(_children), m_mesh_i(-1), m_texture_i(-1) {}
     SceneNode(const vector<SceneNode *> &_children, Transformation _transfo) : m_transfo(_transfo), m_children(_children), m_mesh_i(-1), m_texture_i(-1) {}
 
+    SceneNode(int _mesh_i) : m_transfo(), m_children({}), m_mesh_i(_mesh_i), m_texture_i(-1) {}
     SceneNode(int _mesh_i, int _texture_i) : m_transfo(), m_children({}), m_mesh_i(_mesh_i), m_texture_i(_texture_i) {}
     SceneNode(int _mesh_i, int _texture_i, Transformation _transfo) : m_transfo(_transfo), m_children({}), m_mesh_i(_mesh_i), m_texture_i(_texture_i) {}
+
+    // GETTERS
+    const Transformation& getTransfo() const { return m_transfo; }
+    int getMeshI() const { return m_mesh_i; }
+    int getTextureI() const { return m_texture_i; }
 
     void render(GLuint programID, const vector<Mesh *> &_meshes, const glm::mat4 &_transfo = glm::mat4()) const {
         glm::mat4 render_transfo = _transfo * m_transfo.computeTransformationMatrix();
         if (m_mesh_i >= 0) {
+            glUniform1i(glGetUniformLocation(programID, "texture_i"), m_texture_i);
             glUniform1i(glGetUniformLocation(programID, "texture_sampler"), m_texture_i);
+
             glUniformMatrix4fv(glGetUniformLocation(programID, "model"), 1, false, glm::value_ptr(render_transfo));
             _meshes[m_mesh_i]->render();
         } else {
