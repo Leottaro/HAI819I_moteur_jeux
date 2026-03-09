@@ -158,45 +158,25 @@ int main(void) {
     ImageBase moon_texture("textures/moon_texture.ppm");
     ImageBase sky_texture("textures/sky_texture.ppm");
 
-    Mesh sphere;
-    sphere.setSphere(62, 31);
-
-    float sun_radius = 1.f;
+    Mesh sphere("models/female01.off");
+    // sphere.setSphere(62, 31);
 
     float earth_radius = 0.5f;
     float earth_distance = 3.f;
     float earth_rotation_speed = 1.f;
     float earth_translation_speed = .1f / M_PIf;
 
-    float moon_radius = 0.1f;
-    float moon_distance = 1.2f;
-    float moon_rotation_speed = -1.f / (M_PIf * M_PIf);
-    float moon_translation_speed = .1f;
-
-    SceneNode sun_node(0, 0);
-    sun_node.setScale(sun_radius);
-
     SceneNode earth_node(0, 1);
     earth_node.setPitch(glm::radians(23.44f));
     earth_node.setScale(earth_radius);
 
-    SceneNode moon_node(0, 2);
-    moon_node.setPitch(glm::radians(6.68f));
-    moon_node.setScale(moon_radius);
-
-    SceneNode moon_plane_group({&moon_node});
-    moon_plane_group.setPitch(glm::radians(5.14f));
-
-    SceneNode earth_group({&earth_node, &moon_plane_group});
+    SceneNode earth_group({&earth_node});
     earth_group.setTranslation(glm::vec3(0., 0., -earth_distance));
-
-    SceneNode sun_group({&sun_node, &earth_group});
-    sun_group.setScale(0.1f);
 
     SceneNode skybox(0, 3);
     skybox.setScale(-1000.f);
 
-    SceneNode root({&sun_group, &skybox});
+    SceneNode root({&earth_group, &skybox});
 
     Scene scene({&sphere}, {&sun_texture, &earth_texture, &moon_texture, &sky_texture}, &root);
     scene.initShaderData();
@@ -231,11 +211,6 @@ int main(void) {
 
             earth_node.setYaw(simulation_timing);
             earth_node.updateRotation();
-
-            moon_node.setTranslationX(moon_distance * cos(moon_translation_speed * simulation_timing));
-            moon_node.setTranslationZ(moon_distance * sin(moon_translation_speed * simulation_timing));
-            moon_node.setYaw(moon_rotation_speed * simulation_timing);
-            moon_node.updateRotation();
 
             earth_group.setTranslationX(earth_distance * cos(earth_translation_speed * simulation_timing));
             earth_group.setTranslationZ(earth_distance * sin(earth_translation_speed * simulation_timing));
