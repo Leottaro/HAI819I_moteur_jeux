@@ -49,9 +49,9 @@ bool run_simulation = true;
 
 // window
 glm::vec2 cursor_pos, cursor_vel, scroll;
-int window_width = 1024;
-int window_height = 768;
-double window_aspect_ratio = 4. / 3.;
+int window_width = 900;
+int window_height = 900;
+double window_aspect_ratio = window_width / window_height;
 
 // camera
 #define NUMBER_OF_CAMERA_TYPE 3
@@ -128,7 +128,7 @@ int main(void) {
 
     // Set the mouse at the center of the screen
     glfwPollEvents();
-    glfwSetCursorPos(window, 1024 / 2, 768 / 2);
+    glfwSetCursorPos(window, window_width / 2, window_height / 2);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetCursorPosCallback(window, cursor_pos_callback);
@@ -163,7 +163,7 @@ int main(void) {
     glm::uvec2 terrain_resolution(5, 5);
     terrain.setSimpleTerrain(terrain_resolution, heightmap);
 
-    uint LOD = 6;
+    uint LOD = 1;
     std::vector<Mesh> klowns(LOD);
     klowns[0].loadOFF("models/Klown.off");
     for (uint i = 1; i < LOD; i++) {
