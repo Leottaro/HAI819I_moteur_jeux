@@ -81,7 +81,10 @@ float camera_distance_to_center = 5.f;
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
 bool render_octree = false;
+uint LOD = 4;
+uint terrain_klown_i = 1;
 
 /*******************************************************************************/
 
@@ -160,14 +163,13 @@ int main(void) {
     vector<ImageBase *> textures{&grass};
 
     Mesh terrain;
-    glm::uvec2 terrain_resolution(5, 5);
+    glm::uvec2 terrain_resolution(4, 4);
     terrain.setSimpleTerrain(terrain_resolution, heightmap);
 
-    uint LOD = 1;
     std::vector<Mesh> klowns(LOD);
     klowns[0].loadOFF("models/Klown.off");
     for (uint i = 1; i < LOD; i++) {
-        klowns[i] = klowns[0].adaptiveSimplify(4 << i);
+        klowns[i] = klowns[0].adaptiveSimplify(pow(10, i));
     }
 
     vector<Mesh *> meshes{&terrain};
@@ -184,7 +186,7 @@ int main(void) {
     klown_node.m_transfo.setScale(0.3f);
     klown_node.m_transfo.setTranslationY(1.25f);
 
-    SceneNode terrain_klown_node(1, -1);
+    SceneNode terrain_klown_node(terrain_klown_i, -1);
     terrain_klown_node.m_transfo.setScale(0.3f);
 
     SceneNode root({&terrain_group, &klown_node, &terrain_klown_node});
@@ -224,13 +226,16 @@ int main(void) {
 
             glm::vec3 point_on_terrain = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), klown_node.m_transfo.getTranslation());
             terrain_klown_node.m_transfo.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
-
-            float distance = glm::distance(camera_position, terrain_klown_node.m_transfo.getTranslation());
-            int i = 1;
-            while (i < LOD && i < distance)
-                i++;
-            // terrain_klown_node.m_transfo.setYaw(i * M_PIf / 8.f);
-            terrain_klown_node.m_mesh_i = i;
+        }
+        float distance = glm::distance(camera_position, terrain_klown_node.m_transfo.getTranslation());
+        terrain_klown_i = 1;
+        while (terrain_klown_i < LOD && terrain_klown_i * 2.f < distance)
+            terrain_klown_i++;
+        terrain_klown_node.m_mesh_i = terrain_klown_i;
+        if (terrain_klown_i == 1) {
+            cout << "ORIGINAL: " << meshes[terrain_klown_i]->nbVertices() << "v et " << meshes[terrain_klown_i]->nbTriangles() << "t" << endl;
+        } else {
+            cout << "LOD " << terrain_klown_i - 1 << ": max " << pow(10, terrain_klown_i) << " points par feuilles, " << meshes[terrain_klown_i]->nbVertices() << "v et " << meshes[terrain_klown_i]->nbTriangles() << "t" << endl;
         }
 
         /****************************************/
@@ -300,6 +305,8 @@ bool c_key_pressed = false;
 bool w_key_pressed = false;
 bool p_key_pressed = false;
 bool o_key_pressed = false;
+bool plus_key_pressed = false;
+bool minus_key_pressed = false;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -330,7 +337,6 @@ void processInput(GLFWwindow *window) {
             }
             glfwSetWindowTitle(window, ("TP1 - Camera mode: " + camera_type_str).c_str());
         }
-
     } else {
         if (c_key_pressed) {
             c_key_pressed = false;
@@ -374,6 +380,28 @@ void processInput(GLFWwindow *window) {
     } else {
         if (o_key_pressed) {
             o_key_pressed = false;
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS) {
+        if (!plus_key_pressed) {
+            plus_key_pressed = true;
+            terrain_klown_i = (terrain_klown_i + 1) % LOD;
+        }
+    } else {
+        if (plus_key_pressed) {
+            plus_key_pressed = false;
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS) {
+        if (!minus_key_pressed) {
+            minus_key_pressed = true;
+            terrain_klown_i = (terrain_klown_i + LOD - 1) % LOD;
+        }
+    } else {
+        if (minus_key_pressed) {
+            minus_key_pressed = false;
         }
     }
 

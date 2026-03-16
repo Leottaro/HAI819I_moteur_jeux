@@ -287,9 +287,9 @@ void Mesh::recomputePerVertexTextureCoordinates() {
 
 bool computeBarycentrics(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &normal, const glm::vec3 &p, glm::vec3 &barycentrics) {
     double total_area = glm::length(normal); // this is actually the 2 times the area but it doesn't matter for the barycentric coordinates
-    barycentrics.x = glm::length(glm::cross(v1 - p, v2 - p)) / total_area - 1.e-8;
-    barycentrics.y = glm::length(glm::cross(p - v0, v2 - v0)) / total_area - 1.e-8;
-    barycentrics.z = glm::length(glm::cross(v1 - v0, p - v0)) / total_area - 1.e-8;
+    barycentrics.x = glm::length(glm::cross(v1 - p, v2 - p)) / total_area - 1.e-4;
+    barycentrics.y = glm::length(glm::cross(p - v0, v2 - v0)) / total_area - 1.e-4;
+    barycentrics.z = glm::length(glm::cross(v1 - v0, p - v0)) / total_area - 1.e-4;
     if (barycentrics.x < 0. || 1. < barycentrics.x ||
         barycentrics.y < 0. || 1. < barycentrics.y ||
         barycentrics.z < 0. || 1. < barycentrics.z ||

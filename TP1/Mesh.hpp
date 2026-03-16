@@ -37,14 +37,16 @@ public:
     Mesh(const std::string &filename) { loadOFF(filename); }
     void loadOFF(const std::string &filename);
     void setSingleTriangle();
-    void setSimpleGrid(const glm::uvec2& _resolution);                                           // Create a grid where x and z varies in [0;1]
-    void setSimpleTerrain(const glm::uvec2& _resolution, glm::vec2 y_range = glm::vec2(0., 1.)); // Create a terrain where x and z varies in [0;1] and y varies in y_range
-    void setSimpleTerrain(const glm::uvec2& _resolution, const ImageBase &_heightmap);           // Create a terrain where x and z varies in [0;1] and y varies in the heightmap
-    void setCube(size_t _n);                                                              // Create a cube where x, y and z varies in [0;1]
-    void setCubeSphere(size_t _n);                                                        // Create a CubeSphere of center (0,0,0) and radius 1
+    void setSimpleGrid(const glm::uvec2 &_resolution);                                           // Create a grid where x and z varies in [0;1]
+    void setSimpleTerrain(const glm::uvec2 &_resolution, glm::vec2 y_range = glm::vec2(0., 1.)); // Create a terrain where x and z varies in [0;1] and y varies in y_range
+    void setSimpleTerrain(const glm::uvec2 &_resolution, const ImageBase &_heightmap);           // Create a terrain where x and z varies in [0;1] and y varies in the heightmap
+    void setCube(size_t _n);                                                                     // Create a cube where x, y and z varies in [0;1]
+    void setCubeSphere(size_t _n);                                                               // Create a CubeSphere of center (0,0,0) and radius 1
     void setSphere(size_t nTheta, size_t nPhi);
 
     // GETTERS
+    inline size_t nbVertices() const { return m_vertices.size(); }
+    inline size_t nbTriangles() const { return m_triangles.size(); }
     inline const std::vector<glm::vec3> &vertexPositions() const { return m_vertices; }
     inline std::vector<glm::vec3> &vertexPositions() { return m_vertices; }
     inline const std::vector<glm::vec3> &vertexNormals() const { return m_normals; }
@@ -61,8 +63,8 @@ public:
     void recomputePerVertexTextureCoordinates();
 
     // TP4
-    glm::vec3 computeheight(const glm::uvec2& _grid_resolution, float _x, float _z) const;
-    glm::vec3 computeheight(const glm::uvec2& _grid_resolution, const glm::mat4& _transfo, const glm::vec3& _p) const;
+    glm::vec3 computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const;
+    glm::vec3 computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const;
     Mesh adaptiveSimplify(size_t max_vert_per_leaf) const;
 
     void initShaderData();
