@@ -94,7 +94,7 @@ void Mesh::setSingleTriangle() {
     recomputePerVertexTextureCoordinates();
 }
 
-void Mesh::setSimpleGrid(const glm::uvec2& _resolution) {
+void Mesh::setSimpleGrid(const glm::uvec2 &_resolution) {
     m_vertices.resize(_resolution[0] * _resolution[1]);
     m_normals.resize(_resolution[0] * _resolution[1]);
     m_uvs.resize(_resolution[0] * _resolution[1]);
@@ -128,16 +128,16 @@ void Mesh::setSimpleGrid(const glm::uvec2& _resolution) {
     }
 }
 
-void Mesh::setSimpleTerrain(const glm::uvec2& _resolution, glm::vec2 y_range) {
+void Mesh::setSimpleTerrain(const glm::uvec2 &_resolution, glm::vec2 y_range) {
     setSimpleGrid(_resolution);
     for (size_t i = 0; i < _resolution[0] * _resolution[1]; i++) {
-        float rng = float(rand()) / RAND_MAX;
+        float rng = float(rand()) / float(RAND_MAX);
         m_vertices[i].y = y_range[0] + rng * (y_range[1] - y_range[0]);
     }
     recomputePerVertexNormals();
 }
 
-void Mesh::setSimpleTerrain(const glm::uvec2& _resolution, const ImageBase &_heightmap) {
+void Mesh::setSimpleTerrain(const glm::uvec2 &_resolution, const ImageBase &_heightmap) {
     setSimpleGrid(_resolution);
     for (size_t iz = 0; iz < _resolution[1]; iz++) {
         float z = float(iz) / (_resolution[1] - 1);
@@ -300,125 +300,125 @@ bool computeBarycentrics(const glm::vec3 &v0, const glm::vec3 &v1, const glm::ve
     return true;
 }
 
-glm::vec3 Mesh::computeheight(const glm::uvec2& _grid_resolution, float _x, float _z) const {
+glm::vec3 Mesh::computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const {
     // On part du principe que le terrain est une "grille" régulière et va de (0,0,0) à (1,0,1)
 
     uint iz = _z * (_grid_resolution[1] - 1);
     uint ix = _x * (_grid_resolution[0] - 1);
-    for(uint j = 0; j < 2; j++) { 
+    for (uint j = 0; j < 2; j++) {
         uint i = 2 * (iz * _grid_resolution[0] + ix) + j;
 
-        if (i > m_triangles.size()-1)
+        if (i > m_triangles.size() - 1)
             return glm::vec3(0.f);
-        
+
         glm::vec3 v0 = m_vertices[m_triangles[i][0]];
         glm::vec3 v1 = m_vertices[m_triangles[i][1]];
         glm::vec3 v2 = m_vertices[m_triangles[i][2]];
         v0.y = 0.;
         v1.y = 0.;
         v2.y = 0.;
-        
-        glm::vec3 normal = glm::cross(v1-v0, v2-v0);
+
+        glm::vec3 normal = glm::cross(v1 - v0, v2 - v0);
         glm::vec3 barycentrics;
         if (computeBarycentrics(v0, v1, v2, normal, glm::vec3(_x, 0.f, _z), barycentrics)) {
-            return barycentrics[0]* m_vertices[m_triangles[i][0]] + barycentrics[1]* m_vertices[m_triangles[i][1]] + barycentrics[2]* m_vertices[m_triangles[i][2]];
+            return barycentrics[0] * m_vertices[m_triangles[i][0]] + barycentrics[1] * m_vertices[m_triangles[i][1]] + barycentrics[2] * m_vertices[m_triangles[i][2]];
         }
     }
 
     return glm::vec3(0.f);
 }
 
-glm::vec3 Mesh::computeheight(const glm::uvec2& _grid_resolution, const glm::mat4& _transfo, const glm::vec3& _p) const {
+glm::vec3 Mesh::computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const {
     glm::mat4 inverse = glm::inverse(_transfo);
     glm::vec4 p_terrain = inverse * glm::vec4(_p, 1.f);
 
-    glm::vec3 point_on_terrain = computeheight(_grid_resolution, p_terrain.x/p_terrain.w, p_terrain.z/p_terrain.w);
-    glm::vec4 point = _transfo *glm::vec4(point_on_terrain, 1.f);
+    glm::vec3 point_on_terrain = computeheight(_grid_resolution, p_terrain.x / p_terrain.w, p_terrain.z / p_terrain.w);
+    glm::vec4 point = _transfo * glm::vec4(point_on_terrain, 1.f);
 
-    return glm::vec3(point.x, point.y, point.z)/point.w;
+    return glm::vec3(point.x, point.y, point.z) / point.w;
 }
 
 Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
-        if (max_vert_per_leaf == 0) {
-            return Mesh();
-        }
-
-        // calculer min et max
-        glm::vec3 min = glm::vec3(FLT_MAX);
-        glm::vec3 max = glm::vec3(-FLT_MAX);
-        for (const glm::vec3& v : m_vertices) {
-            if (v[0] < min[0])
-                min[0] = v[0];
-            if (v[1] < min[1])
-                min[1] = v[1];
-            if (v[2] < min[2])
-                min[2] = v[2];
-
-            if (v[0] > max[0])
-                max[0] = v[0];
-            if (v[1] > max[1])
-                max[1] = v[1];
-            if (v[2] > max[2])
-                max[2] = v[2];
-        }
-        min -= glm::vec3(1., 1., 1.);
-        max += glm::vec3(1., 1., 1.);
-
-        // Constreuire l'octree et y ajouter les points.
-        Octree octree(max_vert_per_leaf, min, max);
-        for (size_t i = 0; i < m_vertices.size(); i++) {
-            octree.pushVertex(i, m_vertices[i], m_normals[i]);
-        }
-        octree.calcRepresentants();
-
-        // récupérer les représentants
-        vector<vector<size_t>> representant_i_to_is;
-        vector<glm::vec3> new_vertices;
-        vector<glm::vec3> new_normals;
-        octree.fillRepresentantsData(representant_i_to_is, new_vertices, new_normals);
-
-        // en déduire les i -> representant_i pour la réindexion
-        vector<size_t> i_to_representant_i(m_vertices.size(), 0);
-        for (size_t representant_i = 0; representant_i < new_vertices.size(); representant_i++) {
-            for (size_t i : representant_i_to_is[representant_i]) {
-                i_to_representant_i[i] = representant_i;
-            }
-        }
-
-        // reindexer les triangles
-        vector<glm::uvec3> new_triangles;
-        for (glm::uvec3 triangle : m_triangles) {
-            unsigned int v0 = triangle[0];
-            unsigned int v1 = triangle[1];
-            unsigned int v2 = triangle[2];
-
-            unsigned int new_v0 = i_to_representant_i[v0];
-            unsigned int new_v1 = i_to_representant_i[v1];
-            unsigned int new_v2 = i_to_representant_i[v2];
-            glm::uvec3 new_triangle = glm::uvec3(new_v0, new_v1, new_v2);
-
-            if (new_v0 != new_v1 && new_v0 != new_v2 && new_v1 != new_v2) {
-                glm::vec3 normal = glm::normalize(glm::cross(m_vertices[v1] - m_vertices[v0], m_vertices[v2] - m_vertices[v0]));
-                glm::vec3 new_normal = glm::normalize(glm::cross(new_vertices[new_v1] - new_vertices[new_v0], new_vertices[new_v2] - new_vertices[new_triangle[0]]));
-
-                // si les normales des deux triangles ne sont pas dans le même sens, inverser ses deux premiers points du nouveau triangle
-                if (glm::dot(normal, new_normal) < 0) {
-                    new_triangle[0] = new_v1;
-                    new_triangle[1] = new_v0;
-                }
-                new_triangles.push_back(new_triangle);
-            }
-        }
-
-        Mesh new_mesh;
-        new_mesh.m_vertices = new_vertices;
-        new_mesh.m_normals = new_normals;
-        new_mesh.m_triangles = new_triangles;
-        new_mesh.m_uvs.resize(m_vertices.size());
-        new_mesh.m_octree = octree;
-
-        return new_mesh;
+    if (max_vert_per_leaf == 0) {
+        return Mesh();
     }
+
+    // calculer min et max
+    glm::vec3 min = glm::vec3(FLT_MAX);
+    glm::vec3 max = glm::vec3(-FLT_MAX);
+    for (const glm::vec3 &v : m_vertices) {
+        if (v[0] < min[0])
+            min[0] = v[0];
+        if (v[1] < min[1])
+            min[1] = v[1];
+        if (v[2] < min[2])
+            min[2] = v[2];
+
+        if (v[0] > max[0])
+            max[0] = v[0];
+        if (v[1] > max[1])
+            max[1] = v[1];
+        if (v[2] > max[2])
+            max[2] = v[2];
+    }
+    min -= glm::vec3(1., 1., 1.);
+    max += glm::vec3(1., 1., 1.);
+
+    // Constreuire l'octree et y ajouter les points.
+    Octree octree(max_vert_per_leaf, min, max);
+    for (size_t i = 0; i < m_vertices.size(); i++) {
+        octree.pushVertex(i, m_vertices[i], m_normals[i]);
+    }
+    octree.calcRepresentants();
+
+    // récupérer les représentants
+    vector<vector<size_t>> representant_i_to_is;
+    vector<glm::vec3> new_vertices;
+    vector<glm::vec3> new_normals;
+    octree.fillRepresentantsData(representant_i_to_is, new_vertices, new_normals);
+
+    // en déduire les i -> representant_i pour la réindexion
+    vector<size_t> i_to_representant_i(m_vertices.size(), 0);
+    for (size_t representant_i = 0; representant_i < new_vertices.size(); representant_i++) {
+        for (size_t i : representant_i_to_is[representant_i]) {
+            i_to_representant_i[i] = representant_i;
+        }
+    }
+
+    // reindexer les triangles
+    vector<glm::uvec3> new_triangles;
+    for (glm::uvec3 triangle : m_triangles) {
+        unsigned int v0 = triangle[0];
+        unsigned int v1 = triangle[1];
+        unsigned int v2 = triangle[2];
+
+        unsigned int new_v0 = i_to_representant_i[v0];
+        unsigned int new_v1 = i_to_representant_i[v1];
+        unsigned int new_v2 = i_to_representant_i[v2];
+        glm::uvec3 new_triangle = glm::uvec3(new_v0, new_v1, new_v2);
+
+        if (new_v0 != new_v1 && new_v0 != new_v2 && new_v1 != new_v2) {
+            glm::vec3 normal = glm::normalize(glm::cross(m_vertices[v1] - m_vertices[v0], m_vertices[v2] - m_vertices[v0]));
+            glm::vec3 new_normal = glm::normalize(glm::cross(new_vertices[new_v1] - new_vertices[new_v0], new_vertices[new_v2] - new_vertices[new_triangle[0]]));
+
+            // si les normales des deux triangles ne sont pas dans le même sens, inverser ses deux premiers points du nouveau triangle
+            if (glm::dot(normal, new_normal) < 0) {
+                new_triangle[0] = new_v1;
+                new_triangle[1] = new_v0;
+            }
+            new_triangles.push_back(new_triangle);
+        }
+    }
+
+    Mesh new_mesh;
+    new_mesh.m_vertices = new_vertices;
+    new_mesh.m_normals = new_normals;
+    new_mesh.m_triangles = new_triangles;
+    new_mesh.m_uvs.resize(m_vertices.size());
+    new_mesh.m_octree = octree;
+
+    return new_mesh;
+}
 
 void Mesh::initShaderData() {
     glGenVertexArrays(1, &m_VAO);

@@ -23,6 +23,7 @@ GLFWwindow *window;
 #include <iostream>
 #include <string>
 #include <vector>
+#include <array>
 #include "./ImageBase.h"
 #include "./Mesh.hpp"
 #include "./Scene.hpp"
@@ -80,6 +81,7 @@ float camera_distance_to_center = 5.f;
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+bool render_octree = false;
 
 /*******************************************************************************/
 
@@ -161,24 +163,31 @@ int main(void) {
     glm::uvec2 terrain_resolution(5, 5);
     terrain.setSimpleTerrain(terrain_resolution, heightmap);
 
-    Mesh klown("models/Klown.off");
-    Mesh klown2 = klown.adaptiveSimplify(1024); // TODO: préparer plusieurs niveaux de détails (genre 4)
+    uint LOD = 6;
+    std::vector<Mesh> klowns(LOD);
+    klowns[0].loadOFF("models/Klown.off");
+    for (uint i = 1; i < LOD; i++) {
+        klowns[i] = klowns[0].adaptiveSimplify(4 << i);
+    }
 
-    vector<Mesh *> meshes{&terrain, &klown2};
-    
+    vector<Mesh *> meshes{&terrain};
+    for (Mesh &klown : klowns) {
+        meshes.push_back(&klown);
+    }
+
     SceneNode terrain_node(0, 0);
     terrain_node.m_transfo.setScale(glm::vec3(4.f, 2.f, 4.f));
     terrain_node.m_transfo.setTranslation(glm::vec3(-2.f, -1.f, -2.f));
     SceneNode terrain_group({&terrain_node});
 
-    SceneNode klown1_node(1, -1);
-    klown1_node.m_transfo.setScale(0.3f);
-    klown1_node.m_transfo.setTranslationY(1.f);
-    
-    SceneNode klown2_node(1, -1);
-    klown2_node.m_transfo.setScale(0.3f);
+    SceneNode klown_node(1, -1);
+    klown_node.m_transfo.setScale(0.3f);
+    klown_node.m_transfo.setTranslationY(1.25f);
 
-    SceneNode root({&terrain_group, &klown1_node, &klown2_node});
+    SceneNode terrain_klown_node(1, -1);
+    terrain_klown_node.m_transfo.setScale(0.3f);
+
+    SceneNode root({&terrain_group, &klown_node, &terrain_klown_node});
     Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
@@ -210,11 +219,18 @@ int main(void) {
         if (run_simulation) {
             simulation_timing += deltaTime * 2.f * M_PIf;
 
-            klown1_node.m_transfo.setTranslationX(cos(0.1f * simulation_timing));
-            klown1_node.m_transfo.setTranslationZ(sin(0.1f * simulation_timing));
+            klown_node.m_transfo.setTranslationX(cos(0.1f * simulation_timing));
+            klown_node.m_transfo.setTranslationZ(sin(0.1f * simulation_timing));
 
-            glm::vec3 point_on_terrain = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), klown1_node.m_transfo.getTranslation());
-            klown2_node.m_transfo.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
+            glm::vec3 point_on_terrain = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), klown_node.m_transfo.getTranslation());
+            terrain_klown_node.m_transfo.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
+
+            float distance = glm::distance(camera_position, terrain_klown_node.m_transfo.getTranslation());
+            int i = 1;
+            while (i < LOD && i < distance)
+                i++;
+            // terrain_klown_node.m_transfo.setYaw(i * M_PIf / 8.f);
+            terrain_klown_node.m_mesh_i = i;
         }
 
         /****************************************/
@@ -227,7 +243,7 @@ int main(void) {
         /****************************************/
 
         // Draw the triangles !
-        scene.render(programID);
+        scene.render(programID, render_octree);
 
         // Reset some controls
         scroll = glm::vec2(0.);
@@ -283,6 +299,7 @@ glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
 bool c_key_pressed = false;
 bool w_key_pressed = false;
 bool p_key_pressed = false;
+bool o_key_pressed = false;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -340,12 +357,23 @@ void processInput(GLFWwindow *window) {
 
     if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
         if (!p_key_pressed) {
-            run_simulation = !run_simulation;
             p_key_pressed = true;
+            run_simulation = !run_simulation;
         }
     } else {
         if (p_key_pressed) {
             p_key_pressed = false;
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+        if (!o_key_pressed) {
+            o_key_pressed = true;
+            render_octree = !render_octree;
+        }
+    } else {
+        if (o_key_pressed) {
+            o_key_pressed = false;
         }
     }
 

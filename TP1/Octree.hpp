@@ -169,8 +169,7 @@ public:
                 glm::vec3(max_pos[0], min_pos[1], min_pos[2]),
                 glm::vec3(max_pos[0], min_pos[1], max_pos[2]),
                 glm::vec3(max_pos[0], max_pos[1], min_pos[2]),
-                glm::vec3(max_pos[0], max_pos[1], max_pos[2])
-            };
+                glm::vec3(max_pos[0], max_pos[1], max_pos[2])};
 
             glGenBuffers(1, &m_vertices_VBO);
             glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
@@ -180,19 +179,23 @@ public:
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
             std::vector<glm::uvec2> m_lines{
+                // Z
                 glm::uvec2(0, 1),
-                glm::uvec2(1, 2),
                 glm::uvec2(2, 3),
-                glm::uvec2(3, 0),
                 glm::uvec2(4, 5),
+                glm::uvec2(6, 7),
+
+                // Y
+                glm::uvec2(0, 2),
+                glm::uvec2(1, 3),
+                glm::uvec2(4, 6),
                 glm::uvec2(5, 7),
-                glm::uvec2(7, 6),
-                glm::uvec2(6, 4),
+
+                // X
                 glm::uvec2(0, 4),
                 glm::uvec2(1, 5),
-                glm::uvec2(2, 7),
-                glm::uvec2(3, 6)
-            };
+                glm::uvec2(2, 6),
+                glm::uvec2(3, 7)};
 
             glGenBuffers(1, &m_lines_EBO);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_lines_EBO);
@@ -202,7 +205,7 @@ public:
             glBindVertexArray(0);
         }
     }
-    
+
     void render() const {
         if (!is_leaf) {
             for (size_t i = 0; i < 8; i++) {
@@ -210,7 +213,7 @@ public:
             }
         } else if (data.element_count > 0) {
             glBindVertexArray(m_VAO);
-            glDrawElements(GL_LINES, 36, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
         }
     }
 

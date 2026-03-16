@@ -24,18 +24,22 @@ public:
     SceneNode(int _mesh_i, int _texture_i) : m_transfo(), m_children({}), m_mesh_i(_mesh_i), m_texture_i(_texture_i) {}
     SceneNode(int _mesh_i, int _texture_i, Transformation _transfo) : m_transfo(_transfo), m_children({}), m_mesh_i(_mesh_i), m_texture_i(_texture_i) {}
 
-    void render(GLuint programID, const vector<Mesh *> &_meshes, const glm::mat4 &_transfo = glm::mat4()) const {
+    void render(GLuint programID, const vector<Mesh *> &_meshes, bool _render_octree, const glm::mat4 &_transfo = glm::mat4()) const {
         glm::mat4 render_transfo = _transfo * m_transfo.computeTransformationMatrix();
         if (m_mesh_i >= 0) {
             glUniform1i(glGetUniformLocation(programID, "texture_i"), m_texture_i);
             glUniform1i(glGetUniformLocation(programID, "texture_sampler"), m_texture_i);
 
             glUniformMatrix4fv(glGetUniformLocation(programID, "model"), 1, false, glm::value_ptr(render_transfo));
+            glUniform1i(glGetUniformLocation(programID, "has_normals"), 1);
             _meshes[m_mesh_i]->render();
-            // _meshes[m_mesh_i]->renderOctree(); // TODO: render avec une touche ?
+            if (_render_octree) {
+                glUniform1i(glGetUniformLocation(programID, "has_normals"), 0);
+                _meshes[m_mesh_i]->renderOctree();
+            }
         } else {
             for (const SceneNode *child : m_children) {
-                child->render(programID, _meshes, render_transfo);
+                child->render(programID, _meshes, _render_octree, render_transfo);
             }
         }
     }
@@ -63,8 +67,8 @@ public:
         }
     }
 
-    void render(GLuint programID) const {
-        m_root->render(programID, m_meshes);
+    void render(GLuint programID, bool _render_octree) const {
+        m_root->render(programID, m_meshes, _render_octree);
     }
 
     void clear() {
