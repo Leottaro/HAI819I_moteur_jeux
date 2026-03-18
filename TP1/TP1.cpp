@@ -83,6 +83,7 @@ float camera_distance_to_center = 5.f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+float cube_bounciness = 0.9f;
 float cube_weight = 1.f;
 glm::vec3 cube_pos = glm::vec3(0.f, 2.f, 0.f);
 glm::vec3 cube_vel = glm::vec3(0.f, 0.f, 0.f);
@@ -165,8 +166,12 @@ int main(void) {
     vector<ImageBase *> textures{&grass};
 
     Mesh terrain;
-    glm::uvec2 terrain_resolution(4, 4);
+    glm::uvec2 terrain_resolution(256, 256);
     terrain.setSimpleTerrain(terrain_resolution, heightmap);
+    
+    // Mesh terrain;
+    // glm::uvec2 terrain_resolution(4, 4);
+    // terrain.setSimpleGrid(terrain_resolution);
 
     Mesh cube;
     cube.setCube(2);
@@ -174,8 +179,8 @@ int main(void) {
     vector<Mesh *> meshes{&terrain, &cube};
 
     SceneNode terrain_node(0, 0);
-    terrain_node.m_transfo.setScale(glm::vec3(4.f, 2.f, 4.f));
-    terrain_node.m_transfo.setTranslation(glm::vec3(-2.f, -1.f, -2.f));
+    terrain_node.m_transfo.setScale(glm::vec3(100.f, 25.f, 100.f));
+    terrain_node.m_transfo.setTranslation(glm::vec3(-50.f, -25.f, -50.f));
     SceneNode terrain_group({&terrain_node});
 
     SceneNode cube_node(1, -1);
@@ -212,22 +217,25 @@ int main(void) {
 
         if (run_simulation) {
             cube_accel = glm::vec3(0.f);
-            cube_accel += glm::vec3(0.f, -9.81f, 0.f);
+            cube_accel += glm::vec3(0.f, -.981f, 0.f);
             cube_accel /= cube_weight;
 
             cube_vel += deltaTime * cube_accel;
-
-            glm::vec3 cube_on_terrain =  meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_pos);
-            float dist_to_terrain = glm::dot(cube_pos - cube_on_terrain, glm::vec3(0.f, 1.f, 0.f));
-            cube_pos = cube_on_terrain;
             
-            // if (dist_to_terrain < 0.f) {
-            //     cube_vel *= 0.f;
-            // } else {
-            //     cube_pos += cube_vel;
-            // }
+            cube_pos += cube_vel;
 
-            std::cout << glm::to_string(cube_pos) << "\t" << glm::to_string(cube_vel) << "\t" << glm::to_string(cube_accel) << "\t"<<dist_to_terrain << std::endl;
+            auto [cube_on_terrain, triangle_normal] = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_pos);
+            float dist_to_terrain = glm::dot(cube_pos - cube_on_terrain, triangle_normal);
+            
+            if (dist_to_terrain < 0.f) {
+                cube_pos = cube_on_terrain;
+
+                // Reflection 
+                
+                float vel_dot_n = glm::dot(cube_vel, triangle_normal);
+                glm::vec3 v_normal = vel_dot_n * triangle_normal;
+                cube_vel = cube_vel - (1.f + cube_bounciness) * v_normal;
+            }
         }
         cube_node.m_transfo.setTranslation(cube_pos);
 
@@ -369,9 +377,10 @@ void processInput(GLFWwindow *window) {
             
             cube_pos = camera_position;
             
-            glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf/4.f, glm::normalize(glm::cross(camera_front, camera_up))); 
-            glm::vec4 new_vel = rot * glm::vec4(camera_front.x, camera_front.y, camera_front.z, 0.f);
-            cube_vel = glm::normalize(glm::vec3(new_vel.x, new_vel.y, new_vel.z));
+            // glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf/4.f, glm::normalize(glm::cross(camera_front, camera_up))); 
+            // glm::vec4 new_vel = rot * glm::vec4(camera_front.x, camera_front.y, camera_front.z, 0.f);
+            // cube_vel = glm::normalize(glm::vec3(new_vel.x, new_vel.y, new_vel.z));
+            cube_vel = camera_front;
         }
     } else {
         if (space_key_pressed) {

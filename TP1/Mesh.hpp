@@ -63,8 +63,8 @@ public:
     void recomputePerVertexTextureCoordinates();
 
     // TP4
-    glm::vec3 computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const;
-    glm::vec3 computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const;
+    std::pair<glm::vec3, size_t> computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const;
+    std::pair<glm::vec3, glm::vec3> computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const;
     Mesh adaptiveSimplify(size_t max_vert_per_leaf) const;
 
     void initShaderData();

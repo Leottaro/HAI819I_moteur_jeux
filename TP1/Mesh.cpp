@@ -287,20 +287,20 @@ void Mesh::recomputePerVertexTextureCoordinates() {
 
 bool computeBarycentrics(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &normal, const glm::vec3 &p, glm::vec3 &barycentrics) {
     double total_area = glm::length(normal); // this is actually the 2 times the area but it doesn't matter for the barycentric coordinates
-    barycentrics.x = glm::length(glm::cross(v1 - p, v2 - p)) / total_area - 1.e-4;
-    barycentrics.y = glm::length(glm::cross(p - v0, v2 - v0)) / total_area - 1.e-4;
-    barycentrics.z = glm::length(glm::cross(v1 - v0, p - v0)) / total_area - 1.e-4;
-    if (barycentrics.x < 0. || 1. < barycentrics.x ||
-        barycentrics.y < 0. || 1. < barycentrics.y ||
-        barycentrics.z < 0. || 1. < barycentrics.z ||
-        barycentrics.x + barycentrics.y + barycentrics.z < 0. || 1. < barycentrics.x + barycentrics.y + barycentrics.z) {
+    barycentrics.x = glm::length(glm::cross(v1 - p, v2 - p)) / total_area;
+    barycentrics.y = glm::length(glm::cross(p - v0, v2 - v0)) / total_area;
+    barycentrics.z = glm::length(glm::cross(v1 - v0, p - v0)) / total_area;
+    if (barycentrics.x < 0.f || 1.f < barycentrics.x ||
+        barycentrics.y < 0.f || 1.f < barycentrics.y ||
+        barycentrics.z < 0.f || 1.f < barycentrics.z ||
+        barycentrics.x + barycentrics.y + barycentrics.z < 0.f || 1.f < barycentrics.x + barycentrics.y + barycentrics.z) {
         return false;
     }
 
     return true;
 }
 
-glm::vec3 Mesh::computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const {
+std::pair<glm::vec3, size_t> Mesh::computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const {
     // On part du principe que le terrain est une "grille" régulière et va de (0,0,0) à (1,0,1)
 
     uint iz = _z * (_grid_resolution[1] - 1);
@@ -309,7 +309,7 @@ glm::vec3 Mesh::computeheight(const glm::uvec2 &_grid_resolution, float _x, floa
         uint i = 2 * (iz * _grid_resolution[0] + ix) + j;
 
         if (i > m_triangles.size() - 1)
-            return glm::vec3(0.f);
+            return {glm::vec3(NAN), NAN};
 
         glm::vec3 v0 = m_vertices[m_triangles[i][0]];
         glm::vec3 v1 = m_vertices[m_triangles[i][1]];
@@ -321,21 +321,23 @@ glm::vec3 Mesh::computeheight(const glm::uvec2 &_grid_resolution, float _x, floa
         glm::vec3 normal = glm::cross(v1 - v0, v2 - v0);
         glm::vec3 barycentrics;
         if (computeBarycentrics(v0, v1, v2, normal, glm::vec3(_x, 0.f, _z), barycentrics)) {
-            return barycentrics[0] * m_vertices[m_triangles[i][0]] + barycentrics[1] * m_vertices[m_triangles[i][1]] + barycentrics[2] * m_vertices[m_triangles[i][2]];
+            glm::vec3 point = barycentrics[0] * m_vertices[m_triangles[i][0]] + barycentrics[1] * m_vertices[m_triangles[i][1]] + barycentrics[2] * m_vertices[m_triangles[i][2]];
+            return {point, i};
         }
     }
 
-    return glm::vec3(0.f);
+    return {glm::vec3(NAN), NAN};
 }
 
-glm::vec3 Mesh::computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const {
+std::pair<glm::vec3, glm::vec3> Mesh::computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const {
     glm::mat4 inverse = glm::inverse(_transfo);
     glm::vec4 p_terrain = inverse * glm::vec4(_p, 1.f);
 
-    glm::vec3 point_on_terrain = computeheight(_grid_resolution, p_terrain.x / p_terrain.w, p_terrain.z / p_terrain.w);
+    auto [point_on_terrain, triangle_i] = computeheight(_grid_resolution, p_terrain.x / p_terrain.w, p_terrain.z / p_terrain.w);
     glm::vec4 point = _transfo * glm::vec4(point_on_terrain, 1.f);
+    glm::vec3 normal = glm::cross(m_vertices[m_triangles[triangle_i][1]] - m_vertices[m_triangles[triangle_i][0]], m_vertices[m_triangles[triangle_i][2]] - m_vertices[m_triangles[triangle_i][0]]);
 
-    return glm::vec3(point.x, point.y, point.z) / point.w;
+    return {glm::vec3(point.x, point.y, point.z) / point.w, glm::normalize(normal)};
 }
 
 Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
