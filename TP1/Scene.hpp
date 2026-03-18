@@ -67,7 +67,7 @@ public:
         }
     }
 
-    void render(GLuint programID, bool _render_octree) const {
+    void render(GLuint programID, bool _render_octree = false) const {
         m_root->render(programID, m_meshes, _render_octree);
     }
 

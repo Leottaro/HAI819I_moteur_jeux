@@ -45,7 +45,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 int polygon_mode = GL_FILL;
 float simulation_timing = 0.f;
-bool run_simulation = true;
+bool run_simulation = false;
 
 // window
 glm::vec2 cursor_pos, cursor_vel, scroll;
@@ -65,6 +65,7 @@ enum CameraType {
 #define M_PI_2_SAFE float(M_PI_2 - 0.001)
 #define M_PI_4_SAFE float(M_PI_4 - 0.001)
 
+double camera_fov = M_PI_2;
 glm::vec3 camera_position = glm::vec3(1.0f, 1.0f, 1.0f);
 glm::vec2 camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.); // (pitch, yaw)
 glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -82,9 +83,10 @@ float camera_distance_to_center = 5.f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-bool render_octree = false;
-uint LOD = 4;
-uint terrain_klown_i = 1;
+float cube_weight = 1.f;
+glm::vec3 cube_pos = glm::vec3(0.f, 2.f, 0.f);
+glm::vec3 cube_vel = glm::vec3(0.f, 0.f, 0.f);
+glm::vec3 cube_accel = glm::vec3(0.f, 0.f, 0.f);
 
 /*******************************************************************************/
 
@@ -166,30 +168,20 @@ int main(void) {
     glm::uvec2 terrain_resolution(4, 4);
     terrain.setSimpleTerrain(terrain_resolution, heightmap);
 
-    std::vector<Mesh> klowns(LOD);
-    klowns[0].loadOFF("models/Klown.off");
-    for (uint i = 1; i < LOD; i++) {
-        klowns[i] = klowns[0].adaptiveSimplify(pow(10, i));
-    }
+    Mesh cube;
+    cube.setCube(2);
 
-    vector<Mesh *> meshes{&terrain};
-    for (Mesh &klown : klowns) {
-        meshes.push_back(&klown);
-    }
+    vector<Mesh *> meshes{&terrain, &cube};
 
     SceneNode terrain_node(0, 0);
     terrain_node.m_transfo.setScale(glm::vec3(4.f, 2.f, 4.f));
     terrain_node.m_transfo.setTranslation(glm::vec3(-2.f, -1.f, -2.f));
     SceneNode terrain_group({&terrain_node});
 
-    SceneNode klown_node(1, -1);
-    klown_node.m_transfo.setScale(0.3f);
-    klown_node.m_transfo.setTranslationY(1.25f);
+    SceneNode cube_node(1, -1);
+    cube_node.m_transfo.setTranslation(cube_pos);
 
-    SceneNode terrain_klown_node(terrain_klown_i, -1);
-    terrain_klown_node.m_transfo.setScale(0.3f);
-
-    SceneNode root({&terrain_group, &klown_node, &terrain_klown_node});
+    SceneNode root({&terrain_group, &cube_node});
     Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
@@ -219,36 +211,37 @@ int main(void) {
         /****************************************/
 
         if (run_simulation) {
-            simulation_timing += deltaTime * 2.f * M_PIf;
+            cube_accel = glm::vec3(0.f);
+            cube_accel += glm::vec3(0.f, -9.81f, 0.f);
+            cube_accel /= cube_weight;
 
-            klown_node.m_transfo.setTranslationX(cos(0.1f * simulation_timing));
-            klown_node.m_transfo.setTranslationZ(sin(0.1f * simulation_timing));
+            cube_vel += deltaTime * cube_accel;
 
-            glm::vec3 point_on_terrain = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), klown_node.m_transfo.getTranslation());
-            terrain_klown_node.m_transfo.setTranslation(point_on_terrain + glm::vec3(0.f, .3f, 0.f));
+            glm::vec3 cube_on_terrain =  meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_pos);
+            float dist_to_terrain = glm::dot(cube_pos - cube_on_terrain, glm::vec3(0.f, 1.f, 0.f));
+            cube_pos = cube_on_terrain;
+            
+            // if (dist_to_terrain < 0.f) {
+            //     cube_vel *= 0.f;
+            // } else {
+            //     cube_pos += cube_vel;
+            // }
+
+            std::cout << glm::to_string(cube_pos) << "\t" << glm::to_string(cube_vel) << "\t" << glm::to_string(cube_accel) << "\t"<<dist_to_terrain << std::endl;
         }
-        float distance = glm::distance(camera_position, terrain_klown_node.m_transfo.getTranslation());
-        terrain_klown_i = 1;
-        while (terrain_klown_i < LOD && terrain_klown_i * 2.f < distance)
-            terrain_klown_i++;
-        terrain_klown_node.m_mesh_i = terrain_klown_i;
-        if (terrain_klown_i == 1) {
-            cout << "ORIGINAL: " << meshes[terrain_klown_i]->nbVertices() << "v et " << meshes[terrain_klown_i]->nbTriangles() << "t" << endl;
-        } else {
-            cout << "LOD " << terrain_klown_i - 1 << ": max " << pow(10, terrain_klown_i) << " points par feuilles, " << meshes[terrain_klown_i]->nbVertices() << "v et " << meshes[terrain_klown_i]->nbTriangles() << "t" << endl;
-        }
+        cube_node.m_transfo.setTranslation(cube_pos);
 
         /****************************************/
 
         glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
-        glm::mat4 projection = glm::perspective(M_PI / 4., window_aspect_ratio, 1.e-4, 1.e8);
+        glm::mat4 projection = glm::perspective(camera_fov, window_aspect_ratio, 1.e-4, 1.e8);
         glUniformMatrix4fv(glGetUniformLocation(programID, "view"), 1, false, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(programID, "projection"), 1, false, glm::value_ptr(projection));
 
         /****************************************/
 
         // Draw the triangles !
-        scene.render(programID, render_octree);
+        scene.render(programID);
 
         // Reset some controls
         scroll = glm::vec2(0.);
@@ -304,9 +297,7 @@ glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
 bool c_key_pressed = false;
 bool w_key_pressed = false;
 bool p_key_pressed = false;
-bool o_key_pressed = false;
-bool plus_key_pressed = false;
-bool minus_key_pressed = false;
+bool space_key_pressed = false;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -372,36 +363,19 @@ void processInput(GLFWwindow *window) {
         }
     }
 
-    if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
-        if (!o_key_pressed) {
-            o_key_pressed = true;
-            render_octree = !render_octree;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (!space_key_pressed) {
+            space_key_pressed = true;
+            
+            cube_pos = camera_position;
+            
+            glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf/4.f, glm::normalize(glm::cross(camera_front, camera_up))); 
+            glm::vec4 new_vel = rot * glm::vec4(camera_front.x, camera_front.y, camera_front.z, 0.f);
+            cube_vel = glm::normalize(glm::vec3(new_vel.x, new_vel.y, new_vel.z));
         }
     } else {
-        if (o_key_pressed) {
-            o_key_pressed = false;
-        }
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS) {
-        if (!plus_key_pressed) {
-            plus_key_pressed = true;
-            terrain_klown_i = (terrain_klown_i + 1) % LOD;
-        }
-    } else {
-        if (plus_key_pressed) {
-            plus_key_pressed = false;
-        }
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS) {
-        if (!minus_key_pressed) {
-            minus_key_pressed = true;
-            terrain_klown_i = (terrain_klown_i + LOD - 1) % LOD;
-        }
-    } else {
-        if (minus_key_pressed) {
-            minus_key_pressed = false;
+        if (space_key_pressed) {
+            space_key_pressed = false;
         }
     }
 
