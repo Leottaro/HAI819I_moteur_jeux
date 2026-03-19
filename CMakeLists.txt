@@ -23,9 +23,11 @@ set(APP_SOURCES
 
     src/Scene.hpp
 
+    src/Camera.hpp
+    src/Camera.cpp
+
     src/Mesh.hpp
     src/Mesh.cpp
-
     src/Octree.hpp
 
     src/Transformation.hpp

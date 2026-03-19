@@ -13,14 +13,15 @@
 // USUAL INCLUDES
 #include <math.h>
 
+// helpers
 #define M_PI_SAFE float(M_PI - 0.001)
 #define M_PI_2_SAFE float(M_PI_2 - 0.001)
 #define M_PI_4_SAFE float(M_PI_4 - 0.001)
 
-const glm::vec3 VEC_ZERO = glm::vec3(0.f, 0.f, 0.f);
-const glm::vec3 VEC_RIGHT = glm::vec3(1.f, 0.f, 0.f);
-const glm::vec3 VEC_UP = glm::vec3(0.f, 1.f, 0.f);
-const glm::vec3 VEC_FRONT = glm::vec3(0.f, 0.f, 1.f);
+constexpr glm::vec3 VEC_ZERO(0.f, 0.f, 0.f);
+constexpr glm::vec3 VEC_RIGHT(1.f, 0.f, 0.f);
+constexpr glm::vec3 VEC_UP(0.f, 1.f, 0.f);
+constexpr glm::vec3 VEC_FRONT(0.f, 0.f, 1.f);
 
 class Transformation {
     glm::vec3 m_translation;
@@ -60,10 +61,9 @@ public:
     }
 
     // GETTERS
-    inline const glm::vec3 getTranslation() const { return m_translation; }
-    inline const glm::vec3 getEulerAngles() const { return m_euler_angles; }
-    inline glm::vec3 getScale() const { return m_scale; }
-    inline glm::vec3 getFrontVector() const { return Transformation::EulerToEuclidian(glm::vec2(m_euler_angles[0], m_euler_angles[1])); }
+    inline const glm::vec3 &getTranslation() const { return m_translation; }
+    inline const glm::vec3 &getEulerAngles() const { return m_euler_angles; }
+    inline const glm::vec3 &getScale() const { return m_scale; }
 
     // SETTERS
     inline void setTranslation(const glm::vec3 &t) { m_translation = t; }

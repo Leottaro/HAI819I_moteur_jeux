@@ -24,6 +24,7 @@ GLFWwindow *window;
 #include "ImageBase.h"
 #include "Mesh.hpp"
 #include "Scene.hpp"
+#include "Camera.hpp"
 
 using namespace std;
 
@@ -43,40 +44,14 @@ bool run_simulation = false;
 float deltaTime = 0.f;
 float lastFrame = 0.f;
 
-// camera
-float clipAnglePI(float _angle);
-glm::vec3 EulerToEuclidian(const glm::vec2 &_angles);
-glm::vec2 EuclidianToEuler(const glm::vec3 &xyz);
-#define NUMBER_OF_CAMERA_TYPE 3
-enum CameraType {
-    CameraOrbital,
-    CameraFree,
-    CameraAutoSpin,
-};
-
-#define M_PI_SAFE float(M_PI - 0.001)
-#define M_PI_2_SAFE float(M_PI_2 - 0.001)
-#define M_PI_4_SAFE float(M_PI_4 - 0.001)
-
-double camera_fov = M_PI_2;
-glm::vec3 camera_position = glm::vec3(1.0f, 1.0f, 1.0f);
-glm::vec2 camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.); // (pitch, yaw)
-glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
-glm::vec3 camera_front = EulerToEuclidian(camera_angles);
-
-CameraType camera_type = CameraOrbital;
-float camera_rotation_speed = 1.0f;
-float camera_translation_speed = 2.5f;
-
-// camera orbital
-glm::vec3 camera_center = glm::vec3(0.f, 0.f, 0.f);
-float camera_distance_to_center = 5.f;
-
-float cube_bounciness = 0.9f;
+float cube_friction = 1.f;
+float cube_restitution = 1.f;
 float cube_weight = 1.f;
 glm::vec3 cube_pos = glm::vec3(0.f, 0.f, 0.f);
 glm::vec3 cube_vel = glm::vec3(0.f, 0.f, 0.f);
 glm::vec3 cube_accel = glm::vec3(0.f, 0.f, 0.f);
+
+Camera camera;
 
 void globalInit();
 
@@ -91,10 +66,10 @@ int main(void) {
     vector<ImageBase *> textures{&grass};
 
     Mesh terrain;
-    glm::uvec2 terrain_resolution(16, 16);
-    ImageBase heightmap("ressources/textures/Heightmap_Mountain.ppm");
-    terrain.setSimpleTerrain(terrain_resolution, heightmap);
-    // terrain.setSimpleGrid(terrain_resolution);
+    glm::uvec2 terrain_resolution(512, 512);
+    // ImageBase heightmap("ressources/textures/Heightmap_Mountain.ppm");
+    // terrain.setSimpleTerrain(terrain_resolution, heightmap);
+    terrain.setSimpleGrid(terrain_resolution);
 
     Mesh cube;
     cube.setCube(2);
@@ -114,6 +89,8 @@ int main(void) {
     Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
+    // camera.m_center = &cube_node.m_transfo.getTranslation();
+
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
         glfwSwapBuffers(window);
@@ -130,52 +107,12 @@ int main(void) {
         ImGui::NewFrame();
 
         /**********==========CAMERA UPDATE==========**********/
-        float rotation_speed = camera_rotation_speed * deltaTime;
-        float translation_speed = camera_translation_speed * deltaTime;
-        glm::vec3 camera_right = glm::cross(camera_front, camera_up);
-        // glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
-        switch (camera_type) {
-        case CameraOrbital:
-            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-                camera_angles = glm::vec2(
-                    glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
-                    clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
-
-                camera_front = EulerToEuclidian(camera_angles);
-            }
-            camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, .1f);
-            camera_position = camera_center - camera_distance_to_center * camera_front;
-            break;
-        case CameraFree:
-            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-                camera_angles = glm::vec2(
-                    glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
-                    clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
-
-                camera_front = EulerToEuclidian(camera_angles);
-            }
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-                camera_position += camera_front * translation_speed;
-            } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-                camera_position -= camera_front * translation_speed;
-            } else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                camera_position -= camera_right * translation_speed;
-            } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                camera_position += camera_right * translation_speed;
-            }
-            break;
-        case CameraAutoSpin:
-            camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, 1.f);
-            camera_angles.y = clipAnglePI(camera_angles.y + rotation_speed);
-            camera_front = EulerToEuclidian(camera_angles);
-            camera_position = camera_center - camera_distance_to_center * camera_front;
-            break;
-        }
+        camera.update(window, deltaTime, cursor_vel, scroll);
 
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
             cube_accel = glm::vec3(0.f);
-            cube_accel += glm::vec3(0.f, -9.81f, 0.f) * 0.5f;
+            cube_accel += glm::vec3(0.f, -9.81f, 0.f);
             cube_accel /= cube_weight;
 
             cube_vel += deltaTime * cube_accel;
@@ -187,10 +124,13 @@ int main(void) {
             if (dist_to_terrain < 0.f) {
                 cube_pos = cube_on_terrain;
 
-                // Reflection
-                float vel_dot_n = glm::dot(cube_vel, triangle_normal);
-                glm::vec3 v_normal = vel_dot_n * triangle_normal;
-                cube_vel = cube_vel - (1.f + cube_bounciness) * v_normal;
+                // Bounce
+                float v_dot_n = glm::dot(cube_vel, triangle_normal);
+                glm::vec3 v_normal = v_dot_n * triangle_normal;
+                glm::vec3 v_tangent = cube_vel - v_normal;
+                v_normal *= -cube_restitution;
+                v_tangent *= 1.f - cube_friction;
+                cube_vel = v_normal + v_tangent;
             }
         }
         cube_node.m_transfo.setTranslation(cube_pos + glm::vec3(0.f, sqrt(3.f) / 2.f, 0.f));
@@ -198,10 +138,8 @@ int main(void) {
         /**********==========RENDERING==========**********/
         shader.use();
 
-        glm::mat4 view = glm::lookAt(camera_position, camera_position + camera_front, camera_up);
-        glm::mat4 projection = glm::perspective(camera_fov, window_aspect_ratio, 1.e-4, 1.e8);
-        shader.set("view", view);
-        shader.set("projection", projection);
+        shader.set("view", camera.getViewMatrix());
+        shader.set("projection", camera.getProjectionMatrix());
 
         scene.render(shader);
 
@@ -224,34 +162,6 @@ int main(void) {
     return 0;
 }
 
-// helpers
-float clipAnglePI(float _angle) {
-    while (_angle < -M_PI)
-        _angle += 2. * M_PI;
-    while (_angle > M_PI)
-        _angle -= 2. * M_PI;
-    return _angle;
-}
-
-glm::vec3 EulerToEuclidian(const glm::vec2 &_angles) {
-    float sinPhi = cosf(_angles.x);
-    float x = sinPhi * sinf(_angles.y);
-    float y = sinf(_angles.x);
-    float z = sinPhi * cosf(_angles.y);
-
-    return glm::vec3(x, y, z);
-}
-
-glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
-    float angles_x = asin(xyz[1] / glm::length(xyz)); // polar angle from +y axis, 0..π
-
-    float angles_y = atan2(xyz[0], xyz[2]); // azimuth around y-axis, 0..2π
-    if (angles_y < 0.0f)
-        angles_y += 2.0f * M_PI;
-
-    return glm::vec2(angles_x, angles_y);
-}
-
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     // cout << "framebuffer size: " << width << ", " << height << endl;
     window_width = width;
@@ -268,35 +178,6 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     // cout << "key:" << key << " scancode:" << scancode << " action:" << action << " mods:" << mods << endl;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-
-    // Change camera mode
-    if (key == GLFW_KEY_C && action == GLFW_PRESS) {
-        if (!c_key_pressed) {
-            camera_type = CameraType((int(camera_type) + 1) % NUMBER_OF_CAMERA_TYPE);
-            c_key_pressed = true;
-            string camera_type_str;
-            switch (camera_type) {
-            case CameraOrbital:
-                camera_distance_to_center = glm::distance(camera_position, camera_center);
-                camera_front = glm::normalize(camera_center - camera_position);
-                camera_angles = EuclidianToEuler(camera_front);
-                camera_type_str = "Orbital";
-                break;
-            case CameraFree:
-                camera_type_str = "Free";
-                break;
-            case CameraAutoSpin:
-                camera_angles = glm::vec2(-M_PI_4 * 0.5, 0.);
-                camera_type_str = "AutoSpin";
-                break;
-            }
-            glfwSetWindowTitle(window, ("TP1 - Camera mode: " + camera_type_str).c_str());
-        }
-    } else {
-        if (c_key_pressed) {
-            c_key_pressed = false;
-        }
     }
 
     if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
@@ -332,72 +213,16 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         if (!space_key_pressed) {
             space_key_pressed = true;
 
-            cube_pos = camera_position;
+            cube_pos = camera.m_position;
 
-            glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf / 4.f, glm::normalize(glm::cross(camera_front, camera_up)));
-            glm::vec4 new_vel = rot * glm::vec4(camera_front.x, camera_front.y, camera_front.z, 0.f);
+            glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf / 4.f, glm::normalize(glm::cross(camera.getFront(), camera.getUp())));
+            glm::vec4 new_vel = rot * glm::vec4(camera.getFront(), 0.f);
             cube_vel = glm::normalize(glm::vec3(new_vel.x, new_vel.y, new_vel.z));
         }
     } else {
         if (space_key_pressed) {
             space_key_pressed = false;
         }
-    }
-
-    // Change camera rotation speed
-    if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
-        camera_rotation_speed += 1.f * deltaTime;
-        cout << "rotation speed: " << camera_rotation_speed << endl;
-    } else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-        camera_rotation_speed = max(camera_rotation_speed - 1.f * deltaTime, 0.f);
-        cout << "rotation speed: " << camera_rotation_speed << endl;
-    }
-
-    // Camera update
-    float rotation_speed = camera_rotation_speed * deltaTime;
-    float translation_speed = camera_translation_speed * deltaTime;
-    glm::vec3 camera_right = glm::cross(camera_front, camera_up);
-    glm::vec3 real_camera_up = glm::cross(camera_right, camera_front);
-    switch (camera_type) {
-    case CameraOrbital:
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            camera_angles = glm::vec2(
-                glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
-                clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
-
-            camera_front = EulerToEuclidian(camera_angles);
-        }
-        camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, .1f);
-        camera_position = camera_center - camera_distance_to_center * camera_front;
-        break;
-    case CameraFree:
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            camera_angles = glm::vec2(
-                glm::clamp(camera_angles.x - rotation_speed * cursor_vel.y, -M_PI_2_SAFE, M_PI_2_SAFE),
-                clipAnglePI(camera_angles.y - rotation_speed * cursor_vel.x));
-
-            camera_front = EulerToEuclidian(camera_angles);
-        }
-        if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-            camera_position += camera_front * translation_speed;
-        } else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-            camera_position -= camera_front * translation_speed;
-        } else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-            camera_position -= camera_right * translation_speed;
-        } else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-            camera_position += camera_right * translation_speed;
-        } else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-            camera_position += real_camera_up * translation_speed;
-        } else if (key == GLFW_KEY_LEFT_CONTROL && action == GLFW_PRESS) {
-            camera_position -= real_camera_up * translation_speed;
-        }
-        break;
-    case CameraAutoSpin:
-        camera_distance_to_center = glm::max(camera_distance_to_center - translation_speed * scroll.y, 1.f);
-        camera_angles.y = clipAnglePI(camera_angles.y + rotation_speed);
-        camera_front = EulerToEuclidian(camera_angles);
-        camera_position = camera_center - camera_distance_to_center * camera_front;
-        break;
     }
 }
 
