@@ -20,11 +20,13 @@ GLFWwindow *window;
 #include <stdlib.h>
 #include <string>
 #include <vector>
+#include <fstream>
 #include "ShaderProgram.hpp"
 #include "ImageBase.h"
 #include "Mesh.hpp"
 #include "Scene.hpp"
 #include "Camera.hpp"
+#include "RigidBody.hpp"
 
 using namespace std;
 
@@ -44,14 +46,10 @@ bool run_simulation = false;
 float deltaTime = 0.f;
 float lastFrame = 0.f;
 
-float cube_friction = 1.f;
-float cube_restitution = 1.f;
-float cube_weight = 1.f;
-glm::vec3 cube_pos = glm::vec3(0.f, 0.f, 0.f);
-glm::vec3 cube_vel = glm::vec3(0.f, 0.f, 0.f);
-glm::vec3 cube_accel = glm::vec3(0.f, 0.f, 0.f);
-
 Camera camera;
+
+RigidBody cube_body;
+ofstream logfile;
 
 void globalInit();
 
@@ -71,27 +69,31 @@ int main(void) {
     // terrain.setSimpleTerrain(terrain_resolution, heightmap);
     terrain.setSimpleGrid(terrain_resolution);
 
-    Mesh cube;
-    cube.setCube(2);
+    Mesh cube_mesh;
+    cube_mesh.setCube(2);
 
-    vector<Mesh *> meshes{&terrain, &cube};
+    vector<Mesh *> meshes{&terrain, &cube_mesh};
 
     SceneNode terrain_node(0, 0);
-    terrain_node.m_transfo.setScale(glm::vec3(100.f, 50.f, 100.f));
-    terrain_node.m_transfo.setTranslation(glm::vec3(-50.f, -50.f, -50.f));
+    terrain_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
+    terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 0.f, -5.f));
+    terrain_node.m_transfo.setEulerAngles(glm::vec3(M_PI_4f, 0.f, 0.f));
+    float static_friction = 0.5f;
     SceneNode terrain_group({&terrain_node});
 
     SceneNode cube_node(1, -1);
-    cube_node.m_transfo.setTranslation(cube_pos);
+    cube_node.m_transfo.setTranslation(cube_body.m_pos);
     cube_node.m_transfo.setEulerAngles(glm::vec3(atanf(sqrtf(2.f)), M_PI / 4.f, 0.f));
 
     SceneNode root({&terrain_group, &cube_node});
     Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
-    // camera.m_center = &cube_node.m_transfo.getTranslation();
+    camera.m_center = &cube_node.m_transfo.getTranslation();
 
-    glfwSwapInterval(1); // VSync - avoid having 3000 fps
+    logfile = ofstream("log.log");
+
+    // glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -111,29 +113,17 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
-            cube_accel = glm::vec3(0.f);
-            cube_accel += glm::vec3(0.f, -9.81f, 0.f);
-            cube_accel /= cube_weight;
+            cube_body.update(deltaTime, {glm::vec3(0.f, -9.81f, 0.f)});
 
-            cube_vel += deltaTime * cube_accel;
-            cube_pos += cube_vel;
-
-            auto [cube_on_terrain, triangle_normal] = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_pos);
-            float dist_to_terrain = glm::dot(cube_pos - cube_on_terrain, triangle_normal);
+            auto [cube_on_terrain, triangle_normal] = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_body.m_pos);
+            float dist_to_terrain = glm::dot(cube_body.m_pos - cube_on_terrain, triangle_normal);
 
             if (dist_to_terrain < 0.f) {
-                cube_pos = cube_on_terrain;
-
-                // Bounce
-                float v_dot_n = glm::dot(cube_vel, triangle_normal);
-                glm::vec3 v_normal = v_dot_n * triangle_normal;
-                glm::vec3 v_tangent = cube_vel - v_normal;
-                v_normal *= -cube_restitution;
-                v_tangent *= 1.f - cube_friction;
-                cube_vel = v_normal + v_tangent;
+                cube_body.m_pos = cube_on_terrain;
+                cube_body.bounce(static_friction, applyTransformation(triangle_normal, 0.f, terrain_node.m_transfo.computeTransformationMatrix()));
             }
         }
-        cube_node.m_transfo.setTranslation(cube_pos + glm::vec3(0.f, sqrt(3.f) / 2.f, 0.f));
+        cube_node.m_transfo.setTranslation(cube_body.m_pos + glm::vec3(0.f, sqrt(3.f) / 2.f, 0.f));
 
         /**********==========RENDERING==========**********/
         shader.use();
@@ -150,11 +140,13 @@ int main(void) {
         // Reset some controls
         scroll = glm::vec2(0.);
         cursor_vel = glm::vec2(0.);
+        logfile << cube_body.m_pos.x << "," << cube_body.m_pos.y << "," << cube_body.m_pos.z << "," << cube_body.m_vel.x << "," << cube_body.m_vel.y << "," << cube_body.m_vel.z << std::endl;
     } while (glfwWindowShouldClose(window) == GLFW_FALSE);
 
     // Cleanup VBO and shader
     scene.clear();
     shader.~ShaderProgram();
+    logfile.close();
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
@@ -213,11 +205,10 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         if (!space_key_pressed) {
             space_key_pressed = true;
 
-            cube_pos = camera.m_position;
+            cube_body.m_pos = camera.m_position;
 
             glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf / 4.f, glm::normalize(glm::cross(camera.getFront(), camera.getUp())));
-            glm::vec4 new_vel = rot * glm::vec4(camera.getFront(), 0.f);
-            cube_vel = glm::normalize(glm::vec3(new_vel.x, new_vel.y, new_vel.z));
+            cube_body.m_vel = 10.f * applyTransformation(camera.getFront(), 0.f, rot);
         }
     } else {
         if (space_key_pressed) {

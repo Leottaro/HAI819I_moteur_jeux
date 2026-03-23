@@ -23,6 +23,11 @@ constexpr glm::vec3 VEC_RIGHT(1.f, 0.f, 0.f);
 constexpr glm::vec3 VEC_UP(0.f, 1.f, 0.f);
 constexpr glm::vec3 VEC_FRONT(0.f, 0.f, 1.f);
 
+inline glm::vec3 applyTransformation(const glm::vec3 &vec, float w, const glm::mat4 &transfo) {
+    glm::vec4 temp = transfo * glm::vec4(vec.x, vec.y, vec.z, w);
+    return temp.w == 0. ? glm::vec3(temp.x, temp.y, temp.z) : glm::vec3(temp.x, temp.y, temp.z) / temp.w;
+}
+
 class Transformation {
     glm::vec3 m_translation;
     glm::vec3 m_scale;

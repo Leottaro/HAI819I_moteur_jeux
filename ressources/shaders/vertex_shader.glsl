@@ -17,9 +17,9 @@ void main() {
   vec4 p = model_view * vec4(v_position, 1.0);
   gl_Position = projection * p;
 
-  vec4 n = transpose(inverse(model_view)) * vec4(v_normal, 1.0);
+  vec4 n = model * vec4(v_normal, 0.0);
 
   f_position = p.xyz / p.w;
-  f_normal = normalize(v_normal);
+  f_normal = normalize(n.xyz);
   f_uv = v_uv;
 }
