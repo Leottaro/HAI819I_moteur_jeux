@@ -11,11 +11,13 @@
 #include <iostream>
 
 struct RigidBody {
-    float m_friction = 0.5f;
-    float m_restitution = 0.5f;
-    float m_weight = 1.f;
     glm::vec3 m_pos = glm::vec3(0.f, 0.f, 0.f);
     glm::vec3 m_vel = glm::vec3(0.f, 0.f, 0.f);
+    float m_weight = 500.f;
+    float m_volume = 1.f;
+    float m_friction = 0.5f;
+    float m_restitution = 0.5f;
+    float m_drag = 1.05f;
 
     void update(float _deltaTime, const std::vector<glm::vec3> &_forces) {
         glm::vec3 m_accel = glm::vec3(0.f, 0.f, 0.f);

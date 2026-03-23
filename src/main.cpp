@@ -48,8 +48,8 @@ float lastFrame = 0.f;
 
 Camera camera;
 
-float peau = 1000;
-float pair = 1;
+float densite_eau = 1000.f;
+float densite_air = 1.f;
 
 RigidBody cube_body;
 ofstream logfile;
@@ -80,13 +80,13 @@ int main(void) {
 
     // cube_body.
     cube_body.m_friction = 1.f;
-    cube_body.m_restitution = 10.f;
+    cube_body.m_restitution = 1.f;
     cube_body.m_pos.y = 10.f;
 
     SceneNode terrain_node(0, 0);
-    terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 10.f, -5.f));
+    terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 10.f, -500.f));
     terrain_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
-    terrain_node.m_transfo.setEulerAngles(glm::vec3(M_PI_4f, 0.f, 0.f));
+    terrain_node.m_transfo.setEulerAngles(glm::vec3(-M_PI_2f, 0.f, 0.f));
     float static_friction = 0.1f;
 
     SceneNode eau_node(0, 1);
@@ -126,7 +126,13 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
-            cube_body.update(deltaTime, {glm::vec3(0.f, -9.81f, 0.f)});
+
+            glm::vec3 g = glm::vec3(0.f, -9.81f, 0.f) * cube_body.m_weight;
+            float densite_fluide = cube_body.m_pos.y < 0.f ? densite_eau : densite_air;
+            glm::vec3 flottaison = -g * cube_body.m_volume * densite_fluide / (cube_body.m_weight / cube_body.m_volume);
+            glm::vec3 drag = 0.5f * densite_fluide * cube_body.m_vel * cube_body.m_vel * cube_body.m_drag * 1.f;
+
+            cube_body.update(deltaTime, {g, flottaison, drag});
 
             auto [cube_on_terrain, triangle_normal] = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_body.m_pos);
             float dist_to_terrain = glm::dot(cube_body.m_pos - cube_on_terrain, triangle_normal);
