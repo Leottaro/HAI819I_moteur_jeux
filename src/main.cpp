@@ -48,6 +48,9 @@ float lastFrame = 0.f;
 
 Camera camera;
 
+float peau = 1000;
+float pair = 1;
+
 RigidBody cube_body;
 ofstream logfile;
 
@@ -61,7 +64,8 @@ int main(void) {
 
     // Chargement des données
     ImageBase grass("ressources/textures/grass.ppm");
-    vector<ImageBase *> textures{&grass};
+    ImageBase water("ressources/textures/water.ppm");
+    vector<ImageBase *> textures{&grass, &water};
 
     Mesh terrain;
     glm::uvec2 terrain_resolution(512, 512);
@@ -74,18 +78,27 @@ int main(void) {
 
     vector<Mesh *> meshes{&terrain, &cube_mesh};
 
+    // cube_body.
+    cube_body.m_friction = 1.f;
+    cube_body.m_restitution = 10.f;
+    cube_body.m_pos.y = 10.f;
+
     SceneNode terrain_node(0, 0);
+    terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 10.f, -5.f));
     terrain_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
-    terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 0.f, -5.f));
     terrain_node.m_transfo.setEulerAngles(glm::vec3(M_PI_4f, 0.f, 0.f));
-    float static_friction = 0.5f;
-    SceneNode terrain_group({&terrain_node});
+    float static_friction = 0.1f;
+
+    SceneNode eau_node(0, 1);
+    eau_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
+    eau_node.m_transfo.setTranslation(glm::vec3(-500.f, 0.f, -500.f));
+    eau_node.m_transfo.setEulerAngles(glm::vec3(0.f, 0.f, 0.f));
 
     SceneNode cube_node(1, -1);
     cube_node.m_transfo.setTranslation(cube_body.m_pos);
     cube_node.m_transfo.setEulerAngles(glm::vec3(atanf(sqrtf(2.f)), M_PI / 4.f, 0.f));
 
-    SceneNode root({&terrain_group, &cube_node});
+    SceneNode root({&terrain_node, &eau_node, &cube_node});
     Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
@@ -267,7 +280,7 @@ void initOpenGL() {
     glClearColor(0.1f, 0.1f, 0.3f, 0.0f);                // Dark blue background
     glEnable(GL_DEPTH_TEST);                             // Enable depth test
     glDepthFunc(GL_LESS);                                // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_CULL_FACE);                              // Cull triangles which normal is not towards the camera
+    // glEnable(GL_CULL_FACE);                              // Cull triangles which normal is not towards the camera
 }
 
 void globalInit() {
