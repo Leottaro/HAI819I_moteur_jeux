@@ -2,8 +2,10 @@
 #include <GL/glew.h>
 
 // GLM
-#include <glm/ext.hpp>
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/norm.hpp>
 
 // GLFW
 #include <GLFW/glfw3.h>
@@ -51,7 +53,7 @@ Camera camera;
 float densite_eau = 1000.f;
 float densite_air = 1.f;
 
-RigidBody cube_body;
+RigidBody cube_body, sun_body, spring_body;
 ofstream logfile;
 
 void globalInit();
@@ -73,36 +75,47 @@ int main(void) {
     // terrain.setSimpleTerrain(terrain_resolution, heightmap);
     terrain.setSimpleGrid(terrain_resolution);
 
-    Mesh cube_mesh;
+    Mesh cube_mesh, sphere_mesh;
     cube_mesh.setCube(2);
+    sphere_mesh.setCubeSphere(10);
 
-    vector<Mesh *> meshes{&terrain, &cube_mesh};
+    vector<Mesh *> meshes{&terrain, &cube_mesh, &sphere_mesh};
 
-    // cube_body.
-    cube_body.m_friction = 1.f;
-    cube_body.m_restitution = 1.f;
-    cube_body.m_pos.y = 10.f;
+    // SceneNode terrain_node(0, 0);
+    // terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 10.f, -500.f));
+    // terrain_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
+    // terrain_node.m_transfo.setEulerAngles(glm::vec3(-M_PI_2f, 0.f, 0.f));
+    // float static_friction = 0.1f;
 
-    SceneNode terrain_node(0, 0);
-    terrain_node.m_transfo.setTranslation(glm::vec3(-5.f, 10.f, -500.f));
-    terrain_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
-    terrain_node.m_transfo.setEulerAngles(glm::vec3(-M_PI_2f, 0.f, 0.f));
-    float static_friction = 0.1f;
+    // SceneNode eau_node(0, 1);
+    // eau_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
+    // eau_node.m_transfo.setTranslation(glm::vec3(-500.f, 0.f, -500.f));
+    // eau_node.m_transfo.setEulerAngles(glm::vec3(0.f, 0.f, 0.f));
 
-    SceneNode eau_node(0, 1);
-    eau_node.m_transfo.setScale(glm::vec3(1000.f, 1.f, 1000.f));
-    eau_node.m_transfo.setTranslation(glm::vec3(-500.f, 0.f, -500.f));
-    eau_node.m_transfo.setEulerAngles(glm::vec3(0.f, 0.f, 0.f));
+    sun_body.m_weight = 1000000000000.f;
+    SceneNode sun_node(2, -1);
+    sun_node.m_transfo.setTranslation(sun_body.m_pos);
+    sun_node.m_transfo.setScale(0.5f);
 
+    cube_body.m_pos = glm::vec3(3.f, 0.f, 0.f);
+    cube_body.m_vel = glm::vec3(0.f, -10.f, 0.f);
     SceneNode cube_node(1, -1);
     cube_node.m_transfo.setTranslation(cube_body.m_pos);
-    cube_node.m_transfo.setEulerAngles(glm::vec3(atanf(sqrtf(2.f)), M_PI / 4.f, 0.f));
+    cube_node.m_transfo.setScale(0.3f);
 
-    SceneNode root({&terrain_node, &eau_node, &cube_node});
+    float spring_length = 5.f;
+    float spring_force = 100.f;
+    spring_body.m_pos = glm::vec3(5.f, 5.f, 0.f);
+    SceneNode spring_node(2, -1);
+    spring_node.m_transfo.setTranslation(spring_body.m_pos);
+    spring_node.m_transfo.setScale(0.3f);
+
+    SceneNode root({&sun_node, &cube_node, &spring_node});
     Scene scene(meshes, textures, &root);
     scene.initShaderData();
 
-    camera.m_center = &cube_node.m_transfo.getTranslation();
+    // camera.m_center = &cube_node.m_transfo.getTranslation();
+    camera.m_distance_to_center = 10.f;
 
     logfile = ofstream("log.log");
 
@@ -127,20 +140,26 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
 
-            glm::vec3 g = glm::vec3(0.f, -9.81f, 0.f) * cube_body.m_weight;
-            float densite_fluide = cube_body.m_pos.y < 0.f ? densite_eau : densite_air;
-            glm::vec3 flottaison = -g * cube_body.m_volume * densite_fluide / (cube_body.m_weight / cube_body.m_volume);
-            glm::vec3 drag = -0.5f * densite_fluide * 2.f * cube_body.m_vel * cube_body.m_drag;
+            // glm::vec3 g = glm::vec3(0.f, -9.81f, 0.f) * cube_body.m_weight;
+            // float densite_fluide = cube_body.m_pos.y < 0.f ? densite_eau : densite_air;
+            // glm::vec3 flottaison = -g * cube_body.m_volume * densite_fluide / (cube_body.m_weight / cube_body.m_volume);
+            // glm::vec3 drag = -0.5f * densite_fluide * 2.f * cube_body.m_vel * cube_body.m_drag;
 
-            cube_body.update(deltaTime, {g, flottaison, drag});
+            float squared_sun_ditance = glm::length2(cube_body.m_pos - sun_body.m_pos);
+            glm::vec3 gravitational = -G * sun_body.m_weight * cube_body.m_weight / squared_sun_ditance * glm::normalize(cube_body.m_pos - sun_body.m_pos);
 
-            auto [cube_on_terrain, triangle_normal] = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_body.m_pos);
-            float dist_to_terrain = glm::dot(cube_body.m_pos - cube_on_terrain, triangle_normal);
+            float spring_ditance = glm::distance(cube_body.m_pos, spring_body.m_pos);
+            glm::vec3 spring = -spring_force * (spring_length - spring_ditance) * glm::normalize(spring_body.m_pos - cube_body.m_pos);
 
-            if (dist_to_terrain < 0.f) {
-                cube_body.m_pos = cube_on_terrain;
-                cube_body.bounce(static_friction, applyTransformation(triangle_normal, 0.f, terrain_node.m_transfo.computeTransformationMatrix()));
-            }
+            cube_body.update(deltaTime, {gravitational, spring});
+
+            // auto [cube_on_terrain, triangle_normal] = meshes[terrain_node.m_mesh_i]->computeheight(terrain_resolution, terrain_node.m_transfo.computeTransformationMatrix(), cube_body.m_pos);
+            // float dist_to_terrain = glm::dot(cube_body.m_pos - cube_on_terrain, triangle_normal);
+
+            // if (dist_to_terrain < 0.f) {
+            //     cube_body.m_pos = cube_on_terrain;
+            //     cube_body.bounce(static_friction, applyTransformation(triangle_normal, 0.f, terrain_node.m_transfo.computeTransformationMatrix()));
+            // }
         }
         cube_node.m_transfo.setTranslation(cube_body.m_pos);
 

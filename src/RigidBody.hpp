@@ -10,6 +10,8 @@
 #include "Scene.hpp"
 #include <iostream>
 
+#define G 6.6742e-11f
+
 struct RigidBody {
     glm::vec3 m_pos = glm::vec3(0.f, 0.f, 0.f);
     glm::vec3 m_vel = glm::vec3(0.f, 0.f, 0.f);
