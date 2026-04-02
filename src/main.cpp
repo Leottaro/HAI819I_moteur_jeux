@@ -130,7 +130,7 @@ int main(void) {
             glm::vec3 g = glm::vec3(0.f, -9.81f, 0.f) * cube_body.m_weight;
             float densite_fluide = cube_body.m_pos.y < 0.f ? densite_eau : densite_air;
             glm::vec3 flottaison = -g * cube_body.m_volume * densite_fluide / (cube_body.m_weight / cube_body.m_volume);
-            glm::vec3 drag = 0.5f * densite_fluide * cube_body.m_vel * cube_body.m_vel * cube_body.m_drag * 1.f;
+            glm::vec3 drag = -0.5f * densite_fluide * 2.f * cube_body.m_vel * cube_body.m_drag;
 
             cube_body.update(deltaTime, {g, flottaison, drag});
 
@@ -142,7 +142,7 @@ int main(void) {
                 cube_body.bounce(static_friction, applyTransformation(triangle_normal, 0.f, terrain_node.m_transfo.computeTransformationMatrix()));
             }
         }
-        cube_node.m_transfo.setTranslation(cube_body.m_pos + glm::vec3(0.f, sqrt(3.f) / 2.f, 0.f));
+        cube_node.m_transfo.setTranslation(cube_body.m_pos);
 
         /**********==========RENDERING==========**********/
         shader.use();
