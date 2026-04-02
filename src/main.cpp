@@ -104,7 +104,7 @@ int main(void) {
     cube_node.m_transfo.setScale(0.3f);
 
     float spring_length = 5.f;
-    float spring_force = 100.f;
+    float spring_force = 10000.f;
     spring_body.m_pos = glm::vec3(5.f, 5.f, 0.f);
     SceneNode spring_node(2, -1);
     spring_node.m_transfo.setTranslation(spring_body.m_pos);
@@ -178,7 +178,7 @@ int main(void) {
         // Reset some controls
         scroll = glm::vec2(0.);
         cursor_vel = glm::vec2(0.);
-        logfile << cube_body.m_pos.x << "," << cube_body.m_pos.y << "," << cube_body.m_pos.z << "," << cube_body.m_vel.x << "," << cube_body.m_vel.y << "," << cube_body.m_vel.z << std::endl;
+        logfile << currentFrame << " " << cube_body.m_pos.x << " " << cube_body.m_pos.y << " " << cube_body.m_pos.z << " " << cube_body.m_vel.x << " " << cube_body.m_vel.y << " " << cube_body.m_vel.z << std::endl;
     } while (glfwWindowShouldClose(window) == GLFW_FALSE);
 
     // Cleanup VBO and shader
