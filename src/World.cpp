@@ -2,42 +2,50 @@
 #include "World.hpp"
 
 Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
-    if (!isChunkLoaded(_chunk_pos)) {
-        for (Chunk &chunk : m_chunks) {
-            if (chunk.getPos() == _chunk_pos) {
-                return &chunk;
-            }
-        }
+    if (isChunkLoaded(_chunk_pos)) {
+        return &m_chunks.at(_chunk_pos);
     }
     return nullptr;
 }
 
 bool World::addChunk(const glm::ivec3 &_chunk_pos) {
-    if (!m_loaded_chunks.insert(_chunk_pos).second) {
+    if (!m_chunks.insert({_chunk_pos, Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT)}).second) {
         return false;
     }
-    m_chunks.push_back(Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT));
-    m_chunks.back().buildMesh();
+    Chunk &inserted_chunk = m_chunks.at(_chunk_pos);
 
-    // on ajoute tous ses voisins dans la frontière (si ils ne sont pas déjà chargé)
-    for (const glm::ivec3 &_chunk_offset : Chunk::NEIGHBOURS_POS) {
-        glm::ivec3 neighbour = _chunk_pos + _chunk_offset;
-        if (!isChunkLoaded(neighbour)) {
-            m_chunks_frontier.push(neighbour);
+    // on ajoute tous ses voisins dans la frontière si ils ne sont pas déjà chargé sinon on update le chunk car il a un nouveau voisin !
+    for (int face_i = 0; face_i < 6; face_i++) {
+        glm::ivec3 neighbour_pos = _chunk_pos + Chunk::NEIGHBOURS_POS[face_i];
+        Chunk *neighbour = findChunk(neighbour_pos);
+        if (neighbour == nullptr) {
+            m_chunks_frontier.push(neighbour_pos);
+        } else {
+            inserted_chunk.m_neighbours[face_i] = neighbour;
+            neighbour->m_neighbours[(face_i + 3) % 6] = &inserted_chunk;
+            neighbour->recomputeBlockNeighbours();
+            neighbour->buildMesh();
         }
     }
+
+    inserted_chunk.recomputeBlockNeighbours();
+    inserted_chunk.buildMesh();
 
     return true;
 }
 bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
-    if (m_loaded_chunks.erase(_chunk_pos) == 0)
+    if (m_chunks.erase(_chunk_pos) == 0)
         return false;
 
     // on le remets dans la frontière si un de ses voisins est chargé
-    for (const glm::ivec3 &_chunk_offset : Chunk::NEIGHBOURS_POS) {
-        glm::ivec3 neighbour = _chunk_pos + _chunk_offset;
-        if (isChunkLoaded(neighbour)) {
+    for (int face_i = 0; face_i < 6; face_i++) {
+        glm::ivec3 neighbour_pos = _chunk_pos + Chunk::NEIGHBOURS_POS[face_i];
+        Chunk *neighbour = findChunk(neighbour_pos);
+        if (neighbour != nullptr) {
             m_chunks_frontier.push(_chunk_pos);
+            neighbour->m_neighbours[(face_i + 3) % 6] = nullptr;
+            neighbour->recomputeBlockNeighbours();
+            neighbour->buildMesh();
         }
     }
 

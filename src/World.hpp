@@ -20,15 +20,14 @@ private:
         }
     };
 
-    std::list<Chunk> m_chunks;
-    std::set<glm::ivec3, glmVecLexicoGraphic<int, 3>> m_loaded_chunks;
+    std::map<glm::ivec3, Chunk, glmVecLexicoGraphic<int, 3>> m_chunks;
     std::queue<glm::ivec3> m_chunks_frontier;
 
 public:
     World() {}
 
-    inline bool isChunkLoaded(const glm::ivec3 &_chunk_pos) const { return m_loaded_chunks.find(_chunk_pos) != m_loaded_chunks.end(); }
-    inline Block::BlockType &getBlockType(const glm::ivec3 &_block_pos) { return findChunk(Chunk::blockPosToChunkPos(_block_pos))->getBlockType(_block_pos); }
+    inline bool isChunkLoaded(const glm::ivec3 &_chunk_pos) const { return m_chunks.find(_chunk_pos) != m_chunks.end(); }
+    inline Block &getBlock(const glm::ivec3 &_block_pos) { return findChunk(Chunk::blockPosToChunkPos(_block_pos))->getBlock(_block_pos); }
 
     Chunk *findChunk(const glm::ivec3 &_chunk_pos);
     bool addChunk(const glm::ivec3 &_chunk_pos);
@@ -36,7 +35,7 @@ public:
     bool generate_step();
 
     inline void render(ShaderProgram &_shader) {
-        for (Chunk &chunk : m_chunks) {
+        for (auto &[chunk_pos, chunk] : m_chunks) {
             chunk.render(_shader);
         }
     }

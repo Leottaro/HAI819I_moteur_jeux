@@ -64,6 +64,9 @@ int main(void) {
 
     World world;
     world.addChunk(glm::ivec3(0, 0, 0));
+    for (int i = 0; i < 10; i++) {
+        world.generate_step();
+    }
 
     camera.m_type = CameraFree;
     camera.m_translation_speed = 10.f;

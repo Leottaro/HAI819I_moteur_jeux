@@ -2,20 +2,45 @@
 #include "Chunk.hpp"
 #include <stdexcept>
 
+void Chunk::recomputeBlockNeighbours() {
+    foreachBlock([this](const glm::uvec3 &pos, const glm::ivec3 &world_pos, Block &block) {
+        for (int face_i = 0; face_i < 6; face_i++) {
+            glm::ivec3 neighbour_pos = glm::ivec3(pos) + Block::NEIGHBOURS_POS[face_i];
+            if (neighbour_pos.x < 0 || neighbour_pos.y < 0 || neighbour_pos.z < 0 || neighbour_pos.x >= CHUNK_SIZE || neighbour_pos.y >= CHUNK_SIZE || neighbour_pos.z >= CHUNK_SIZE) {
+                if (m_neighbours[face_i] != nullptr) {
+                    block.m_neighbours[face_i] = &m_neighbours[face_i]->m_blocks[posToBlockI((neighbour_pos.x + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.y + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.z + CHUNK_SIZE) % CHUNK_SIZE)];
+                }
+                continue;
+            }
+            block.m_neighbours[face_i] = &m_blocks[posToBlockI(neighbour_pos)];
+        }
+    });
+}
+
+Chunk::~Chunk() {
+    clear();
+}
+
 Chunk::Chunk(const glm::ivec3 &_chunk_pos, GenType _type) : m_pos(_chunk_pos) {
     switch (_type) {
     case GenType::SUPERFLAT:
-        foreachBlockWorld([](int world_x, int world_y, int world_z, Block::BlockType &type) {
-            if (world_y <= -1)
-                type = Block::BlockType::Air;
-            else if (world_y <= 0)
-                type = Block::BlockType::Bedrock;
-            else if (world_y <= 3)
-                type = Block::BlockType::Dirt;
-            else if (world_y <= 4)
-                type = Block::BlockType::Grass;
-            else
-                type = Block::BlockType::Air;
+        foreachBlock([](const glm::uvec3 &pos, const glm::ivec3 &world_pos, Block &block) {
+            block.getPos() = world_pos;
+            if (world_pos.y <= -1) {
+                block.getType() = Block::BlockType::Air;
+            } else if (world_pos.y <= 0) {
+                block.getType() = Block::BlockType::Bedrock;
+            } else if (world_pos.y <= 3) {
+                block.getType() = Block::BlockType::Dirt;
+            } else if (world_pos.y <= 4) {
+                block.getType() = Block::BlockType::Grass;
+            } else {
+                block.getType() = Block::BlockType::Air;
+            }
+
+            if (pos.x == 0 && pos.z == 0) {
+                block.getType() = pos.y % 2 == 0 ? Block::BlockType::Air : Block::BlockType::Dirt;
+            }
         });
         break;
     default:
@@ -30,14 +55,19 @@ void Chunk::buildMesh() {
     std::vector<glm::vec2> &uvs = m_mesh.vertexTexCoords();
     std::vector<glm::uvec3> &triangles = m_mesh.triangleIndices();
 
-    foreachBlockWorld([&positions, &normals, &triangles, &uvs](int world_x, int world_y, int world_z, Block::BlockType &type) {
-        if (type == Block::BlockType::Air)
+    foreachBlock([&positions, &normals, &triangles, &uvs](const glm::uvec3 &pos, const glm::ivec3 &world_pos, Block &block) {
+        if (block.getType() == Block::BlockType::Air)
             return;
-        glm::vec3 pos(world_x, world_y, world_z);
+
         for (int face_i = 0; face_i < 6; face_i++) {
+            if (block.m_neighbours[face_i] != nullptr && block.m_neighbours[face_i]->getType() != Block::BlockType::Air) {
+                continue;
+            }
+
             const Block::FaceData &face = Block::FACE_DATA[face_i];
+
             for (int i = 0; i < 4; ++i) {
-                positions.push_back(pos + face.vertices[i]);
+                positions.push_back(glm::vec3(world_pos) + face.vertices[i]);
                 normals.push_back(face.normal);
             }
             glm::uvec3 offset(positions.size() - 4);
