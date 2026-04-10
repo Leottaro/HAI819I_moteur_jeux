@@ -23,6 +23,15 @@ set(APP_SOURCES
 
     src/Scene.hpp
 
+    src/World.hpp
+    src/World.cpp
+
+    src/Chunk.hpp
+    src/Chunk.cpp
+
+    src/Block.hpp
+    src/Block.cpp
+
     src/Camera.hpp
     src/Camera.cpp
 
