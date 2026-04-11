@@ -6,6 +6,7 @@
 #include <glm/ext.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 // GLFW
 #include <GLFW/glfw3.h>
@@ -63,10 +64,7 @@ int main(void) {
     ShaderProgram shader("ressources/shaders/vertex_shader.glsl", "ressources/shaders/fragment_shader.glsl");
 
     World world;
-    // world.addChunk(glm::ivec3(0, 0, 0));
-    world.addChunk(glm::ivec3(32, 0, 0));
     world.addChunk(glm::ivec3(0, 0, 0));
-    bool truc = false;
 
     camera.m_type = CameraFree;
     camera.m_translation_speed = 10.f;
@@ -93,13 +91,10 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
-            if (truc) {
-                world.addChunk(glm::ivec3(32, 0, 0));
-            } else {
-                world.removeChunk(glm::ivec3(32, 0, 0));
-            }
-            truc = !truc;
-            run_simulation = false;
+            glm::ivec3 cam_chunk = Chunk::posToChunkPos(camera.m_position);
+            // std::cout << glm::to_string(cam_chunk) << std::endl;
+            world.generate(cam_chunk);
+            // run_simulation = false;
         }
 
         /**********==========RENDERING==========**********/

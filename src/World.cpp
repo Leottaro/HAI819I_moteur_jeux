@@ -66,14 +66,36 @@ bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
     return true;
 }
 
-bool World::generate_step() {
-    // glm::ivec3 next_chunk;
-    // do {
-    //     if (m_chunks_frontier.empty())
-    //         return false;
-    //     next_chunk = m_chunks_frontier.back();
-    //     m_chunks_frontier.pop_back();
-    // } while (isChunkLoaded(next_chunk));
-    // addChunk(next_chunk);
-    return true;
+bool World::generate(const glm::ivec3 &_chunk_pos) {
+    if (!isChunkLoaded(_chunk_pos)) {
+        addChunk(_chunk_pos);
+        return true;
+    }
+
+    std::list<glm::ivec3> chunk_to_remove;
+    for (auto &[chunk_pos, chunk] : m_chunks) {
+        if (Chunk::chunkDistance(chunk_pos, _chunk_pos) > RENDER_DISTANCE) {
+            chunk_to_remove.push_back(chunk_pos);
+        }
+    }
+    for (const glm::ivec3 &chunk_pos : chunk_to_remove) {
+        removeChunk(chunk_pos);
+    }
+    if (!chunk_to_remove.empty()) {
+        return true;
+    }
+
+    std::map<uint, glm::ivec3> chunk_to_add;
+    for (const glm::ivec3 &chunk_pos : m_chunks_frontier) {
+        uint chunk_dist = Chunk::chunkDistance(chunk_pos, _chunk_pos);
+        if (chunk_dist <= RENDER_DISTANCE) {
+            chunk_to_add.insert({chunk_dist, chunk_pos});
+        }
+    }
+    if (!chunk_to_add.empty()) {
+        addChunk(chunk_to_add.begin()->second);
+        return true;
+    }
+
+    return false;
 }

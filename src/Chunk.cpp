@@ -76,7 +76,9 @@ void Chunk::buildMesh() {
             triangles.push_back(face.triangles[1] + offset);
         }
     });
-    uvs.resize(positions.size());
-    m_mesh.initShaderData();
+    if (m_mesh.nbVertices() > 0) {
+        uvs.resize(positions.size());
+        m_mesh.initShaderData();
+    }
     m_aabb.initShaderData();
 }

@@ -19,7 +19,7 @@ private:
     std::vector<glm::vec3> m_normals = std::vector<glm::vec3>();
     std::vector<glm::vec2> m_uvs = std::vector<glm::vec2>();
     std::vector<glm::uvec3> m_triangles = std::vector<glm::uvec3>();
-    Octree m_octree;
+    Octree *m_octree = nullptr;
 
     GLuint m_VAO = 0;
     GLuint m_vertices_VBO = 0;

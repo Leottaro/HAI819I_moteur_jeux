@@ -26,15 +26,19 @@ public:
         glm::ivec3(0, CHUNK_SIZE, 0),  // Top   (+Y)
     };
 
+    static constexpr glm::ivec3 posToChunkPos(const glm::vec3 &_pos) {
+        return blockPosToChunkPos(glm::ivec3(_pos.x, _pos.y, _pos.z));
+    }
     static constexpr glm::ivec3 blockPosToChunkPos(const glm::ivec3 &_block_pos) {
         return glm::ivec3(
-            _block_pos.x + _block_pos.x % CHUNK_SIZE,
-            _block_pos.y + _block_pos.y % CHUNK_SIZE,
-            _block_pos.z + _block_pos.z % CHUNK_SIZE);
+            (_block_pos.x < 0 && _block_pos.x % CHUNK_SIZE != 0 ? _block_pos.x / CHUNK_SIZE - 1 : _block_pos.x / CHUNK_SIZE) * CHUNK_SIZE,
+            (_block_pos.y < 0 && _block_pos.y % CHUNK_SIZE != 0 ? _block_pos.y / CHUNK_SIZE - 1 : _block_pos.y / CHUNK_SIZE) * CHUNK_SIZE,
+            (_block_pos.z < 0 && _block_pos.z % CHUNK_SIZE != 0 ? _block_pos.z / CHUNK_SIZE - 1 : _block_pos.z / CHUNK_SIZE) * CHUNK_SIZE);
     }
 
     static constexpr uint chunkDistance(const glm::ivec3 &_a, const glm::ivec3 &_b) {
-        return std::sqrt(std::pow(_a.x - _b.x, 2) + std::pow(_a.y - _b.y, 2) + std::pow(_a.z - _b.z, 2));
+        uint dist = std::sqrt(std::pow(_a.x - _b.x, 2) + std::pow(_a.y - _b.y, 2) + std::pow(_a.z - _b.z, 2));
+        return dist / CHUNK_SIZE;
     }
 
     enum class GenType {
@@ -85,6 +89,8 @@ public:
     void recomputeBlockNeighbours();
     void buildMesh();
     inline void render(ShaderProgram &_shader) {
+        if (m_mesh.nbVertices() == 0)
+            return;
         _shader.set("texture_i", -1);
         _shader.set("texture_sampler", -1);
 

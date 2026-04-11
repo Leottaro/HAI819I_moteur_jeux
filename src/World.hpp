@@ -8,7 +8,7 @@
 
 class World {
 public:
-    static constexpr int RENDER_DISTANCE = 4;
+    static constexpr int RENDER_DISTANCE = 8;
 
 private:
     template <typename T, size_t n>
@@ -35,7 +35,9 @@ public:
     Chunk *findChunk(const glm::ivec3 &_chunk_pos);
     bool addChunk(const glm::ivec3 &_chunk_pos);
     bool removeChunk(const glm::ivec3 &_chunk_pos);
-    bool generate_step();
+    bool generate(const glm::ivec3 &_chunk_pos);
+
+    // RENDERING
 
     inline void render(ShaderProgram &_shader) {
         for (auto &[chunk_pos, chunk] : m_chunks) {

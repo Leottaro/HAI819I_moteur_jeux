@@ -398,7 +398,7 @@ Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
     new_mesh.m_normals = new_normals;
     new_mesh.m_triangles = new_triangles;
     new_mesh.m_uvs.resize(m_vertices.size());
-    new_mesh.m_octree = octree;
+    new_mesh.m_octree = &octree;
 
     return new_mesh;
 }
@@ -435,7 +435,9 @@ void Mesh::initShaderData() {
 
     glBindVertexArray(0);
 
-    m_octree.initShaderData();
+    if (m_octree != nullptr) {
+        m_octree->initShaderData();
+    }
 }
 
 void Mesh::render() const {
@@ -444,7 +446,9 @@ void Mesh::render() const {
 }
 
 void Mesh::renderOctree() const {
-    m_octree.render();
+    if (m_octree != nullptr) {
+        m_octree->render();
+    }
 }
 
 void Mesh::clear() {
@@ -473,5 +477,8 @@ void Mesh::clear() {
         m_triangles_EBO = 0;
     }
 
-    m_octree.clear();
+    if (m_octree != nullptr) {
+        m_octree->clear();
+        m_octree = nullptr;
+    }
 }
