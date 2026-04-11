@@ -22,7 +22,7 @@ Chunk::~Chunk() {
     clear();
 }
 
-Chunk::Chunk(const glm::ivec3 &_chunk_pos, GenType _type) : m_pos(_chunk_pos) {
+Chunk::Chunk(const glm::ivec3 &_chunk_pos, GenType _type) : m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     switch (_type) {
     case GenType::SUPERFLAT:
         foreachBlock([](const glm::uvec3 &pos, const glm::ivec3 &world_pos, Block &block) {
@@ -78,4 +78,5 @@ void Chunk::buildMesh() {
     });
     uvs.resize(positions.size());
     m_mesh.initShaderData();
+    m_aabb.initShaderData();
 }

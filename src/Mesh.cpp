@@ -340,28 +340,15 @@ Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
     }
 
     // calculer min et max
-    glm::vec3 min = glm::vec3(FLT_MAX);
-    glm::vec3 max = glm::vec3(-FLT_MAX);
+    AABB<float> aabb;
     for (const glm::vec3 &v : m_vertices) {
-        if (v[0] < min[0])
-            min[0] = v[0];
-        if (v[1] < min[1])
-            min[1] = v[1];
-        if (v[2] < min[2])
-            min[2] = v[2];
-
-        if (v[0] > max[0])
-            max[0] = v[0];
-        if (v[1] > max[1])
-            max[1] = v[1];
-        if (v[2] > max[2])
-            max[2] = v[2];
+        aabb.addPosition(v);
     }
-    min -= glm::vec3(1., 1., 1.);
-    max += glm::vec3(1., 1., 1.);
+    aabb.min -= glm::vec3(1.);
+    aabb.max += glm::vec3(1.);
 
     // Constreuire l'octree et y ajouter les points.
-    Octree octree(max_vert_per_leaf, min, max);
+    Octree octree(max_vert_per_leaf, aabb);
     for (size_t i = 0; i < m_vertices.size(); i++) {
         octree.pushVertex(i, m_vertices[i], m_normals[i]);
     }

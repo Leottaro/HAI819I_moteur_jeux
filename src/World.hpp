@@ -42,6 +42,16 @@ public:
             chunk.render(_shader);
         }
     }
+    inline void renderDebugBoxes(ShaderProgram &_shader) {
+        for (auto &[chunk_pos, chunk] : m_chunks) {
+            chunk.renderDebugBox(_shader);
+        }
+        for (const glm::ivec3 &chunk_pos : m_chunks_frontier) {
+            AABB<int> aabb(chunk_pos, chunk_pos + glm::ivec3(Chunk::CHUNK_SIZE));
+            aabb.initShaderData();
+            aabb.render();
+        }
+    }
     inline void clear() {
         m_chunks.clear();
         m_chunks_frontier.clear();

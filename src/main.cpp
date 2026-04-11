@@ -109,6 +109,7 @@ int main(void) {
         shader.set("projection", camera.getProjectionMatrix());
 
         world.render(shader);
+        world.renderDebugBoxes(shader);
 
         // ImGui Render
         ImGui::Render();

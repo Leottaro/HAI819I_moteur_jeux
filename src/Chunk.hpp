@@ -44,6 +44,8 @@ public:
 private:
     glm::ivec3 m_pos;
     std::array<Block, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE> m_blocks;
+
+    AABB<float> m_aabb;
     Mesh m_mesh;
 
     static inline size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
@@ -91,6 +93,17 @@ public:
         m_mesh.render();
     }
     inline void renderDebugBox(ShaderProgram &_shader) {
+        // m_aabb = AABB<float>(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE));
+        // m_aabb.initShaderData();
+        _shader.set("texture_i", -1);
+        _shader.set("texture_sampler", -1);
+
+        _shader.set("model", glm::mat4(1.));
+        _shader.set("has_normals", 0);
+        m_aabb.render();
     }
-    inline void clear() { m_mesh.clear(); }
+    inline void clear() {
+        m_mesh.clear();
+        m_aabb.clearShaderData();
+    }
 };

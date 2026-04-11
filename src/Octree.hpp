@@ -1,14 +1,13 @@
 #pragma once
 
-// Include GLEW
-#include <GL/glew.h>
-
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+// USUAL INCLUDES
 #include <vector>
+#include "AABB.hpp"
 
 struct OctreeData {
     size_t element_count;
@@ -54,15 +53,11 @@ struct OctreeData {
 class Octree {
 protected:
     size_t max_vert_per_leaf;
-    glm::vec3 min_pos, max_pos;
+    AABB<float> aabb;
 
     bool is_leaf;
     OctreeData data;
     std::vector<Octree> children;
-
-    GLuint m_VAO = 0;
-    GLuint m_vertices_VBO = 0;
-    GLuint m_lines_EBO = 0;
 
     // divide the current node and return the number of children that have at least 1 vertex.
     void divide() {
@@ -75,10 +70,10 @@ protected:
         for (size_t x = 0; x < 2; x++) {
             for (size_t y = 0; y < 2; y++) {
                 for (size_t z = 0; z < 2; z++) {
-                    glm::vec3 temp = (max_pos - min_pos) / 2.f;
-                    glm::vec3 child_min_pos = min_pos + glm::vec3(x, y, z) * temp;
+                    glm::vec3 temp = (aabb.max - aabb.min) / 2.f;
+                    glm::vec3 child_min_pos = aabb.min + glm::vec3(x, y, z) * temp;
                     glm::vec3 child_max_pos = child_min_pos + temp;
-                    children.push_back(Octree(max_vert_per_leaf, child_min_pos, child_max_pos));
+                    children.push_back(Octree(max_vert_per_leaf, AABB(child_min_pos, child_max_pos)));
                 }
             }
         }
@@ -94,19 +89,19 @@ protected:
         data = OctreeData();
     }
 
-    size_t getCellX(glm::vec3 pos) { return 2 * (pos[0] - min_pos[0]) / (max_pos[0] - min_pos[0]); }
-    size_t getCellY(glm::vec3 pos) { return 2 * (pos[1] - min_pos[1]) / (max_pos[1] - min_pos[1]); }
-    size_t getCellZ(glm::vec3 pos) { return 2 * (pos[2] - min_pos[2]) / (max_pos[2] - min_pos[2]); }
+    size_t getCellX(glm::vec3 pos) { return 2 * (pos.x - aabb.min.x) / (aabb.max.x - aabb.min.x); }
+    size_t getCellY(glm::vec3 pos) { return 2 * (pos.y - aabb.min.y) / (aabb.max.y - aabb.min.y); }
+    size_t getCellZ(glm::vec3 pos) { return 2 * (pos.z - aabb.min.z) / (aabb.max.z - aabb.min.z); }
     size_t getIndex(glm::vec3 pos) { return getCellX(pos) * 4 + getCellY(pos) * 2 + getCellZ(pos); }
     bool isInside(glm::vec3 const &v) {
-        return min_pos[0] - FLT_EPSILON <= v[0] && v[0] <= max_pos[0] + FLT_EPSILON &&
-               min_pos[1] - FLT_EPSILON <= v[1] && v[1] <= max_pos[1] + FLT_EPSILON &&
-               min_pos[2] - FLT_EPSILON <= v[2] && v[2] <= max_pos[2] + FLT_EPSILON;
+        return aabb.min.x - FLT_EPSILON <= v.x && v.x <= aabb.max.x + FLT_EPSILON &&
+               aabb.min.y - FLT_EPSILON <= v.y && v.y <= aabb.max.y + FLT_EPSILON &&
+               aabb.min.z - FLT_EPSILON <= v.z && v.z <= aabb.max.z + FLT_EPSILON;
     }
 
 public:
-    Octree() : max_vert_per_leaf(), min_pos(), max_pos(), is_leaf(true), data(), children({}) {}
-    Octree(size_t const &max_vert_per_leaf, glm::vec3 const &min_pos, glm::vec3 const &max_pos) : max_vert_per_leaf(max_vert_per_leaf), min_pos(min_pos), max_pos(max_pos), is_leaf(true), data(), children({}) {}
+    Octree() : max_vert_per_leaf(), aabb(), is_leaf(true), data(), children({}) {}
+    Octree(const size_t &max_vert_per_leaf, const AABB<float> &aabb) : max_vert_per_leaf(max_vert_per_leaf), aabb(aabb), is_leaf(true), data(), children({}) {}
 
     // recalculates the Representants of all the tree
     void calcRepresentants() {
@@ -158,51 +153,7 @@ public:
                 children[i].initShaderData();
             }
         } else if (data.element_count > 0) {
-            glGenVertexArrays(1, &m_VAO);
-            glBindVertexArray(m_VAO);
-
-            std::vector<glm::vec3> m_vertices{
-                glm::vec3(min_pos[0], min_pos[1], min_pos[2]),
-                glm::vec3(min_pos[0], min_pos[1], max_pos[2]),
-                glm::vec3(min_pos[0], max_pos[1], min_pos[2]),
-                glm::vec3(min_pos[0], max_pos[1], max_pos[2]),
-                glm::vec3(max_pos[0], min_pos[1], min_pos[2]),
-                glm::vec3(max_pos[0], min_pos[1], max_pos[2]),
-                glm::vec3(max_pos[0], max_pos[1], min_pos[2]),
-                glm::vec3(max_pos[0], max_pos[1], max_pos[2])};
-
-            glGenBuffers(1, &m_vertices_VBO);
-            glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
-            glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
-            glEnableVertexAttribArray(0);
-            glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-            std::vector<glm::uvec2> m_lines{
-                // Z
-                glm::uvec2(0, 1),
-                glm::uvec2(2, 3),
-                glm::uvec2(4, 5),
-                glm::uvec2(6, 7),
-
-                // Y
-                glm::uvec2(0, 2),
-                glm::uvec2(1, 3),
-                glm::uvec2(4, 6),
-                glm::uvec2(5, 7),
-
-                // X
-                glm::uvec2(0, 4),
-                glm::uvec2(1, 5),
-                glm::uvec2(2, 6),
-                glm::uvec2(3, 7)};
-
-            glGenBuffers(1, &m_lines_EBO);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_lines_EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_lines.size() * sizeof(glm::uvec3), m_lines.data(), GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-            glBindVertexArray(0);
+            aabb.initShaderData();
         }
     }
 
@@ -212,8 +163,7 @@ public:
                 children[i].render();
             }
         } else if (data.element_count > 0) {
-            glBindVertexArray(m_VAO);
-            glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+            aabb.render();
         }
     }
 
@@ -223,6 +173,7 @@ public:
                 children[i].clear();
             }
         } else if (data.element_count > 0) {
+            aabb.clearShaderData();
             data.clear();
         }
     }

@@ -30,7 +30,6 @@ set(APP_SOURCES
     src/Chunk.cpp
 
     src/Block.hpp
-    src/Block.cpp
 
     src/Camera.hpp
     src/Camera.cpp
@@ -38,6 +37,7 @@ set(APP_SOURCES
     src/Mesh.hpp
     src/Mesh.cpp
     src/Octree.hpp
+    src/AABB.hpp
 
     src/Transformation.hpp
 
