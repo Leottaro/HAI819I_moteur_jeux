@@ -33,6 +33,10 @@ public:
             _block_pos.z + _block_pos.z % CHUNK_SIZE);
     }
 
+    static constexpr uint chunkDistance(const glm::ivec3 &_a, const glm::ivec3 &_b) {
+        return std::sqrt(std::pow(_a.x - _b.x, 2) + std::pow(_a.y - _b.y, 2) + std::pow(_a.z - _b.z, 2));
+    }
+
     enum class GenType {
         SUPERFLAT,
     };
@@ -85,6 +89,8 @@ public:
         _shader.set("model", glm::mat4(1.));
         _shader.set("has_normals", 1);
         m_mesh.render();
+    }
+    inline void renderDebugBox(ShaderProgram &_shader) {
     }
     inline void clear() { m_mesh.clear(); }
 };

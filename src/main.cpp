@@ -63,10 +63,10 @@ int main(void) {
     ShaderProgram shader("ressources/shaders/vertex_shader.glsl", "ressources/shaders/fragment_shader.glsl");
 
     World world;
+    // world.addChunk(glm::ivec3(0, 0, 0));
+    world.addChunk(glm::ivec3(32, 0, 0));
     world.addChunk(glm::ivec3(0, 0, 0));
-    for (int i = 0; i < 10; i++) {
-        world.generate_step();
-    }
+    bool truc = false;
 
     camera.m_type = CameraFree;
     camera.m_translation_speed = 10.f;
@@ -93,7 +93,12 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
-            world.generate_step();
+            if (truc) {
+                world.addChunk(glm::ivec3(32, 0, 0));
+            } else {
+                world.removeChunk(glm::ivec3(32, 0, 0));
+            }
+            truc = !truc;
             run_simulation = false;
         }
 

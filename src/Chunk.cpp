@@ -7,9 +7,10 @@ void Chunk::recomputeBlockNeighbours() {
         for (int face_i = 0; face_i < 6; face_i++) {
             glm::ivec3 neighbour_pos = glm::ivec3(pos) + Block::NEIGHBOURS_POS[face_i];
             if (neighbour_pos.x < 0 || neighbour_pos.y < 0 || neighbour_pos.z < 0 || neighbour_pos.x >= CHUNK_SIZE || neighbour_pos.y >= CHUNK_SIZE || neighbour_pos.z >= CHUNK_SIZE) {
-                if (m_neighbours[face_i] != nullptr) {
-                    block.m_neighbours[face_i] = &m_neighbours[face_i]->m_blocks[posToBlockI((neighbour_pos.x + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.y + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.z + CHUNK_SIZE) % CHUNK_SIZE)];
-                }
+                block.m_neighbours[face_i] = m_neighbours[face_i] == nullptr
+                                                 ? nullptr
+                                                 : &m_neighbours[face_i]->m_blocks[posToBlockI((neighbour_pos.x + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.y + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.z + CHUNK_SIZE) % CHUNK_SIZE)];
+
                 continue;
             }
             block.m_neighbours[face_i] = &m_blocks[posToBlockI(neighbour_pos)];

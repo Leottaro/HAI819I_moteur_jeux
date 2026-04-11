@@ -6,6 +6,8 @@
 
 // USUAL INCLUDES
 
+constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
+
 class Block {
 public:
     enum class BlockType { Air,
