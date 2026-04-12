@@ -1,18 +1,11 @@
 #pragma once
 
-// GLM EXPERIMENTAL
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/string_cast.hpp>
-
 // USUAL INCLUDES
 #include "Block.hpp"
-#include "Camera.hpp"
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
 #include <array>
 #include <cstdint>
-#include <functional>
-#include <iostream>
 
 class Chunk {
 public:
@@ -54,30 +47,19 @@ private:
 
     static inline size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
     static inline size_t posToBlockI(const glm::uvec3 &_relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
-
-    inline void foreachBlock(std::function<void(const glm::uvec3 &pos, const glm::ivec3 &world_pos, Block &block)> _func) {
-        glm::uvec3 pos(0);
-        glm::ivec3 world_pos;
-        world_pos.y = m_pos.y;
-        for (pos.y = 0; pos.y < CHUNK_SIZE; pos.y++) {
-            world_pos.z = m_pos.z;
-            for (pos.z = 0; pos.z < CHUNK_SIZE; pos.z++) {
-                world_pos.x = m_pos.x;
-                for (pos.x = 0; pos.x < CHUNK_SIZE; pos.x++) {
-                    _func(pos, world_pos, m_blocks[posToBlockI(pos)]);
-                    world_pos.x++;
-                }
-                world_pos.z++;
-            }
-            world_pos.y++;
-        }
-    }
+    void initNeighbours();
+    void generate(GenType _type);
 
 public:
-    std::array<const Chunk *, 6> m_neighbours{nullptr};
+    std::array<Chunk *, 6>
+        m_neighbours{nullptr};
 
+    Chunk(Chunk &&) = delete;
+    Chunk(const Chunk &) = delete;
+    Chunk &operator=(const Chunk &) = delete;
+    Chunk &operator=(Chunk &&) = delete;
     Chunk(const glm::ivec3 &_chunk_pos, GenType _type);
-    ~Chunk();
+    ~Chunk() { clear(); }
 
     inline const glm::ivec3 &getPos() const { return m_pos; }
     inline glm::ivec3 &getPos() { return m_pos; }
@@ -86,7 +68,7 @@ public:
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
 
-    void recomputeBlockNeighbours();
+    void updateBlockNeighbours(uint8_t _face_i);
     void buildMesh();
     inline void render(ShaderProgram &_shader) {
         if (m_mesh.nbVertices() == 0)
@@ -99,8 +81,6 @@ public:
         m_mesh.render();
     }
     inline void renderDebugBox(ShaderProgram &_shader) {
-        // m_aabb = AABB<float>(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE));
-        // m_aabb.initShaderData();
         _shader.set("texture_i", -1);
         _shader.set("texture_sampler", -1);
 

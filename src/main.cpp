@@ -4,9 +4,6 @@
 // GLM
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/norm.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 // GLFW
 #include <GLFW/glfw3.h>
@@ -22,12 +19,8 @@ GLFWwindow *window;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <vector>
 #include <fstream>
 #include "ShaderProgram.hpp"
-#include "ImageBase.h"
-#include "Mesh.hpp"
-#include "Scene.hpp"
 #include "Camera.hpp"
 #include "RigidBody.hpp"
 #include "Chunk.hpp"
@@ -48,12 +41,8 @@ float deltaTime = 0.f;
 float lastFrame = 0.f;
 
 Camera camera;
-
-float densite_eau = 1000.f;
-float densite_air = 1.f;
-
-RigidBody cube_body, sun_body, spring_body;
-ofstream logfile;
+World world;
+bool display_debug = false;
 
 void globalInit();
 
@@ -63,13 +52,13 @@ int main(void) {
     // Create and compile our GLSL program from the shaders
     ShaderProgram shader("ressources/shaders/vertex_shader.glsl", "ressources/shaders/fragment_shader.glsl");
 
-    World world;
-    world.addChunk(glm::ivec3(0, 0, 0));
-
-    camera.m_type = CameraFree;
-    camera.m_translation_speed = 10.f;
+    camera.m_type = Camera::Type::Free;
+    camera.m_position = glm::vec3(16.f, 16.f, 16.f);
+    camera.m_translation_speed = 32.f;
+    camera.m_orientation = glm::vec2(0.f, 0.f);
     camera.m_rotation_speed = 1.f;
-    camera.m_position = glm::vec3(0, 10, 0);
+
+    world.generate(camera.m_position);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
@@ -92,9 +81,7 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
             glm::ivec3 cam_chunk = Chunk::posToChunkPos(camera.m_position);
-            // std::cout << glm::to_string(cam_chunk) << std::endl;
             world.generate(cam_chunk);
-            // run_simulation = false;
         }
 
         /**********==========RENDERING==========**********/
@@ -104,7 +91,8 @@ int main(void) {
         shader.set("projection", camera.getProjectionMatrix());
 
         world.render(shader);
-        world.renderDebugBoxes(shader);
+        if (display_debug)
+            world.renderDebugBoxes(shader);
 
         // ImGui Render
         ImGui::Render();
@@ -113,13 +101,11 @@ int main(void) {
         // Reset some controls
         scroll = glm::vec2(0.);
         cursor_vel = glm::vec2(0.);
-        logfile << currentFrame << " " << cube_body.m_pos.x << " " << cube_body.m_pos.y << " " << cube_body.m_pos.z << " " << cube_body.m_vel.x << " " << cube_body.m_vel.y << " " << cube_body.m_vel.z << std::endl;
     } while (glfwWindowShouldClose(window) == GLFW_FALSE);
 
     // Cleanup VBO and shader
-    world.clear();
+    world.~World();
     shader.~ShaderProgram();
-    logfile.close();
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
@@ -135,10 +121,10 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-bool c_key_pressed = false;
 bool w_key_pressed = false;
 bool p_key_pressed = false;
-bool space_key_pressed = false;
+bool r_key_pressed = false;
+bool g_key_pressed = false;
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     // cout << "key:" << key << " scancode:" << scancode << " action:" << action << " mods:" << mods << endl;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -174,18 +160,26 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         }
     }
 
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-        if (!space_key_pressed) {
-            space_key_pressed = true;
-
-            cube_body.m_pos = camera.m_position;
-
-            glm::mat4 rot = glm::rotate(glm::mat4(1.), M_PIf / 4.f, glm::normalize(glm::cross(camera.getFront(), camera.getUp())));
-            cube_body.m_vel = 10.f * applyTransformation(camera.getFront(), 0.f, rot);
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        if (!r_key_pressed) {
+            r_key_pressed = true;
+            world.clear();
+            world.generate(camera.m_position);
         }
     } else {
-        if (space_key_pressed) {
-            space_key_pressed = false;
+        if (r_key_pressed) {
+            r_key_pressed = false;
+        }
+    }
+
+    if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+        if (!g_key_pressed) {
+            g_key_pressed = true;
+            display_debug = !display_debug;
+        }
+    } else {
+        if (g_key_pressed) {
+            g_key_pressed = false;
         }
     }
 }

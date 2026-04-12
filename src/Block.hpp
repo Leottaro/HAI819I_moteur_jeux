@@ -1,7 +1,6 @@
 #pragma once
 
 // GLM
-#include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
 // USUAL INCLUDES
@@ -44,7 +43,7 @@ private:
     glm::ivec3 m_pos;
 
 public:
-    std::array<const Block *, 6> m_neighbours{nullptr};
+    std::array<Block *, 6> m_neighbours{nullptr};
 
     Block() : m_type(BlockType::Air) {}
     Block(BlockType _type, const glm::ivec3 &_pos) : m_type(_type), m_pos(_pos) {}

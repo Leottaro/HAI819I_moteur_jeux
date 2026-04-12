@@ -1,19 +1,21 @@
 // USUAL INCLUDES
 #include "World.hpp"
+#include <list>
 
 Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
     if (isChunkLoaded(_chunk_pos)) {
-        return &m_chunks.at(_chunk_pos);
+        return m_chunks.at(_chunk_pos);
     }
     return nullptr;
 }
 
 bool World::addChunk(const glm::ivec3 &_chunk_pos) {
-    if (!m_chunks.insert({_chunk_pos, Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT)}).second) {
+    if (isChunkLoaded(_chunk_pos))
         return false;
-    }
+
+    m_chunks.insert({_chunk_pos, new Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT)});
     m_chunks_frontier.erase(_chunk_pos);
-    Chunk &inserted_chunk = m_chunks.at(_chunk_pos);
+    Chunk *inserted_chunk = m_chunks.at(_chunk_pos);
 
     // on ajoute tous ses voisins dans la frontière si ils ne sont pas déjà chargé sinon on update le chunk car il a un nouveau voisin !
     for (int face_i = 0; face_i < 6; face_i++) {
@@ -22,21 +24,25 @@ bool World::addChunk(const glm::ivec3 &_chunk_pos) {
         if (neighbour == nullptr) {
             m_chunks_frontier.insert(neighbour_pos);
         } else {
-            inserted_chunk.m_neighbours[face_i] = neighbour;
-            neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = &inserted_chunk;
-            neighbour->recomputeBlockNeighbours();
+            inserted_chunk->m_neighbours[face_i] = neighbour;
+            inserted_chunk->updateBlockNeighbours(face_i);
+
+            neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = inserted_chunk;
             neighbour->buildMesh();
         }
     }
 
-    inserted_chunk.recomputeBlockNeighbours();
-    inserted_chunk.buildMesh();
+    inserted_chunk->buildMesh();
 
     return true;
 }
 bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
-    if (m_chunks.erase(_chunk_pos) == 0)
+    Chunk *removed_chunk = findChunk(_chunk_pos);
+    if (removed_chunk == nullptr)
         return false;
+    delete removed_chunk;
+    m_chunks.erase(_chunk_pos);
+    m_chunks_frontier.erase(_chunk_pos);
 
     for (int face_i = 0; face_i < 6; face_i++) {
         glm::ivec3 neighbour_pos = _chunk_pos + Chunk::NEIGHBOURS_POS[face_i];
@@ -45,7 +51,7 @@ bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
             // neighbour chunk is loaded, we update it and put the current chunk in the frontier
             m_chunks_frontier.insert(_chunk_pos);
             neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = nullptr;
-            neighbour->recomputeBlockNeighbours();
+            neighbour->updateBlockNeighbours(OPPOSITE_FACE[face_i]);
             neighbour->buildMesh();
         } else if (isChunkFrontier(neighbour_pos)) {
             // neighbour chunk is in frontier, remove it if it has no loaded neighbour.

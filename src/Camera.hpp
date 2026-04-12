@@ -1,24 +1,23 @@
 #pragma once
 
 // GLM
-#include <glm/ext.hpp>
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
 // USUAL INCLUDES
 #include <math.h>
 #include "Transformation.hpp"
 
-#define CAMERA_TYPES_N 3
-#define CAMERA_TYPES "Free\0Orbital\0AutoSpin"
-enum CameraType {
-    CameraFree,
-    CameraOrbital,
-    CameraAutoSpin,
-};
-
 class Camera {
 public:
-    CameraType m_type = CameraOrbital;
+#define CAMERA_TYPES_N 2
+#define CAMERA_TYPES "Free\0Orbital\0"
+    enum class Type {
+        Free = 0,
+        Orbital = 1,
+    };
+
+    Type m_type = Type::Free;
     glm::vec3 m_position = glm::vec3(1.0f, 1.0f, 1.0f);
     float m_translation_speed = 2.5f;
 

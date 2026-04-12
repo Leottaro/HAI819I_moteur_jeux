@@ -3,7 +3,6 @@
 // USUAL INCLUDES
 #include "Chunk.hpp"
 #include <map>
-#include <list>
 #include <set>
 
 class World {
@@ -14,19 +13,18 @@ private:
     template <typename T, size_t n>
     struct glmVecLexicoGraphic {
         bool operator()(const glm::vec<n, T, glm::packed_highp> &a, const glm::vec<n, T, glm::packed_highp> &b) const {
-            if (a.x != b.x)
-                return a.x < b.x;
-            if (a.y != b.y)
-                return a.y < b.y;
-            return a.z < b.z;
+            return a.x != b.x   ? a.x < b.x
+                   : a.y != b.y ? a.y < b.y
+                                : a.z < b.z;
         }
     };
 
-    std::map<glm::ivec3, Chunk, glmVecLexicoGraphic<int, 3>> m_chunks;
+    std::map<glm::ivec3, Chunk *, glmVecLexicoGraphic<int, 3>> m_chunks;
     std::set<glm::ivec3, glmVecLexicoGraphic<int, 3>> m_chunks_frontier;
 
 public:
     World() {}
+    ~World() { clear(); }
 
     inline bool isChunkLoaded(const glm::ivec3 &_chunk_pos) const { return m_chunks.find(_chunk_pos) != m_chunks.end(); }
     inline bool isChunkFrontier(const glm::ivec3 &_chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
@@ -41,20 +39,18 @@ public:
 
     inline void render(ShaderProgram &_shader) {
         for (auto &[chunk_pos, chunk] : m_chunks) {
-            chunk.render(_shader);
+            chunk->render(_shader);
         }
     }
     inline void renderDebugBoxes(ShaderProgram &_shader) {
         for (auto &[chunk_pos, chunk] : m_chunks) {
-            chunk.renderDebugBox(_shader);
-        }
-        for (const glm::ivec3 &chunk_pos : m_chunks_frontier) {
-            AABB<int> aabb(chunk_pos, chunk_pos + glm::ivec3(Chunk::CHUNK_SIZE));
-            aabb.initShaderData();
-            aabb.render();
+            chunk->renderDebugBox(_shader);
         }
     }
     inline void clear() {
+        for (auto &[chunk_pos, chunk] : m_chunks) {
+            delete chunk;
+        }
         m_chunks.clear();
         m_chunks_frontier.clear();
     }

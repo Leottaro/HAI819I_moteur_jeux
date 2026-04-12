@@ -8,10 +8,6 @@
 
 using namespace std;
 
-Mesh::~Mesh() {
-    clear();
-}
-
 void Mesh::centerAndScaleToUnit() {
     glm::vec3 center(0.);
     for (unsigned int i = 0; i < m_vertices.size(); i++)
@@ -348,17 +344,17 @@ Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
     aabb.max += glm::vec3(1.);
 
     // Constreuire l'octree et y ajouter les points.
-    Octree octree(max_vert_per_leaf, aabb);
+    Octree* octree = new Octree(max_vert_per_leaf, aabb);
     for (size_t i = 0; i < m_vertices.size(); i++) {
-        octree.pushVertex(i, m_vertices[i], m_normals[i]);
+        octree->pushVertex(i, m_vertices[i], m_normals[i]);
     }
-    octree.calcRepresentants();
+    octree->calcRepresentants();
 
     // récupérer les représentants
     vector<vector<size_t>> representant_i_to_is;
     vector<glm::vec3> new_vertices;
     vector<glm::vec3> new_normals;
-    octree.fillRepresentantsData(representant_i_to_is, new_vertices, new_normals);
+    octree->fillRepresentantsData(representant_i_to_is, new_vertices, new_normals);
 
     // en déduire les i -> representant_i pour la réindexion
     vector<size_t> i_to_representant_i(m_vertices.size(), 0);
@@ -398,7 +394,7 @@ Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
     new_mesh.m_normals = new_normals;
     new_mesh.m_triangles = new_triangles;
     new_mesh.m_uvs.resize(m_vertices.size());
-    new_mesh.m_octree = &octree;
+    new_mesh.m_octree = octree;
 
     return new_mesh;
 }

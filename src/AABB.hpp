@@ -4,11 +4,9 @@
 #include <GL/glew.h>
 
 // GLM
-#include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
-// USUAL INCLUDES
-#include <limits>
+// USUAL INCLUDESs
 
 template <typename T>
 struct AABB {
@@ -73,6 +71,7 @@ private:
     GLuint m_lines_EBO = 0;
 
 public:
+    ~AABB() { clearShaderData(); }
     void initShaderData() {
         glGenVertexArrays(1, &m_VAO);
         glBindVertexArray(m_VAO);
@@ -115,7 +114,7 @@ public:
 
         glGenBuffers(1, &m_lines_EBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_lines_EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_lines.size() * sizeof(glm::uvec3), m_lines.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_lines.size() * sizeof(glm::uvec2), m_lines.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         glBindVertexArray(0);

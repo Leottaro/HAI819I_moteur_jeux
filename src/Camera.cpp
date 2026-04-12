@@ -27,17 +27,14 @@ bool Camera::updateInterface(float _deltaTime) {
         // Camera Type Selection
         int current_type = static_cast<int>(m_type);
         if (ImGui::Combo("Camera Type", &current_type, CAMERA_TYPES)) {
-            m_type = CameraType(current_type);
+            m_type = Type(current_type);
             switch (m_type) {
-            case CameraFree:
+            case Type::Free:
                 break;
-            case CameraOrbital:
+            case Type::Orbital:
                 m_distance_to_center = glm::distance(m_position, *m_center);
                 m_front = glm::normalize(*m_center - m_position);
                 m_orientation = Transformation::EuclidianToEuler(m_front);
-                break;
-            case CameraAutoSpin:
-                m_orientation = glm::vec2(-M_PI_4f * 0.5f, 0.f);
                 break;
             }
             updateData();
@@ -45,7 +42,7 @@ bool Camera::updateInterface(float _deltaTime) {
 
         ImGui::Separator();
 
-        if (m_type == CameraFree) { // Free position Controls
+        if (m_type == Type::Free) { // Free position Controls
             bool position_changed = ImGui::DragFloat3("Position", &m_position[0], 0.1f);
             if (position_changed) {
                 updateData();
@@ -74,7 +71,7 @@ bool Camera::updateInterface(float _deltaTime) {
         ImGui::Separator();
 
         // Speed Controls
-        if (m_type == CameraFree) {
+        if (m_type == Type::Free) {
             ImGui::DragFloat("Translation Speed", &m_translation_speed, 1.e-2f, 0.f, 1.e2f);
         } else {
             bool distance_changed = ImGui::DragFloat("Distance to Center", &m_distance_to_center, 0.1f, 1.e-4f, 1.e4f);
@@ -94,30 +91,30 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
     static bool c_was_pressed = false;
     bool c_is_pressed = glfwGetKey(_window, GLFW_KEY_C) == GLFW_PRESS;
     if (c_is_pressed && !c_was_pressed) {
-        m_type = CameraType((int(m_type) + 1) % CAMERA_TYPES_N);
+        m_type = Type((int(m_type) + 1) % CAMERA_TYPES_N);
         switch (m_type) {
-        case CameraFree:
+        case Type::Free:
             break;
-        case CameraOrbital:
+        case Type::Orbital:
             m_distance_to_center = glm::distance(m_position, *m_center);
             m_front = glm::normalize(*m_center - m_position);
             m_orientation = Transformation::EuclidianToEuler(m_front);
             break;
-        case CameraAutoSpin:
-            m_orientation = glm::vec2(-M_PI_4f * 0.5f, 0.f);
-            break;
         }
     }
 
-    if (m_type == CameraFree) {
+    if (m_type == Type::Free) {
         float translation_speed = _deltaTime * m_translation_speed;
         if (glfwGetKey(_window, GLFW_KEY_W) == GLFW_PRESS) {
             m_position += m_front * translation_speed;
-        } else if (glfwGetKey(_window, GLFW_KEY_S) == GLFW_PRESS) {
+        }
+        if (glfwGetKey(_window, GLFW_KEY_S) == GLFW_PRESS) {
             m_position -= m_front * translation_speed;
-        } else if (glfwGetKey(_window, GLFW_KEY_A) == GLFW_PRESS) {
+        }
+        if (glfwGetKey(_window, GLFW_KEY_A) == GLFW_PRESS) {
             m_position -= m_right * translation_speed;
-        } else if (glfwGetKey(_window, GLFW_KEY_D) == GLFW_PRESS) {
+        }
+        if (glfwGetKey(_window, GLFW_KEY_D) == GLFW_PRESS) {
             m_position += m_right * translation_speed;
         }
     }
@@ -128,13 +125,13 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
 void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions) {
     float rotation_speed = _deltaTime * m_rotation_speed;
     switch (m_type) {
-    case CameraFree:
+    case Type::Free:
         if (!_disable_actions && glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_orientation.x -= rotation_speed * _cursor_vel.y;
             m_orientation.y -= rotation_speed * _cursor_vel.x;
         }
         break;
-    case CameraOrbital:
+    case Type::Orbital:
         if (!_disable_actions) {
             m_distance_to_center = glm::max(m_distance_to_center * (1.f - _scroll.y * m_zoom_rate), 1.e-4f);
             if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
@@ -152,12 +149,6 @@ void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::
         // re update angle
         m_front = *m_center - m_position;
         m_orientation = Transformation::EuclidianToEuler(m_front);
-        break;
-    case CameraAutoSpin:
-        m_distance_to_center = glm::max(m_distance_to_center * (1.f - _scroll.y * m_zoom_rate), 1.e-4f);
-        m_orientation.y += rotation_speed;
-        updateData();
-        m_position = *m_center - m_distance_to_center * m_front;
         break;
     }
 }

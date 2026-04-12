@@ -1,17 +1,10 @@
 #pragma once
 
-// GLEW
-#include <GL/glew.h>
-
-// GLM
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-
 // USUAL INCLUDES
+#include "Octree.hpp"
+#include "ImageBase.h"
 #include <string>
 #include <vector>
-#include "./ImageBase.h"
-#include "./Octree.hpp"
 
 class Mesh {
 private:
@@ -30,7 +23,7 @@ private:
     void centerAndScaleToUnit();
 
 public:
-    virtual ~Mesh();
+    virtual ~Mesh() { clear(); }
 
     // INITIALIZERS
     Mesh() {}
