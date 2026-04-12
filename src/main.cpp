@@ -80,8 +80,8 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
-            glm::ivec3 cam_chunk = Chunk::posToChunkPos(camera.m_position);
-            world.generate(cam_chunk);
+            world.generate(camera.m_position);
+            // run_simulation = false;
         }
 
         /**********==========RENDERING==========**********/
@@ -104,7 +104,7 @@ int main(void) {
     } while (glfwWindowShouldClose(window) == GLFW_FALSE);
 
     // Cleanup VBO and shader
-    world.~World();
+    world.clear();
     shader.~ShaderProgram();
 
     // Close OpenGL window and terminate GLFW
@@ -212,6 +212,7 @@ void initWindow() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE); // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
     window = glfwCreateWindow(window_width, window_height, "Moteur de jeux", NULL, NULL);
     if (!window) {

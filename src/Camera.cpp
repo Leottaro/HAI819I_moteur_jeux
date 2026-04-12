@@ -15,7 +15,7 @@ void Camera::updateData() {
     m_right = glm::cross(m_front, VEC_UP);
     m_real_up = glm::normalize(glm::cross(m_right, m_front));
 
-    m_projection = glm::perspective(m_fovy, m_aspect_ratio, 1.e-4f, 1.e8f);
+    m_projection = glm::perspective(m_fovy, m_aspect_ratio, 1.e-1f, 1.e8f);
     m_view = glm::lookAt(m_position, m_position + m_front, m_real_up);
 }
 

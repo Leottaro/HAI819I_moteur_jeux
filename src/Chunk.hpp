@@ -29,8 +29,8 @@ public:
             (_block_pos.z < 0 && _block_pos.z % CHUNK_SIZE != 0 ? _block_pos.z / CHUNK_SIZE - 1 : _block_pos.z / CHUNK_SIZE) * CHUNK_SIZE);
     }
 
-    static constexpr uint chunkDistance(const glm::ivec3 &_a, const glm::ivec3 &_b) {
-        uint dist = std::sqrt(std::pow(_a.x - _b.x, 2) + std::pow(_a.y - _b.y, 2) + std::pow(_a.z - _b.z, 2));
+    static constexpr float chunkDistance(const glm::vec3 &_a, const glm::vec3 &_b) {
+        float dist = std::sqrt(std::pow(_a.x - _b.x - 16, 2) + std::pow(_a.y - _b.y - 16, 2) + std::pow(_a.z - _b.z - 16, 2));
         return dist / CHUNK_SIZE;
     }
 

@@ -25,9 +25,9 @@ bool World::addChunk(const glm::ivec3 &_chunk_pos) {
             m_chunks_frontier.insert(neighbour_pos);
         } else {
             inserted_chunk->m_neighbours[face_i] = neighbour;
-            inserted_chunk->updateBlockNeighbours(face_i);
-
             neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = inserted_chunk;
+
+            inserted_chunk->updateBlockNeighbours(face_i);
             neighbour->buildMesh();
         }
     }
@@ -72,7 +72,8 @@ bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
     return true;
 }
 
-bool World::generate(const glm::ivec3 &_chunk_pos) {
+bool World::generate(const glm::vec3 &_pos) {
+    glm::ivec3 _chunk_pos = Chunk::posToChunkPos(_pos);
     if (!isChunkLoaded(_chunk_pos)) {
         addChunk(_chunk_pos);
         return true;
@@ -80,7 +81,7 @@ bool World::generate(const glm::ivec3 &_chunk_pos) {
 
     std::list<glm::ivec3> chunk_to_remove;
     for (auto &[chunk_pos, chunk] : m_chunks) {
-        if (Chunk::chunkDistance(chunk_pos, _chunk_pos) > RENDER_DISTANCE) {
+        if (Chunk::chunkDistance(_pos, chunk_pos) > RENDER_DISTANCE) {
             chunk_to_remove.push_back(chunk_pos);
         }
     }
@@ -91,9 +92,9 @@ bool World::generate(const glm::ivec3 &_chunk_pos) {
         return true;
     }
 
-    std::map<uint, glm::ivec3> chunk_to_add;
+    std::map<float, glm::ivec3> chunk_to_add;
     for (const glm::ivec3 &chunk_pos : m_chunks_frontier) {
-        uint chunk_dist = Chunk::chunkDistance(chunk_pos, _chunk_pos);
+        float chunk_dist = Chunk::chunkDistance(_pos, chunk_pos);
         if (chunk_dist <= RENDER_DISTANCE) {
             chunk_to_add.insert({chunk_dist, chunk_pos});
         }

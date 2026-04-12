@@ -33,7 +33,7 @@ public:
     Chunk *findChunk(const glm::ivec3 &_chunk_pos);
     bool addChunk(const glm::ivec3 &_chunk_pos);
     bool removeChunk(const glm::ivec3 &_chunk_pos);
-    bool generate(const glm::ivec3 &_chunk_pos);
+    bool generate(const glm::vec3 &_pos);
 
     // RENDERING
 
