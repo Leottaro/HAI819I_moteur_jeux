@@ -90,6 +90,8 @@ void Chunk::generate(GenType _type) {
                     } else {
                         block.getType() = Block::BlockType::Air;
                     }
+                    // TODO : test le fait que les chunks ne sauvegardent pas leur mesh mais la passe direct au GPU (on peut rien faire avec de toute facon)
+                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::BlockType::Stone : Block::BlockType::Air;
 
                     world_pos.x++;
                 }

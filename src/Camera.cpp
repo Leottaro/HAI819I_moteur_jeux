@@ -7,16 +7,71 @@
 #include "Camera.hpp"
 #include <iostream>
 
+void Camera::Frustum::updatePlanes(Camera *_camera) {
+    float far_height = _camera->m_near_far[1] * std::tan(_camera->m_fovy * 0.5f);
+    float far_width = far_height * _camera->m_aspect_ratio;
+
+    glm::vec3 left_normal = glm::normalize(glm::cross(
+        _camera->m_front * _camera->m_near_far[1] - _camera->m_right * far_width,
+        _camera->m_real_up));
+    m_left = glm::vec4(left_normal, -glm::dot(left_normal, _camera->m_position));
+
+    glm::vec3 right_normal = glm::normalize(glm::cross(
+        _camera->m_real_up,
+        _camera->m_front * _camera->m_near_far[1] + _camera->m_right * far_width));
+    m_right = glm::vec4(right_normal, -glm::dot(right_normal, _camera->m_position));
+
+    glm::vec3 bottom_normal = glm::normalize(glm::cross(
+        _camera->m_right,
+        _camera->m_front * _camera->m_near_far[1] - _camera->m_real_up * far_height));
+    m_bottom = glm::vec4(bottom_normal, -glm::dot(bottom_normal, _camera->m_position));
+
+    glm::vec3 top_normal = glm::normalize(glm::cross(
+        _camera->m_front * _camera->m_near_far[1] + _camera->m_real_up * far_height,
+        _camera->m_right));
+    m_top = glm::vec4(top_normal, -glm::dot(top_normal, _camera->m_position));
+
+    glm::vec3 near_normal = _camera->m_front;
+    glm::vec3 near_point = _camera->m_position + _camera->m_front * _camera->m_near_far[0];
+    m_near = glm::vec4(near_normal, -glm::dot(near_normal, near_point));
+
+    glm::vec3 far_normal = -_camera->m_front;
+    glm::vec3 far_point = _camera->m_position + _camera->m_front * _camera->m_near_far[1];
+    m_far = glm::vec4(far_normal, -glm::dot(far_normal, far_point));
+}
+
+bool Camera::isVisible(const AABB<float> &_aabb) const {
+    auto visible = [&_aabb](const glm::vec4 &plane) -> bool {
+        return (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.min.y, _aabb.min.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.min.y, _aabb.min.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.max.y, _aabb.min.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.max.y, _aabb.min.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.min.y, _aabb.max.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.min.y, _aabb.max.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.max.y, _aabb.max.z, 1.f)) >= 0.f) ||
+               (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.max.y, _aabb.max.z, 1.f)) >= 0.f);
+    };
+
+    return visible(m_frustum.m_near) &&
+           visible(m_frustum.m_far) &&
+           visible(m_frustum.m_top) &&
+           visible(m_frustum.m_bottom) &&
+           visible(m_frustum.m_right) &&
+           visible(m_frustum.m_left);
+}
+
 void Camera::updateData() {
     m_orientation.x = glm::clamp(m_orientation.x, -M_PI_2_SAFE, M_PI_2_SAFE);
     m_orientation.y = Transformation::clipAnglePI(m_orientation.y);
 
-    m_front = Transformation::EulerToEuclidian(m_orientation);
-    m_right = glm::cross(m_front, VEC_UP);
+    m_front = glm::normalize(Transformation::EulerToEuclidian(m_orientation));
+    m_right = glm::normalize(glm::cross(m_front, VEC_UP));
     m_real_up = glm::normalize(glm::cross(m_right, m_front));
 
-    m_projection = glm::perspective(m_fovy, m_aspect_ratio, 1.e-1f, 1.e8f);
+    m_projection = glm::perspective(m_fovy, m_aspect_ratio, m_near_far[0], m_near_far[1]);
     m_view = glm::lookAt(m_position, m_position + m_front, m_real_up);
+
+    m_frustum.updatePlanes(this);
 }
 
 bool Camera::updateInterface(float _deltaTime) {

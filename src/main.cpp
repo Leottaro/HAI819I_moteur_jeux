@@ -4,6 +4,8 @@
 // GLM
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+// #define GLM_ENABLE_EXPERIMENTAL
+// #include <glm/gtx/string_cast.hpp>
 
 // GLFW
 #include <GLFW/glfw3.h>
@@ -36,7 +38,7 @@ glm::vec2 cursor_pos{0, 0};
 glm::vec2 cursor_vel{0, 0};
 glm::vec2 scroll{0, 0};
 
-bool run_simulation = false;
+bool run_simulation = true;
 float deltaTime = 0.f;
 float lastFrame = 0.f;
 
@@ -61,8 +63,7 @@ int main(void) {
     camera.m_translation_speed = 32.f;
     camera.m_orientation = glm::vec2(0.f, 0.f);
     camera.m_rotation_speed = 1.f;
-
-    world.generate(camera.m_position);
+    camera.updateData();
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
@@ -91,12 +92,10 @@ int main(void) {
         /**********==========RENDERING==========**********/
         shader.use();
 
-        shader.set("view", camera.getViewMatrix());
-        shader.set("projection", camera.getProjectionMatrix());
-
-        world.render(shader);
-        if (display_debug)
-            world.renderDebugBoxes(shader);
+        world.render(shader, camera);
+        if (display_debug) {
+            world.renderDebugBoxes(shader, camera);
+        }
 
         // ImGui Render
         ImGui::Render();

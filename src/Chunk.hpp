@@ -62,7 +62,7 @@ public:
     ~Chunk() { clear(); }
 
     inline const glm::ivec3 &getPos() const { return m_pos; }
-    inline glm::ivec3 &getPos() { return m_pos; }
+    inline const AABB<float> &getAABB() { return m_aabb; }
     inline const Block &getBlock(const glm::ivec3 &_block_pos) const { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
     inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
 

@@ -2,6 +2,7 @@
 
 // USUAL INCLUDES
 #include "Chunk.hpp"
+#include "Camera.hpp"
 #include <map>
 #include <set>
 
@@ -37,12 +38,18 @@ public:
 
     // RENDERING
 
-    inline void render(ShaderProgram &_shader) {
+    inline void render(ShaderProgram &_shader, const Camera &_camera) {
+        _shader.set("view", _camera.getViewMatrix());
+        _shader.set("projection", _camera.getProjectionMatrix());
         for (auto &[chunk_pos, chunk] : m_chunks) {
-            chunk->render(_shader);
+            if (_camera.isVisible(chunk->getAABB())) {
+                chunk->render(_shader);
+            }
         }
     }
-    inline void renderDebugBoxes(ShaderProgram &_shader) {
+    inline void renderDebugBoxes(ShaderProgram &_shader, const Camera &_camera) {
+        _shader.set("view", _camera.getViewMatrix());
+        _shader.set("projection", _camera.getProjectionMatrix());
         for (auto &[chunk_pos, chunk] : m_chunks) {
             chunk->renderDebugBox(_shader);
         }
