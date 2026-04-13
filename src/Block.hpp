@@ -1,6 +1,7 @@
 #pragma once
 
 // GLM
+#define GLM_FORCE_CONSTEXPR
 #include <glm/glm.hpp>
 
 // USUAL INCLUDES
@@ -9,11 +10,12 @@ constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
 class Block {
 public:
+    static constexpr uint BLOCK_TYPES_N = 4;
     enum class BlockType { Air,
                            Stone,
                            Dirt,
-                           Grass,
-                           Bedrock };
+                           Grass
+    };
 
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
         glm::ivec3(0, 0, -1), // Front (-Z)
@@ -37,6 +39,26 @@ public:
         {{{{1, 0, 0}, {1, 0, 1}, {1, 1, 1}, {1, 1, 0}}}, {1.f, 0.f, 0.f}, {{{0u, 2u, 1u}, {0u, 3u, 2u}}}},  // Right (+X)
         {{{{0, 1, 0}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}}}, {0.f, 1.f, 0.f}, {{{0u, 2u, 1u}, {0u, 3u, 2u}}}},  // Top   (+Y)
     }};
+
+    static constexpr float ATLAS_SIZE = 4; // in blocks
+
+    static constexpr std::array<std::array<std::array<float, 2>, 6>, BLOCK_TYPES_N> UB_TABLE_DATA = {{
+        // Front (-Z)    Left  (-X)    Bottom(-Y)    Back  (+Z)    Right (+X)    Top   (+Y)
+        {{{{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}}}, // Stone
+        {{{{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}}}, // Dirt
+        {{{{2.f, 0.f}}, {{2.f, 0.f}}, {{1.f, 0.f}}, {{2.f, 0.f}}, {{2.f, 0.f}}, {{3.f, 0.f}}}}  // Grass
+    }};
+
+    // Helper to convert float array to glm::vec4 at runtime
+    static constexpr std::array<glm::vec2, 4> getUV(BlockType type, int face) {
+        const auto &uv = UB_TABLE_DATA[static_cast<int>(type) - 1][face];
+        return {
+            glm::vec2(uv[0] + 1.f, uv[1] + 1.f) / ATLAS_SIZE,
+            glm::vec2(uv[0], uv[1] + 1.f) / ATLAS_SIZE,
+            glm::vec2(uv[0], uv[1]) / ATLAS_SIZE,
+            glm::vec2(uv[0] + 1.f, uv[1]) / ATLAS_SIZE,
+        };
+    }
 
 private:
     BlockType m_type;

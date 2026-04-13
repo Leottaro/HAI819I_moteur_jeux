@@ -52,6 +52,10 @@ int main(void) {
     // Create and compile our GLSL program from the shaders
     ShaderProgram shader("ressources/shaders/vertex_shader.glsl", "ressources/shaders/fragment_shader.glsl");
 
+    // Import needed textures
+    ImageBase block_atlas("ressources/textures/block_atlas.ppm");
+    block_atlas.initShaderData(0);
+
     camera.m_type = Camera::Type::Free;
     camera.m_position = glm::vec3(16.f, 16.f, 16.f);
     camera.m_translation_speed = 32.f;

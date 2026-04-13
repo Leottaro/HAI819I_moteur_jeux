@@ -73,8 +73,8 @@ public:
     inline void render(ShaderProgram &_shader) {
         if (m_mesh.nbVertices() == 0)
             return;
-        _shader.set("texture_i", -1);
-        _shader.set("texture_sampler", -1);
+        _shader.set("texture_i", 0);
+        _shader.set("texture_sampler", 0);
 
         _shader.set("model", glm::mat4(1.));
         _shader.set("has_normals", 1);

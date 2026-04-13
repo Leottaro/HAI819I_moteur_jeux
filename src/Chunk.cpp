@@ -82,7 +82,7 @@ void Chunk::generate(GenType _type) {
                     if (world_pos.y <= -45) {
                         block.getType() = Block::BlockType::Air;
                     } else if (world_pos.y <= 0) {
-                        block.getType() = Block::BlockType::Bedrock;
+                        block.getType() = Block::BlockType::Stone;
                     } else if (world_pos.y <= 3) {
                         block.getType() = Block::BlockType::Dirt;
                     } else if (world_pos.y <= 4) {
@@ -135,10 +135,13 @@ void Chunk::buildMesh() {
                         continue;
                     const Block::FaceData &face = Block::FACE_DATA[face_i];
 
+                    std::array<glm::vec2, 4> face_uvs = Block::getUV(block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {
                         positions.push_back(glm::vec3(world_pos) + face.vertices[i]);
+                        uvs.push_back(face_uvs[i]);
                         normals.push_back(face.normal);
                     }
+
                     glm::uvec3 offset(positions.size() - 4);
                     triangles.push_back(face.triangles[0] + offset);
                     triangles.push_back(face.triangles[1] + offset);
@@ -151,7 +154,6 @@ void Chunk::buildMesh() {
     }
 
     if (m_mesh.nbVertices() > 0) {
-        uvs.resize(positions.size());
         m_mesh.initShaderData();
     }
     m_aabb.clearShaderData();
