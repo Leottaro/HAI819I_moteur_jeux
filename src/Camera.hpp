@@ -26,11 +26,12 @@ class Camera {
     };
 
 public:
-#define CAMERA_TYPES_N 2
-#define CAMERA_TYPES "Free\0Orbital\0"
+#define CAMERA_TYPES_N 3
+#define CAMERA_TYPES "Free\0FirstPerson\0Orbital\0"
     enum class Type {
         Free = 0,
-        Orbital = 1,
+        FirstPerson = 1,
+        Orbital = 2,
     };
 
     Type m_type = Type::Free;

@@ -86,6 +86,8 @@ bool Camera::updateInterface(float _deltaTime) {
             switch (m_type) {
             case Type::Free:
                 break;
+            case Type::FirstPerson:
+                break;
             case Type::Orbital:
                 m_distance_to_center = glm::distance(m_position, *m_center);
                 m_front = glm::normalize(*m_center - m_position);
@@ -97,7 +99,7 @@ bool Camera::updateInterface(float _deltaTime) {
 
         ImGui::Separator();
 
-        if (m_type == Type::Free) { // Free position Controls
+        if (m_type == Type::Free || m_type == Type::FirstPerson) { // Free position Controls
             bool position_changed = ImGui::DragFloat3("Position", &m_position[0], 0.1f);
             if (position_changed) {
                 updateData();
@@ -126,7 +128,7 @@ bool Camera::updateInterface(float _deltaTime) {
         ImGui::Separator();
 
         // Speed Controls
-        if (m_type == Type::Free) {
+        if (m_type == Type::Free || m_type == Type::FirstPerson) {
             ImGui::DragFloat("Translation Speed", &m_translation_speed, 1.e-2f, 0.f, 1.e2f);
         } else {
             bool distance_changed = ImGui::DragFloat("Distance to Center", &m_distance_to_center, 0.1f, 1.e-4f, 1.e4f);
@@ -150,6 +152,8 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
         switch (m_type) {
         case Type::Free:
             break;
+        case Type::FirstPerson:
+            break;
         case Type::Orbital:
             m_distance_to_center = glm::distance(m_position, *m_center);
             m_front = glm::normalize(*m_center - m_position);
@@ -157,30 +161,35 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
             break;
         }
     }
-
-    if (m_type == Type::Free) {
-        float translation_speed = _deltaTime * m_translation_speed;
-        if (glfwGetKey(_window, GLFW_KEY_W) == GLFW_PRESS) {
-            m_position += m_front * translation_speed;
-        }
-        if (glfwGetKey(_window, GLFW_KEY_S) == GLFW_PRESS) {
-            m_position -= m_front * translation_speed;
-        }
-        if (glfwGetKey(_window, GLFW_KEY_A) == GLFW_PRESS) {
-            m_position -= m_right * translation_speed;
-        }
-        if (glfwGetKey(_window, GLFW_KEY_D) == GLFW_PRESS) {
-            m_position += m_right * translation_speed;
-        }
-    }
-
     c_was_pressed = c_is_pressed;
+
+    glm::vec3 motion = glm::vec3(
+                           int(glfwGetKey(_window, GLFW_KEY_SPACE) == GLFW_PRESS) - int(glfwGetKey(_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS),
+                           int(glfwGetKey(_window, GLFW_KEY_D) == GLFW_PRESS) - int(glfwGetKey(_window, GLFW_KEY_A) == GLFW_PRESS),
+                           int(glfwGetKey(_window, GLFW_KEY_W) == GLFW_PRESS) - int(glfwGetKey(_window, GLFW_KEY_S) == GLFW_PRESS)) *
+                       _deltaTime * m_translation_speed;
+
+    glm::vec3 flat_front = glm::cross(VEC_UP, m_right);
+    switch (m_type) {
+    case Type::Free:
+        m_position += motion.x * m_real_up + motion.y * m_right + motion.z * m_front;
+        break;
+    case Type::FirstPerson:
+        m_position += motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front;
+        break;
+    case Type::Orbital:
+        m_distance_to_center = glm::distance(m_position, *m_center);
+        m_front = glm::normalize(*m_center - m_position);
+        m_orientation = Transformation::EuclidianToEuler(m_front);
+        break;
+    }
 }
 
 void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions) {
     float rotation_speed = _deltaTime * m_rotation_speed;
     switch (m_type) {
     case Type::Free:
+    case Type::FirstPerson:
         if (!_disable_actions && glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_orientation.x -= rotation_speed * _cursor_vel.y;
             m_orientation.y -= rotation_speed * _cursor_vel.x;
