@@ -24,7 +24,7 @@ GLFWwindow *window;
 #include <fstream>
 #include "ShaderProgram.hpp"
 #include "Camera.hpp"
-#include "RigidBody.hpp"
+#include "Texture.hpp"
 #include "Chunk.hpp"
 #include "World.hpp"
 
@@ -56,8 +56,8 @@ int main(void) {
     ShaderProgram block_shader("src/shaders/block_vertex.glsl", "src/shaders/block_fragment.glsl");
 
     // Import needed textures
-    ImageBase block_atlas("ressources/textures/block_atlas.ppm");
-    block_atlas.initShaderData(0);
+    Texture block_atlas("ressources/textures/block_atlas.png");
+    block_atlas.initShaderData();
 
     camera.m_type = Camera::Type::Free;
     camera.m_position = glm::vec3(16.f, 16.f, 16.f);
@@ -91,6 +91,7 @@ int main(void) {
 
         /**********==========RENDERING==========**********/
         block_shader.use();
+        block_atlas.bind(0);
 
         world.render(block_shader, camera);
         if (display_debug) {
@@ -233,8 +234,10 @@ void initOpenGL() {
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE); // Ensure we can capture the escape key being pressed below
     glClearColor(0.1f, 0.1f, 0.3f, 0.0f);                // Dark blue background
     glEnable(GL_DEPTH_TEST);                             // Enable depth test
+    glEnable(GL_BLEND);                                  // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);   // Set a blending function
     glDepthFunc(GL_LESS);                                // Accept fragment if it closer to the camera than the former one
-    // glEnable(GL_CULL_FACE);                              // Cull triangles which normal is not towards the camera
+    glEnable(GL_CULL_FACE);                              // Cull triangles which normal is not towards the camera
 }
 
 void globalInit() {

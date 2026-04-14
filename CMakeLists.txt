@@ -17,11 +17,11 @@ include_directories(${PROJECT_SOURCE_DIR} .)
 set(APP_SOURCES
     src/main.cpp
 
-    src/image_ppm.h
-    src/ImageBase.h
-    src/ImageBase.cpp
+    # src/image_ppm.h
+    # src/ImageBase.h
+    # src/ImageBase.cpp
 
-    src/Scene.hpp
+    # src/Scene.hpp
 
     src/World.hpp
     src/World.cpp
@@ -31,12 +31,14 @@ set(APP_SOURCES
 
     src/Block.hpp
 
+    src/Texture.hpp
+
     src/Camera.hpp
     src/Camera.cpp
 
-    src/Mesh.hpp
-    src/Mesh.cpp
-    src/Octree.hpp
+    # src/Mesh.hpp
+    # src/Mesh.cpp
+    # src/Octree.hpp
     src/AABB.hpp
 
     src/Transformation.hpp
@@ -101,3 +103,9 @@ add_subdirectory(external/glm)
 include_directories(external/glm)
 target_link_libraries(${APP_TARGET_DEBUG} glm)
 target_link_libraries(${APP_TARGET_OPT} glm)
+
+# stb
+add_subdirectory(external/stb)
+include_directories(external/stb)
+target_link_libraries(${APP_TARGET_DEBUG} stb)
+target_link_libraries(${APP_TARGET_OPT} stb)

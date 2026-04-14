@@ -73,18 +73,19 @@ void Chunk::generate(GenType _type) {
                     Block &block = m_blocks[block_i++];
                     block.getPos() = world_pos;
                     if (world_pos.y <= -45) {
-                        block.getType() = Block::BlockType::Air;
+                        block.getType() = Block::Type::Air;
                     } else if (world_pos.y <= 0) {
-                        block.getType() = Block::BlockType::Stone;
+                        block.getType() = Block::Type::Stone;
                     } else if (world_pos.y <= 3) {
-                        block.getType() = Block::BlockType::Dirt;
+                        block.getType() = Block::Type::Dirt;
                     } else if (world_pos.y <= 4) {
-                        block.getType() = Block::BlockType::Grass;
+                        block.getType() = Block::Type::Grass;
                     } else {
-                        block.getType() = Block::BlockType::Air;
+                        block.getType() = Block::Type::Air;
                     }
 
-                    // block.getType() = world_pos.x % 2 == 0 && world_pos.y % 2 == 0 && world_pos.z % 2 == 0 ? Block::BlockType::Dirt : Block::BlockType::Air;
+                    if (std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1)
+                        block.getType() = Block::Type::Glass;
                 }
             }
         }
@@ -143,13 +144,13 @@ void Chunk::updateShaderData() {
             for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
                 block_i++;
                 Block &block = m_blocks[block_i];
-                if (block.getType() == Block::BlockType::Air) {
+                if (block.getType() == Block::Type::Air) {
                     continue;
                 }
 
                 for (int face_i = 0; face_i < 6; face_i++) {
                     const Block *neighbour = block.m_neighbours[face_i];
-                    if (neighbour != nullptr && neighbour->getType() != Block::BlockType::Air)
+                    if (neighbour != nullptr && (!neighbour->isTransparent() || block.getType() == neighbour->getType()))
                         continue;
                     const Block::FaceData &face = Block::FACE_DATA[face_i];
 

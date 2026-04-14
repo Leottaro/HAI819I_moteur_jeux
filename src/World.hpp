@@ -44,9 +44,9 @@ public:
         _block_shader.set("block_atlas", 0);
 
         for (auto &[chunk_pos, chunk] : m_chunks) {
-            // if (_camera.isVisible(chunk->getAABB())) {
-            chunk->render();
-            // }
+            if (_camera.isVisible(chunk->getAABB())) {
+                chunk->render();
+            }
         }
     }
     inline void renderDebugBoxes(ShaderProgram &_line_shader, const Camera &_camera) {

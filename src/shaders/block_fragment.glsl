@@ -8,8 +8,13 @@ uniform sampler2D block_atlas;
 in vec2 f_uv;
 
 // Ouput data
-out vec3 color;
+out vec4 out_color;
 
 void main() {
-  color = texture(block_atlas, f_uv).rgb;
+  out_color = texture(block_atlas, f_uv).rgba;
+
+  // Discard fully transparent fragments to prevent depth buffer artifacts
+  if (out_color.a == 0.0) {
+    discard;
+  }
 }
