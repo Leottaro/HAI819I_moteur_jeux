@@ -8,7 +8,7 @@
 
 class World {
 public:
-    static constexpr int RENDER_DISTANCE = 8;
+    static constexpr int RENDER_DISTANCE = 5;
 
 private:
     template <typename T, size_t n>
@@ -38,20 +38,24 @@ public:
 
     // RENDERING
 
-    inline void render(ShaderProgram &_shader, const Camera &_camera) {
-        _shader.set("view", _camera.getViewMatrix());
-        _shader.set("projection", _camera.getProjectionMatrix());
+    inline void render(ShaderProgram &_block_shader, const Camera &_camera) {
+        _block_shader.set("view", _camera.getViewMatrix());
+        _block_shader.set("projection", _camera.getProjectionMatrix());
+        _block_shader.set("block_atlas", 0);
+
         for (auto &[chunk_pos, chunk] : m_chunks) {
-            if (_camera.isVisible(chunk->getAABB())) {
-                chunk->render(_shader);
-            }
+            // if (_camera.isVisible(chunk->getAABB())) {
+            chunk->render();
+            // }
         }
     }
-    inline void renderDebugBoxes(ShaderProgram &_shader, const Camera &_camera) {
-        _shader.set("view", _camera.getViewMatrix());
-        _shader.set("projection", _camera.getProjectionMatrix());
+    inline void renderDebugBoxes(ShaderProgram &_line_shader, const Camera &_camera) {
+        _line_shader.set("view", _camera.getViewMatrix());
+        _line_shader.set("projection", _camera.getProjectionMatrix());
+        _line_shader.set("color", glm::vec3(1.f));
+
         for (auto &[chunk_pos, chunk] : m_chunks) {
-            chunk->renderDebugBox(_shader);
+            chunk->renderDebugBox();
         }
     }
     inline void clear() {

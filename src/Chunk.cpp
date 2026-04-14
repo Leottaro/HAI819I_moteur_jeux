@@ -1,6 +1,7 @@
 // USUAL INCLUDES
 #include "Chunk.hpp"
 #include <stdexcept>
+#include <iostream>
 
 void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     uint8_t face_axis = _face_i % 3;
@@ -39,45 +40,37 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
 }
 
 void Chunk::initNeighbours() {
-    glm::uvec3 pos;
     glm::ivec3 world_pos;
-    world_pos.y = m_pos.y;
-    for (pos.y = 0; pos.y < CHUNK_SIZE; pos.y++) {
-        world_pos.z = m_pos.z;
-        for (pos.z = 0; pos.z < CHUNK_SIZE; pos.z++) {
-            world_pos.x = m_pos.x;
-            for (pos.x = 0; pos.x < CHUNK_SIZE; pos.x++) {
-                Block &block = m_blocks[posToBlockI(pos)];
-                for (uint8_t _face_i = 0; _face_i < 6; _face_i++) {
-                    glm::ivec3 neighbour_pos = glm::ivec3(pos) + Block::NEIGHBOURS_POS[_face_i];
-                    if (neighbour_pos.x < 0 || neighbour_pos.y < 0 || neighbour_pos.z < 0 || neighbour_pos.x >= CHUNK_SIZE || neighbour_pos.y >= CHUNK_SIZE || neighbour_pos.z >= CHUNK_SIZE) {
-                        block.m_neighbours[_face_i] = m_neighbours[_face_i] == nullptr
-                                                          ? nullptr
-                                                          : &m_neighbours[_face_i]->m_blocks[posToBlockI((neighbour_pos.x + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.y + CHUNK_SIZE) % CHUNK_SIZE, (neighbour_pos.z + CHUNK_SIZE) % CHUNK_SIZE)];
-                    } else {
-                        block.m_neighbours[_face_i] = &m_blocks[posToBlockI(neighbour_pos)];
+    int block_i = -1;
+    std::array<bool, 3> neighbour_exists{false};
+    for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+        neighbour_exists[2] = world_pos.y > m_pos.y;
+        for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+            neighbour_exists[0] = world_pos.z > m_pos.z;
+            for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                neighbour_exists[1] = world_pos.x > m_pos.x;
+                block_i++;
+                for (uint8_t _face_i = 0; _face_i < 3; _face_i++) {
+                    if (neighbour_exists[_face_i]) {
+                        int neighbour_i = block_i + BLOCK_NEIGHBOUR_I_OFFSET[_face_i];
+                        m_blocks[block_i].m_neighbours[_face_i] = &m_blocks[neighbour_i];
+                        m_blocks[neighbour_i].m_neighbours[OPPOSITE_FACE[_face_i]] = &m_blocks[block_i];
                     }
                 }
-                world_pos.x++;
             }
-            world_pos.z++;
         }
-        world_pos.y++;
     }
 }
 
 void Chunk::generate(GenType _type) {
-    glm::uvec3 pos;
     glm::ivec3 world_pos;
+    size_t block_i = 0;
     switch (_type) {
     case GenType::SUPERFLAT:
-        world_pos.y = m_pos.y;
-        for (pos.y = 0; pos.y < CHUNK_SIZE; pos.y++) {
-            world_pos.z = m_pos.z;
-            for (pos.z = 0; pos.z < CHUNK_SIZE; pos.z++) {
-                world_pos.x = m_pos.x;
-                for (pos.x = 0; pos.x < CHUNK_SIZE; pos.x++) {
-                    Block &block = m_blocks[posToBlockI(pos)];
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block &block = m_blocks[block_i++];
                     block.getPos() = world_pos;
                     if (world_pos.y <= -45) {
                         block.getType() = Block::BlockType::Air;
@@ -90,14 +83,10 @@ void Chunk::generate(GenType _type) {
                     } else {
                         block.getType() = Block::BlockType::Air;
                     }
-                    // TODO : test le fait que les chunks ne sauvegardent pas leur mesh mais la passe direct au GPU (on peut rien faire avec de toute facon)
-                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::BlockType::Stone : Block::BlockType::Air;
 
-                    world_pos.x++;
+                    // block.getType() = world_pos.x % 2 == 0 && world_pos.y % 2 == 0 && world_pos.z % 2 == 0 ? Block::BlockType::Dirt : Block::BlockType::Air;
                 }
-                world_pos.z++;
             }
-            world_pos.y++;
         }
         break;
     default:
@@ -108,26 +97,53 @@ void Chunk::generate(GenType _type) {
 Chunk::Chunk(const glm::ivec3 &_chunk_pos, GenType _type) : m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     initNeighbours();
     generate(_type);
+    initShaderData();
+    updateShaderData();
 }
 
-void Chunk::buildMesh() {
-    m_mesh.clear();
-    std::vector<glm::vec3> &positions = m_mesh.vertexPositions();
-    std::vector<glm::vec3> &normals = m_mesh.vertexNormals();
-    std::vector<glm::vec2> &uvs = m_mesh.vertexTexCoords();
-    std::vector<glm::uvec3> &triangles = m_mesh.triangleIndices();
+struct ChunkVertex {
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};
+// Si mes comptes sont bons on a 28.5MiB pour tout les chunks (c'est OK)
+namespace ChunkMeshScratch {
+std::array<ChunkVertex, Chunk::MAX_VERTICES> vertices;
+std::array<glm::uvec3, Chunk::MAX_TRIANGLES> triangles;
+}; // namespace ChunkMeshScratch
+void Chunk::initShaderData() {
+    glGenVertexArrays(1, &m_VAO);
+    glBindVertexArray(m_VAO);
 
-    glm::uvec3 pos(0);
+    glGenBuffers(1, &m_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    // Attribute 0: position
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, position));
+    // Attribute 1: normal
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, normal));
+    // Attribute 2: uv
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, uv));
+
+    glGenBuffers(1, &m_EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+
+    m_aabb.initShaderData();
+}
+
+void Chunk::updateShaderData() {
+    m_vertices_count = m_triangles_count = 0;
+
     glm::ivec3 world_pos;
-    world_pos.y = m_pos.y;
-    for (pos.y = 0; pos.y < CHUNK_SIZE; pos.y++) {
-        world_pos.z = m_pos.z;
-        for (pos.z = 0; pos.z < CHUNK_SIZE; pos.z++) {
-            world_pos.x = m_pos.x;
-            for (pos.x = 0; pos.x < CHUNK_SIZE; pos.x++) {
-                Block &block = m_blocks[posToBlockI(pos)];
+    int block_i = -1;
+    for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+        for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+            for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                block_i++;
+                Block &block = m_blocks[block_i];
                 if (block.getType() == Block::BlockType::Air) {
-                    world_pos.x++;
                     continue;
                 }
 
@@ -139,25 +155,49 @@ void Chunk::buildMesh() {
 
                     std::array<glm::vec2, 4> face_uvs = Block::getUV(block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {
-                        positions.push_back(glm::vec3(world_pos) + face.vertices[i]);
-                        uvs.push_back(face_uvs[i]);
-                        normals.push_back(face.normal);
+                        ChunkMeshScratch::vertices[m_vertices_count].position = glm::vec3(world_pos) + face.vertices[i];
+                        ChunkMeshScratch::vertices[m_vertices_count].uv = face_uvs[i];
+                        ChunkMeshScratch::vertices[m_vertices_count].normal = face.normal;
+                        m_vertices_count++;
                     }
 
-                    glm::uvec3 offset(positions.size() - 4);
-                    triangles.push_back(face.triangles[0] + offset);
-                    triangles.push_back(face.triangles[1] + offset);
+                    glm::uvec3 offset(m_vertices_count - 4);
+                    ChunkMeshScratch::triangles[m_triangles_count++] = face.triangles[0] + offset;
+                    ChunkMeshScratch::triangles[m_triangles_count++] = face.triangles[1] + offset;
                 }
-                world_pos.x++;
             }
-            world_pos.z++;
         }
-        world_pos.y++;
     }
 
-    if (m_mesh.nbVertices() > 0) {
-        m_mesh.initShaderData();
+    glBindVertexArray(m_VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_vertices_count * sizeof(ChunkVertex)), ChunkMeshScratch::vertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_triangles_count * sizeof(glm::uvec3)), ChunkMeshScratch::triangles.data(), GL_STATIC_DRAW);
+}
+
+void Chunk::render() {
+    glBindVertexArray(m_VAO);
+    glDrawElements(GL_TRIANGLES, m_triangles_count * 3, GL_UNSIGNED_INT, 0);
+}
+
+void Chunk::renderDebugBox() {
+    m_aabb.render();
+}
+void Chunk::clearShaderData() {
+    if (m_VAO) {
+        glDeleteVertexArrays(1, &m_VAO);
+        m_VAO = 0;
+    }
+    if (m_VBO) {
+        glDeleteBuffers(1, &m_VBO);
+        m_VBO = 0;
+    }
+    if (m_EBO) {
+        glDeleteBuffers(1, &m_EBO);
+        m_EBO = 0;
     }
     m_aabb.clearShaderData();
-    m_aabb.initShaderData();
 }

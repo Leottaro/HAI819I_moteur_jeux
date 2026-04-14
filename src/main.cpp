@@ -52,7 +52,8 @@ int main(void) {
     globalInit();
 
     // Create and compile our GLSL program from the shaders
-    ShaderProgram shader("ressources/shaders/vertex_shader.glsl", "ressources/shaders/fragment_shader.glsl");
+    ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
+    ShaderProgram block_shader("src/shaders/block_vertex.glsl", "src/shaders/block_fragment.glsl");
 
     // Import needed textures
     ImageBase block_atlas("ressources/textures/block_atlas.ppm");
@@ -86,15 +87,14 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         if (run_simulation) {
             world.generate(camera.m_position);
-            // run_simulation = false;
         }
 
         /**********==========RENDERING==========**********/
-        shader.use();
+        block_shader.use();
 
-        world.render(shader, camera);
+        world.render(block_shader, camera);
         if (display_debug) {
-            world.renderDebugBoxes(shader, camera);
+            world.renderDebugBoxes(line_shader, camera);
         }
 
         // ImGui Render
@@ -105,10 +105,6 @@ int main(void) {
         scroll = glm::vec2(0.);
         cursor_vel = glm::vec2(0.);
     } while (glfwWindowShouldClose(window) == GLFW_FALSE);
-
-    // Cleanup VBO and shader
-    world.clear();
-    shader.~ShaderProgram();
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();

@@ -28,11 +28,11 @@ bool World::addChunk(const glm::ivec3 &_chunk_pos) {
             neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = inserted_chunk;
 
             inserted_chunk->updateBlockNeighbours(face_i);
-            neighbour->buildMesh();
+            neighbour->updateShaderData();
         }
     }
 
-    inserted_chunk->buildMesh();
+    inserted_chunk->updateShaderData();
 
     return true;
 }
@@ -52,7 +52,7 @@ bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
             m_chunks_frontier.insert(_chunk_pos);
             neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = nullptr;
             neighbour->updateBlockNeighbours(OPPOSITE_FACE[face_i]);
-            neighbour->buildMesh();
+            neighbour->updateShaderData();
         } else if (isChunkFrontier(neighbour_pos)) {
             // neighbour chunk is in frontier, remove it if it has no loaded neighbour.
             bool neighbour_has_neighbour = false;

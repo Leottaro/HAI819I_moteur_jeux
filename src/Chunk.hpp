@@ -10,6 +10,9 @@
 class Chunk {
 public:
     static constexpr uint8_t CHUNK_SIZE = 32; // A chunk is 32x32x32 blocks
+    static constexpr uint MAX_VERTICES = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * 6 * 4;
+    static constexpr uint MAX_TRIANGLES = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * 6 * 2;
+
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
         glm::ivec3(0, 0, -CHUNK_SIZE), // Front (-Z)
         glm::ivec3(-CHUNK_SIZE, 0, 0), // Left  (-X)
@@ -39,27 +42,38 @@ public:
     };
 
 private:
+    GLuint m_VAO = 0;
+    GLuint m_VBO = 0;
+    GLuint m_EBO = 0;
+    size_t m_vertices_count = 0, m_triangles_count = 0;
+
     glm::ivec3 m_pos;
     std::array<Block, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE> m_blocks;
-
     AABB<float> m_aabb;
-    Mesh m_mesh;
 
     static inline size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
     static inline size_t posToBlockI(const glm::uvec3 &_relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
+    static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
+        -CHUNK_SIZE,             // Front (-Z)
+        -1,                      // Left  (-X)
+        -CHUNK_SIZE *CHUNK_SIZE, // Bottom(-Y)
+        CHUNK_SIZE,              // Back  (+Z)
+        1,                       // Right (+X)
+        CHUNK_SIZE *CHUNK_SIZE,  // Top   (+Y)
+    };
+
     void initNeighbours();
     void generate(GenType _type);
 
 public:
-    std::array<Chunk *, 6>
-        m_neighbours{nullptr};
+    std::array<Chunk *, 6> m_neighbours{nullptr};
 
     Chunk(Chunk &&) = delete;
     Chunk(const Chunk &) = delete;
     Chunk &operator=(const Chunk &) = delete;
     Chunk &operator=(Chunk &&) = delete;
     Chunk(const glm::ivec3 &_chunk_pos, GenType _type);
-    ~Chunk() { clear(); }
+    ~Chunk() { clearShaderData(); }
 
     inline const glm::ivec3 &getPos() const { return m_pos; }
     inline const AABB<float> &getAABB() { return m_aabb; }
@@ -67,29 +81,11 @@ public:
     inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
-
     void updateBlockNeighbours(uint8_t _face_i);
-    void buildMesh();
-    inline void render(ShaderProgram &_shader) {
-        if (m_mesh.nbVertices() == 0)
-            return;
-        _shader.set("texture_i", 0);
-        _shader.set("texture_sampler", 0);
 
-        _shader.set("model", glm::mat4(1.));
-        _shader.set("has_normals", 1);
-        m_mesh.render();
-    }
-    inline void renderDebugBox(ShaderProgram &_shader) {
-        _shader.set("texture_i", -1);
-        _shader.set("texture_sampler", -1);
-
-        _shader.set("model", glm::mat4(1.));
-        _shader.set("has_normals", 0);
-        m_aabb.render();
-    }
-    inline void clear() {
-        m_mesh.clear();
-        m_aabb.clearShaderData();
-    }
+    void initShaderData();
+    void updateShaderData();
+    void render();
+    void renderDebugBox();
+    void clearShaderData();
 };
