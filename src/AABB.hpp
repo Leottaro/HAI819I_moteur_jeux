@@ -65,6 +65,73 @@ struct AABB {
         return true;
     }
 
+    // Return if there is an intersection and the minimal vector "dist" to move "_other" so it doesn't intersect
+    bool intersect(const AABB &_other, vec3 &dist) const {
+        const T overlapX = std::min(max.x, _other.max.x) - std::max(min.x, _other.min.x);
+        const T overlapY = std::min(max.y, _other.max.y) - std::max(min.y, _other.min.y);
+        const T overlapZ = std::min(max.z, _other.max.z) - std::max(min.z, _other.min.z);
+
+        if (overlapX <= T(0) || overlapY <= T(0) || overlapZ <= T(0)) {
+            dist = vec3(T(0));
+            return false;
+        }
+
+        const vec3 center = (min + max) * T(0.5);
+        const vec3 other_center = (_other.min + _other.max) * T(0.5);
+
+        dist = vec3(T(0));
+        if (overlapX <= overlapY && overlapX <= overlapZ) {
+            dist.x = (other_center.x < center.x) ? -overlapX : overlapX;
+        } else if (overlapY <= overlapZ) {
+            dist.y = (other_center.y < center.y) ? -overlapY : overlapY;
+        } else {
+            dist.z = (other_center.z < center.z) ? -overlapZ : overlapZ;
+        }
+
+        return true;
+    }
+
+    // Returns true if _other moving by _other_vel will intersect *this.
+    // Sets t to the earliest time in [0,1] at which (_other + vel*t) first touches *this.
+    bool intersect(const AABB &_other, const vec3 &_other_vel, T &t) const {
+        T t_enter = T(0);
+        T t_exit = T(1); // clamp sweep to one step (vel is a full-frame delta)
+
+        // For each axis compute the entry/exit times of the overlapping slab.
+        for (int i = 0; i < 3; ++i) {
+            const T vel = _other_vel[i];
+            const T a_min = min[i], a_max = max[i];               // *this  (static)
+            const T b_min = _other.min[i], b_max = _other.max[i]; // _other (moving)
+
+            if (std::abs(vel) < std::numeric_limits<T>::epsilon()) {
+                // No motion on this axis — if already separated, no collision possible.
+                if (b_max < a_min || b_min > a_max)
+                    return false;
+                // Otherwise the slab is permanently overlapping; don't narrow [t_enter, t_exit].
+            } else {
+                // Time at which the leading and trailing faces meet.
+                // b moves toward a, so:
+                //   entry = gap between closest faces / vel
+                //   exit  = gap between farthest faces / vel
+                T inv_vel = T(1) / vel;
+                T t0 = (a_min - b_max) * inv_vel; // _other's front face reaches *this's back face
+                T t1 = (a_max - b_min) * inv_vel; // _other's back face reaches *this's front face
+
+                if (t0 > t1)
+                    std::swap(t0, t1); // ensure t0 <= t1 regardless of direction
+
+                t_enter = std::max(t_enter, t0);
+                t_exit = std::min(t_exit, t1);
+
+                if (t_enter > t_exit)
+                    return false; // slabs don't overlap in time
+            }
+        }
+
+        t = t_enter;
+        return true;
+    }
+
 private:
     GLuint m_VAO = 0;
     GLuint m_vertices_VBO = 0;

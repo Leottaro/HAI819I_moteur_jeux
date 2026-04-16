@@ -1,10 +1,15 @@
 #pragma once
 
 // USUAL INCLUDES
-#include "Chunk.hpp"
-#include "Camera.hpp"
 #include <map>
 #include <set>
+#include <list>
+#include "Chunk.hpp"
+#include "Camera.hpp"
+#include "Entity.hpp"
+
+#include <random>
+#include <sstream>
 
 class World {
 public:
@@ -22,6 +27,7 @@ private:
 
     std::map<glm::ivec3, Chunk *, glmVecLexicoGraphic<int, 3>> m_chunks;
     std::set<glm::ivec3, glmVecLexicoGraphic<int, 3>> m_chunks_frontier;
+    std::map<std::string, Entity *> m_entities;
 
 public:
     World() {}
@@ -30,15 +36,21 @@ public:
     inline bool isChunkLoaded(const glm::ivec3 &_chunk_pos) const { return m_chunks.find(_chunk_pos) != m_chunks.end(); }
     inline bool isChunkFrontier(const glm::ivec3 &_chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
     inline Block &getBlock(const glm::ivec3 &_block_pos) { return findChunk(Chunk::blockPosToChunkPos(_block_pos))->getBlock(_block_pos); }
-
     Chunk *findChunk(const glm::ivec3 &_chunk_pos);
-    bool addChunk(const glm::ivec3 &_chunk_pos);
+    Chunk *addChunk(const glm::ivec3 &_chunk_pos);
     bool removeChunk(const glm::ivec3 &_chunk_pos);
     bool generate(const glm::vec3 &_pos);
 
+    inline bool isEntityLoaded(const std::string &_uuid) const { return m_entities.find(_uuid) != m_entities.end(); }
+    Entity *findEntity(const std::string &_uuid);
+    Entity *addEntity(Entity::Type _type, const glm::vec3 &_pos);
+    bool removeEntity(const std::string &_uuid);
+    void update(float _deltaTime);
+
     // RENDERING
 
-    inline void render(ShaderProgram &_block_shader, const Camera &_camera) {
+    inline void render(ShaderProgram &_block_shader, ShaderProgram &_line_shader, const Camera &_camera) {
+        _block_shader.use();
         _block_shader.set("view", _camera.getViewMatrix());
         _block_shader.set("projection", _camera.getProjectionMatrix());
         _block_shader.set("camera_pos", _camera.m_position);
@@ -52,11 +64,22 @@ public:
                 chunk->render();
             }
         }
-    }
-    inline void renderDebugBoxes(ShaderProgram &_line_shader, const Camera &_camera) {
+
+        _line_shader.use();
         _line_shader.set("view", _camera.getViewMatrix());
         _line_shader.set("projection", _camera.getProjectionMatrix());
         _line_shader.set("color", glm::vec3(1.f));
+        _line_shader.set("position", glm::vec3(0.f));
+        for (auto &[uuid, entity] : m_entities) {
+            entity->render();
+        }
+    }
+    inline void renderDebugBoxes(ShaderProgram &_line_shader, const Camera &_camera) {
+        _line_shader.use();
+        _line_shader.set("view", _camera.getViewMatrix());
+        _line_shader.set("projection", _camera.getProjectionMatrix());
+        _line_shader.set("color", glm::vec3(1.f));
+        _line_shader.set("position", glm::vec3(0.f));
 
         for (auto &[chunk_pos, chunk] : m_chunks) {
             chunk->renderDebugBox();

@@ -84,11 +84,9 @@ bool Camera::updateInterface(float _deltaTime) {
         if (ImGui::Combo("Camera Type", &current_type, CAMERA_TYPES)) {
             m_type = Type(current_type);
             switch (m_type) {
-            case Type::Free:
-                break;
             case Type::FirstPerson:
                 break;
-            case Type::Orbital:
+            case Type::ThirdPerson:
                 m_distance_to_center = glm::distance(m_position, *m_center);
                 m_front = glm::normalize(*m_center - m_position);
                 m_orientation = Transformation::EuclidianToEuler(m_front);
@@ -99,7 +97,7 @@ bool Camera::updateInterface(float _deltaTime) {
 
         ImGui::Separator();
 
-        if (m_type == Type::Free || m_type == Type::FirstPerson) { // Free position Controls
+        if (m_type == Type::FirstPerson) { // Free position Controls
             bool position_changed = ImGui::DragFloat3("Position", &m_position[0], 0.1f);
             if (position_changed) {
                 updateData();
@@ -128,7 +126,7 @@ bool Camera::updateInterface(float _deltaTime) {
         ImGui::Separator();
 
         // Speed Controls
-        if (m_type == Type::Free || m_type == Type::FirstPerson) {
+        if (m_type == Type::FirstPerson) {
             ImGui::DragFloat("Translation Speed", &m_translation_speed, 1.e-2f, 0.f, 1.e2f);
         } else {
             bool distance_changed = ImGui::DragFloat("Distance to Center", &m_distance_to_center, 0.1f, 1.e-4f, 1.e4f);
@@ -150,11 +148,9 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
     if (c_is_pressed && !c_was_pressed) {
         m_type = Type((int(m_type) + 1) % CAMERA_TYPES_N);
         switch (m_type) {
-        case Type::Free:
-            break;
         case Type::FirstPerson:
             break;
-        case Type::Orbital:
+        case Type::ThirdPerson:
             m_distance_to_center = glm::distance(m_position, *m_center);
             m_front = glm::normalize(*m_center - m_position);
             m_orientation = Transformation::EuclidianToEuler(m_front);
@@ -171,13 +167,10 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
 
     glm::vec3 flat_front = glm::cross(VEC_UP, m_right);
     switch (m_type) {
-    case Type::Free:
-        m_position += motion.x * m_real_up + motion.y * m_right + motion.z * m_front;
-        break;
     case Type::FirstPerson:
         m_position += motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front;
         break;
-    case Type::Orbital:
+    case Type::ThirdPerson:
         m_distance_to_center = glm::distance(m_position, *m_center);
         m_front = glm::normalize(*m_center - m_position);
         m_orientation = Transformation::EuclidianToEuler(m_front);
@@ -188,14 +181,13 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
 void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions) {
     float rotation_speed = _deltaTime * m_rotation_speed;
     switch (m_type) {
-    case Type::Free:
     case Type::FirstPerson:
         if (!_disable_actions && glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_orientation.x -= rotation_speed * _cursor_vel.y;
             m_orientation.y -= rotation_speed * _cursor_vel.x;
         }
         break;
-    case Type::Orbital:
+    case Type::ThirdPerson:
         if (!_disable_actions) {
             m_distance_to_center = glm::max(m_distance_to_center * (1.f - _scroll.y * m_zoom_rate), 1.e-4f);
             if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {

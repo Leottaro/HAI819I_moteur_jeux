@@ -2,6 +2,40 @@
 #include "World.hpp"
 #include <list>
 
+namespace uuid {
+static std::random_device rd;
+static std::mt19937 gen(rd());
+static std::uniform_int_distribution<> dis(0, 15);
+static std::uniform_int_distribution<> dis2(8, 11);
+
+std::string generate_uuid_v4() {
+    std::stringstream ss;
+    int i;
+    ss << std::hex;
+    for (i = 0; i < 8; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    for (i = 0; i < 4; i++) {
+        ss << dis(gen);
+    }
+    ss << "-4";
+    for (i = 0; i < 3; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    ss << dis2(gen);
+    for (i = 0; i < 3; i++) {
+        ss << dis(gen);
+    }
+    ss << "-";
+    for (i = 0; i < 12; i++) {
+        ss << dis(gen);
+    };
+    return ss.str();
+}
+} // namespace uuid
+
 Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
     if (isChunkLoaded(_chunk_pos)) {
         return m_chunks.at(_chunk_pos);
@@ -9,9 +43,9 @@ Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
     return nullptr;
 }
 
-bool World::addChunk(const glm::ivec3 &_chunk_pos) {
+Chunk *World::addChunk(const glm::ivec3 &_chunk_pos) {
     if (isChunkLoaded(_chunk_pos))
-        return false;
+        return nullptr;
 
     m_chunks.insert({_chunk_pos, new Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT)});
     m_chunks_frontier.erase(_chunk_pos);
@@ -34,7 +68,7 @@ bool World::addChunk(const glm::ivec3 &_chunk_pos) {
 
     inserted_chunk->updateShaderData();
 
-    return true;
+    return inserted_chunk;
 }
 bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
     Chunk *removed_chunk = findChunk(_chunk_pos);
@@ -105,4 +139,37 @@ bool World::generate(const glm::vec3 &_pos) {
     }
 
     return false;
+}
+
+Entity *World::findEntity(const std::string &_uuid) {
+    if (isEntityLoaded(_uuid)) {
+        return m_entities.at(_uuid);
+    }
+    return nullptr;
+}
+
+Entity *World::addEntity(Entity::Type _type, const glm::vec3 &_pos) {
+    glm::ivec3 chunk_pos = Chunk::posToChunkPos(_pos);
+    Chunk *chunk = addChunk(chunk_pos);
+    if (chunk == nullptr)
+        return nullptr;
+
+    std::string uuid = uuid::generate_uuid_v4();
+    m_entities.insert({uuid, new Entity(_type, uuid, chunk, _pos)});
+    return m_entities.at(uuid);
+}
+
+bool World::removeEntity(const std::string &_uuid) {
+    Entity *removed_entity = findEntity(_uuid);
+    if (removed_entity == nullptr)
+        return false;
+    delete removed_entity;
+    m_entities.erase(_uuid);
+    return true;
+}
+
+void World::update(float _deltaTime) {
+    for (auto &[uuid, entity] : m_entities) {
+        entity->update(_deltaTime);
+    }
 }

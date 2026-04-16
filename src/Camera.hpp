@@ -26,15 +26,14 @@ class Camera {
     };
 
 public:
-#define CAMERA_TYPES_N 3
-#define CAMERA_TYPES "Free\0FirstPerson\0Orbital\0"
+#define CAMERA_TYPES_N 2
+#define CAMERA_TYPES "FirstPerson\0ThirdPerson\0"
     enum class Type {
-        Free = 0,
-        FirstPerson = 1,
-        Orbital = 2,
+        FirstPerson = 0,
+        ThirdPerson,
     };
 
-    Type m_type = Type::Free;
+    Type m_type = Type::FirstPerson;
     glm::vec3 m_position = glm::vec3(1.0f, 1.0f, 1.0f);
     float m_translation_speed = 2.5f;
 
@@ -59,14 +58,13 @@ private:
 
     Frustum m_frustum;
 
-    bool updateInterface(float _deltaTime);
-    void updateKeyboardInput(GLFWwindow *_window, float _deltaTime);
-    void updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions);
-
 public:
     Camera() {}
 
     void updateData();
+    bool updateInterface(float _deltaTime);
+    void updateKeyboardInput(GLFWwindow *_window, float _deltaTime);
+    void updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions);
     void update(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll);
 
     inline const glm::vec3 &getFront() const { return m_front; }

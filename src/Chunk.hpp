@@ -78,7 +78,7 @@ public:
     inline const glm::ivec3 &getPos() const { return m_pos; }
     inline const AABB<float> &getAABB() { return m_aabb; }
     inline const Block &getBlock(const glm::ivec3 &_block_pos) const { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
-    inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
+    inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; } // TODO: aller chercher l'autre
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
     void updateBlockNeighbours(uint8_t _face_i);

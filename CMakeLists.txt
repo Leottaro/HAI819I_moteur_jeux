@@ -31,6 +31,8 @@ set(APP_SOURCES
 
     src/Block.hpp
 
+    src/Entity.hpp
+
     src/Texture.hpp
 
     src/Camera.hpp
@@ -39,6 +41,7 @@ set(APP_SOURCES
     # src/Mesh.hpp
     # src/Mesh.cpp
     # src/Octree.hpp
+    src/RigidBody.hpp
     src/AABB.hpp
 
     src/Transformation.hpp

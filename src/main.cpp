@@ -38,7 +38,7 @@ glm::vec2 cursor_pos{0, 0};
 glm::vec2 cursor_vel{0, 0};
 glm::vec2 scroll{0, 0};
 
-bool run_simulation = true;
+bool run_simulation = false;
 float deltaTime = 0.f;
 float lastFrame = 0.f;
 
@@ -63,11 +63,14 @@ int main(void) {
     Texture specular_map("ressources/textures/specular_map.png");
     specular_map.initShaderData();
 
-    camera.m_type = Camera::Type::Free;
+    Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(24.f, 24.f, 24.f));
+
+    camera.m_type = Camera::Type::ThirdPerson;
     camera.m_position = glm::vec3(16.f, 16.f, 16.f);
     camera.m_translation_speed = 32.f;
     camera.m_orientation = glm::vec2(0.f, 0.f);
     camera.m_rotation_speed = 1.f;
+    camera.m_center = &truc->m_pos;
     camera.updateData();
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
@@ -89,8 +92,9 @@ int main(void) {
         camera.update(window, deltaTime, cursor_vel, scroll);
 
         /**********==========OBJECTS UPDATE==========**********/
+        world.generate(camera.m_position);
         if (run_simulation) {
-            world.generate(camera.m_position);
+            world.update(deltaTime);
         }
 
         /**********==========RENDERING==========**********/
@@ -99,7 +103,7 @@ int main(void) {
         normal_atlas.bind(1);
         specular_map.bind(2);
 
-        world.render(block_shader, camera);
+        world.render(block_shader, line_shader, camera);
         if (display_debug) {
             world.renderDebugBoxes(line_shader, camera);
         }
