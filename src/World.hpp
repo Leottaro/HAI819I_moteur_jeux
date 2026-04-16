@@ -48,6 +48,7 @@ public:
 
         for (auto &[chunk_pos, chunk] : m_chunks) {
             if (_camera.isVisible(chunk->getAABB())) {
+                _block_shader.set("chunk_pos", chunk_pos);
                 chunk->render();
             }
         }

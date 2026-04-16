@@ -48,6 +48,24 @@ public:
     inline void set(const std::string &name, float value) {
         glUniform1f(getLocation(name.c_str()), value);
     }
+    inline void set(const std::string &name, const glm::uvec2 &value) {
+        glUniform2uiv(getLocation(name.c_str()), 1, glm::value_ptr(value));
+    }
+    inline void set(const std::string &name, const glm::uvec3 &value) {
+        glUniform3uiv(getLocation(name.c_str()), 1, glm::value_ptr(value));
+    }
+    inline void set(const std::string &name, const glm::uvec4 &value) {
+        glUniform4uiv(getLocation(name.c_str()), 1, glm::value_ptr(value));
+    }
+    inline void set(const std::string &name, const glm::ivec2 &value) {
+        glUniform2iv(getLocation(name.c_str()), 1, glm::value_ptr(value));
+    }
+    inline void set(const std::string &name, const glm::ivec3 &value) {
+        glUniform3iv(getLocation(name.c_str()), 1, glm::value_ptr(value));
+    }
+    inline void set(const std::string &name, const glm::ivec4 &value) {
+        glUniform4iv(getLocation(name.c_str()), 1, glm::value_ptr(value));
+    }
     inline void set(const std::string &name, const glm::vec2 &value) {
         glUniform2fv(getLocation(name.c_str()), 1, glm::value_ptr(value));
     }

@@ -106,8 +106,9 @@ Chunk::Chunk(const glm::ivec3 &_chunk_pos, GenType _type) : m_pos(_chunk_pos), m
 }
 
 struct ChunkVertex {
-    glm::vec3 position;
-    glm::vec3 normal;
+    glm::u8vec3 position;
+    glm::i8vec3 normal;
+    uint8_t _pad[2]; // explicit 2-byte pad
     glm::vec2 uv;
 };
 // Si mes comptes sont bons on a 28.5MiB pour tout les chunks (c'est OK)
@@ -123,11 +124,11 @@ void Chunk::initShaderData() {
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
     // Attribute 0: position
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, position));
+    glVertexAttribIPointer(0, 3, GL_UNSIGNED_BYTE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, position));
     // Attribute 1: normal
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, normal));
-    // Attribute 2: uv
+    glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, normal));
+    // Attribute 0: uv
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, uv));
 
@@ -140,11 +141,11 @@ void Chunk::initShaderData() {
 void Chunk::updateShaderData() {
     m_vertices_count = m_triangles_count = 0;
 
-    glm::ivec3 world_pos;
+    glm::u8vec3 local_pos;
     int block_i = -1;
-    for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-        for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-            for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+    for (local_pos.y = 0; local_pos.y < CHUNK_SIZE; local_pos.y++) {
+        for (local_pos.z = 0; local_pos.z < CHUNK_SIZE; local_pos.z++) {
+            for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
                 block_i++;
                 Block &block = m_blocks[block_i];
                 if (block.getType() == Block::Type::Air) {
@@ -159,9 +160,9 @@ void Chunk::updateShaderData() {
 
                     std::array<glm::vec2, 4> face_uvs = Block::getUV(block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {
-                        ChunkMeshScratch::vertices[m_vertices_count].position = glm::vec3(world_pos) + face.vertices[i];
-                        ChunkMeshScratch::vertices[m_vertices_count].uv = face_uvs[i];
+                        ChunkMeshScratch::vertices[m_vertices_count].position = local_pos + face.vertices[i];
                         ChunkMeshScratch::vertices[m_vertices_count].normal = face.normal;
+                        ChunkMeshScratch::vertices[m_vertices_count].uv = face_uvs[i];
                         m_vertices_count++;
                     }
 
