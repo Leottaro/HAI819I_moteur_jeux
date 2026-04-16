@@ -79,13 +79,16 @@ void Chunk::generate(GenType _type) {
                     } else if (world_pos.y <= 3) {
                         block.getType() = Block::Type::Dirt;
                     } else if (world_pos.y <= 4) {
-                        block.getType() = Block::Type::Grass;
+                        uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
+                        block.getType() = Block::Type(truc % Block::BLOCK_TYPES_N);
                     } else {
                         block.getType() = Block::Type::Air;
                     }
 
                     if (std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1)
                         block.getType() = Block::Type::Glass;
+
+                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
                 }
             }
         }

@@ -31,7 +31,7 @@ GLFWwindow *window;
 using namespace std;
 
 // window state
-GLuint window_width = 800, window_height = 600;
+GLuint window_width = 1600, window_height = 900;
 double window_aspect_ratio = double(window_width) / window_height;
 GLenum polygon_mode = GL_FILL;
 glm::vec2 cursor_pos{0, 0};
@@ -56,8 +56,12 @@ int main(void) {
     ShaderProgram block_shader("src/shaders/block_vertex.glsl", "src/shaders/block_fragment.glsl");
 
     // Import needed textures
-    Texture block_atlas("ressources/textures/block_atlas.png");
-    block_atlas.initShaderData();
+    Texture albedo_atlas("ressources/textures/albedo_atlas.png");
+    albedo_atlas.initShaderData();
+    Texture normal_atlas("ressources/textures/normal_atlas.png");
+    normal_atlas.initShaderData();
+    Texture specular_map("ressources/textures/specular_map.png");
+    specular_map.initShaderData();
 
     camera.m_type = Camera::Type::Free;
     camera.m_position = glm::vec3(16.f, 16.f, 16.f);
@@ -91,7 +95,9 @@ int main(void) {
 
         /**********==========RENDERING==========**********/
         block_shader.use();
-        block_atlas.bind(0);
+        albedo_atlas.bind(0);
+        normal_atlas.bind(1);
+        specular_map.bind(2);
 
         world.render(block_shader, camera);
         if (display_debug) {
@@ -225,19 +231,16 @@ void initWindow() {
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_pos_callback);
     glfwSetScrollCallback(window, scroll_callback);
-
-    if (glfwRawMouseMotionSupported())
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 }
 
 void initOpenGL() {
-    glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE); // Ensure we can capture the escape key being pressed below
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);                // Dark blue background
-    glEnable(GL_DEPTH_TEST);                             // Enable depth test
-    glEnable(GL_BLEND);                                  // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);   // Set a blending function
-    glDepthFunc(GL_LESS);                                // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_CULL_FACE);                              // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }
 
 void globalInit() {

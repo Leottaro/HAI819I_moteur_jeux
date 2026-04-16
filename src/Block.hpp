@@ -41,6 +41,9 @@ public:
                       Dirt,
                       Grass,
                       Glass,
+                      IronBlock,
+                      RedstoneLamp,
+                      DiamondOre,
                       NUMBER_OF_TYPES
     };
     static constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(Type::NUMBER_OF_TYPES);
@@ -49,7 +52,10 @@ public:
         {{{{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}}}, // Stone
         {{{{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}}}, // Dirt
         {{{{2.f, 0.f}}, {{2.f, 0.f}}, {{1.f, 0.f}}, {{2.f, 0.f}}, {{2.f, 0.f}}, {{3.f, 0.f}}}}, // Grass
-        {{{{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}}}  // Glass
+        {{{{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}}}, // Glass
+        {{{{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}}}, // IronBlock
+        {{{{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}}}, // RedstoneLamp
+        {{{{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}}}  // DiamondOre
     }};
 
     // TEXTURES

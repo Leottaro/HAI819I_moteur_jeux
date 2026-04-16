@@ -41,7 +41,10 @@ public:
     inline void render(ShaderProgram &_block_shader, const Camera &_camera) {
         _block_shader.set("view", _camera.getViewMatrix());
         _block_shader.set("projection", _camera.getProjectionMatrix());
-        _block_shader.set("block_atlas", 0);
+        _block_shader.set("camera_pos", _camera.m_position);
+        _block_shader.set("albedo_atlas", 0);
+        _block_shader.set("normal_atlas", 1);
+        _block_shader.set("specular_map", 2);
 
         for (auto &[chunk_pos, chunk] : m_chunks) {
             if (_camera.isVisible(chunk->getAABB())) {
