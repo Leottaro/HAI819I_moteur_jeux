@@ -178,33 +178,38 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
     }
 }
 
-void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions) {
-    float rotation_speed = _deltaTime * m_rotation_speed;
+void Camera::updatePosConstraint(float _deltaTime) {
     switch (m_type) {
     case Type::FirstPerson:
-        if (!_disable_actions && glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            m_orientation.x -= rotation_speed * _cursor_vel.y;
-            m_orientation.y -= rotation_speed * _cursor_vel.x;
-        }
         break;
     case Type::ThirdPerson:
-        if (!_disable_actions) {
-            m_distance_to_center = glm::max(m_distance_to_center * (1.f - _scroll.y * m_zoom_rate), 1.e-4f);
-            if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-                m_orientation.x -= rotation_speed * _cursor_vel.y;
-                m_orientation.y -= rotation_speed * _cursor_vel.x;
-                updateData();
-                m_position = *m_center - m_distance_to_center * m_front;
-                break;
-            }
-        }
-
         // update target pos
         m_position = *m_center - m_distance_to_center * m_front;
 
         // re update angle
         m_front = *m_center - m_position;
         m_orientation = Transformation::EuclidianToEuler(m_front);
+        break;
+    }
+}
+
+void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll) {
+    float rotation_speed = _deltaTime * m_rotation_speed;
+    switch (m_type) {
+    case Type::FirstPerson:
+        if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            m_orientation.x -= rotation_speed * _cursor_vel.y;
+            m_orientation.y -= rotation_speed * _cursor_vel.x;
+        }
+        break;
+    case Type::ThirdPerson:
+        m_distance_to_center = glm::max(m_distance_to_center * (1.f - _scroll.y * m_zoom_rate), 1.e-4f);
+        if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            m_orientation.x -= rotation_speed * _cursor_vel.y;
+            m_orientation.y -= rotation_speed * _cursor_vel.x;
+            updateData();
+            m_position = *m_center - m_distance_to_center * m_front;
+        }
         break;
     }
 }
@@ -217,7 +222,10 @@ void Camera::update(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cur
     m_aspect_ratio = float(window_width) / window_height;
 
     updateKeyboardInput(_window, _deltaTime);
-    updateMouseInput(_window, _deltaTime, _cursor_vel, _scroll, disable_mouse_actions);
+    if (!disable_mouse_actions) {
+        updateMouseInput(_window, _deltaTime, _cursor_vel, _scroll);
+    }
+    updatePosConstraint(_deltaTime);
 
     updateData();
 }

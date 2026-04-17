@@ -62,9 +62,10 @@ public:
     Camera() {}
 
     void updateData();
+    void updatePosConstraint(float _deltaTime);
     bool updateInterface(float _deltaTime);
     void updateKeyboardInput(GLFWwindow *_window, float _deltaTime);
-    void updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions);
+    void updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll);
     void update(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll);
 
     inline const glm::vec3 &getFront() const { return m_front; }

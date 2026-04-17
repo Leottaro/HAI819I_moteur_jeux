@@ -143,21 +143,9 @@ public:
         glGenVertexArrays(1, &m_VAO);
         glBindVertexArray(m_VAO);
 
-        std::vector<glm::vec3> m_vertices{
-            glm::vec3(min.x, min.y, min.z),
-            glm::vec3(min.x, min.y, max.z),
-            glm::vec3(min.x, max.y, min.z),
-            glm::vec3(min.x, max.y, max.z),
-            glm::vec3(max.x, min.y, min.z),
-            glm::vec3(max.x, min.y, max.z),
-            glm::vec3(max.x, max.y, min.z),
-            glm::vec3(max.x, max.y, max.z)};
-
         glGenBuffers(1, &m_vertices_VBO);
         glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
-        glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
         std::vector<glm::uvec2> m_lines{
@@ -184,7 +172,23 @@ public:
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_lines.size() * sizeof(glm::uvec2), m_lines.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        glBindVertexArray(0);
+        updateShaderData();
+    }
+
+    void updateShaderData() {
+        std::vector<glm::vec3> m_vertices{
+            glm::vec3(min.x, min.y, min.z),
+            glm::vec3(min.x, min.y, max.z),
+            glm::vec3(min.x, max.y, min.z),
+            glm::vec3(min.x, max.y, max.z),
+            glm::vec3(max.x, min.y, min.z),
+            glm::vec3(max.x, min.y, max.z),
+            glm::vec3(max.x, max.y, min.z),
+            glm::vec3(max.x, max.y, max.z)};
+
+        glBindVertexArray(m_VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
+        glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
     }
 
     void render() const {

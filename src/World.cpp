@@ -169,7 +169,15 @@ bool World::removeEntity(const std::string &_uuid) {
 }
 
 void World::update(float _deltaTime) {
+    std::vector<std::string> entities_to_destroy;
+    entities_to_destroy.reserve(m_entities.size());
     for (auto &[uuid, entity] : m_entities) {
-        entity->update(_deltaTime);
+        if (!entity->update(_deltaTime)) {
+            entities_to_destroy.push_back(uuid);
+        }
+    }
+
+    for (const std::string &uuid : entities_to_destroy) {
+        removeEntity(uuid);
     }
 }

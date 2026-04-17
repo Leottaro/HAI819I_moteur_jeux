@@ -64,6 +64,7 @@ int main(void) {
     specular_map.initShaderData();
 
     Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(24.f, 24.f, 24.f));
+    truc->m_camera = &camera;
 
     camera.m_type = Camera::Type::ThirdPerson;
     camera.m_position = glm::vec3(16.f, 16.f, 16.f);

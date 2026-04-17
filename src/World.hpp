@@ -69,8 +69,8 @@ public:
         _line_shader.set("view", _camera.getViewMatrix());
         _line_shader.set("projection", _camera.getProjectionMatrix());
         _line_shader.set("color", glm::vec3(1.f));
-        _line_shader.set("position", glm::vec3(0.f));
         for (auto &[uuid, entity] : m_entities) {
+            _line_shader.set("position", entity->m_pos);
             entity->render();
         }
     }
