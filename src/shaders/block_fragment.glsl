@@ -58,10 +58,11 @@ void main() {
   // TODO: use normal map
 
   vec4 pbr = texture(specular_map, f_uv).rgba;
-  float roughness = pbr.b;
+  float roughness = 1.f - pbr.r;
   float metallic = pbr.g;
-  float ao = pbr.r;
-  // float emission = ...
+  vec3 F0 = vec3(pbr.b);
+  float ao = 1.f;
+  float emission = 0.f;
 
   // TODO: lights uniforms
   vec3 lightPositions[3] = vec3[](vec3(0.f, 1.f, 1.f) + f_worldpos, vec3(16.f, 10.f, 16.f), vec3(24.f, 10.f, 12.f));
@@ -70,7 +71,7 @@ void main() {
   vec3 N = normalize(f_normal);
   vec3 V = normalize(camera_pos - f_worldpos);
 
-  vec3 F0 = vec3(0.04);
+  // vec3 F0 = vec3(0.04);
   F0 = mix(F0, albedo, metallic);
 
   // reflectance equation
@@ -101,8 +102,9 @@ void main() {
     Lo += (kD * albedo / PI + specular) * radiance * NdotL;
   }
 
-  vec3 ambient = vec3(0.03) * albedo * ao;
-  vec3 color = ambient + Lo;
+  vec3 ambient_light = vec3(0.03) * albedo * ao;
+  vec3 emited_light = albedo * emission;
+  vec3 color = ambient_light + emited_light + Lo;
 
   color = color / (color + vec3(1.0));
   color = pow(color, vec3(1.0 / 2.2));
