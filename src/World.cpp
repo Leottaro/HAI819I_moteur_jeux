@@ -43,11 +43,19 @@ Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
     return nullptr;
 }
 
+Block *World::findBlock(const glm::ivec3 &_block_pos) {
+    glm::ivec3 chunk_pos = Chunk::posToChunkPos(_block_pos);
+    if (isChunkLoaded(chunk_pos)) {
+        return &m_chunks.at(chunk_pos)->getBlock(_block_pos);
+    }
+    return nullptr;
+}
+
 Chunk *World::addChunk(const glm::ivec3 &_chunk_pos) {
     if (isChunkLoaded(_chunk_pos))
         return nullptr;
 
-    m_chunks.insert({_chunk_pos, new Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT)});
+    m_chunks.insert({_chunk_pos, new Chunk(this, _chunk_pos, Chunk::GenType::SUPERFLAT)});
     m_chunks_frontier.erase(_chunk_pos);
     Chunk *inserted_chunk = m_chunks.at(_chunk_pos);
 

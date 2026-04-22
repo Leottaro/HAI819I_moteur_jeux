@@ -2,7 +2,6 @@
 #include "Chunk.hpp"
 #include "AABB.hpp"
 #include "RigidBody.hpp"
-// #include <cstddef>
 
 class Entity : public RigidBody {
 public:
@@ -37,7 +36,7 @@ public:
 
         switch (_type) {
         case Type::Test:
-            m_hitbox = {AABB<float>(glm::vec3(-0.49f, 0.f, -0.49f), glm::vec3(0.49f, 1.74f, 0.49f))};
+            m_hitbox = {AABB<float>(glm::vec3(-0.3333333f, 0.f, -0.3333333f), glm::vec3(0.3333333f, 1.74f, 0.3333333f))};
             break;
         }
 
@@ -45,56 +44,84 @@ public:
     }
     ~Entity() { clearShaderData(); }
 
+    void fixCamera(Camera *_camera) {
+        m_camera = _camera;
+        m_camera->m_center = &m_pos;
+        _camera->updatePosConstraint();
+        _camera->updateData();
+    }
+
     bool update(float _deltaTime) {
-        if (m_on_ground)
-            return true;
         if (m_current_chunk == nullptr)
             return false;
 
         std::vector<glm::vec3> forces;
         forces.reserve(3);
 
-        forces.push_back(glm::vec3(0.f, -9.81f, 0.f) * m_weight); // g
-        Block &block = m_current_chunk->getBlock(m_pos);
-        float densite_fluide = block.getType() == Block::Type::Air ? 1.f : 0.f;
-        if (densite_fluide > 0.f) {
-            forces.push_back(densite_fluide * -forces[0] * m_volume / (m_weight / m_volume)); // flottaison
-            forces.push_back(densite_fluide * m_vel * -m_drag);                               // drag
+        if (!m_on_ground) {
+            forces.push_back(glm::vec3(0.f, -9.81f, 0.f) * m_weight); // g
+            Block &block = m_current_chunk->getBlock(m_pos);
+            float densite_fluide = block.getDensity();
+            if (densite_fluide > 0.f) {
+                forces.push_back(densite_fluide * -forces[0] * m_volume / (m_weight / m_volume)); // flottaison
+                forces.push_back(densite_fluide * m_vel * -m_drag);                               // drag
+            }
         }
 
+        glm::vec3 old_pos = m_pos;
         RigidBody::update(_deltaTime, forces);
 
         // Chunk collision detection
-        // cube_body.bounce(static_friction, applyTransformation(triangle_normal, 0.f, terrain_node.m_transfo.computeTransformationMatrix()));
+        float collision_t = FLT_MAX;
+        glm::vec3 collision_normal;
+        Block::Type collided_block_type;
+        for (const AABB<float> &hitbox : m_hitbox) {
+            hitbox.forAllCorners([&](const glm::vec3 &_corner) {
+                Block *collided_block = m_current_chunk->getFirstSolidBlock(old_pos + _corner, m_pos + _corner);
+                if (collided_block == nullptr) {
+                    return;
+                }
+                glm::vec3 block_pos = collided_block->getPos();
+                AABB<float> block_aabb(block_pos, block_pos + glm::vec3(1.f));
+
+                float t;
+                glm::vec3 normal;
+                if (block_aabb.intersectAABB(old_pos + hitbox, _deltaTime * m_vel, t, normal) && t < collision_t) {
+                    collision_t = t;
+                    collision_normal = normal;
+                    collided_block_type = collided_block->getType();
+                }
+            });
+        }
+
+        if (collision_t < FLT_MAX) {
+            glm::vec3 new_vel = collision_t * _deltaTime * m_vel;
+            m_pos = old_pos + new_vel;
+            auto [friction, bounciness] = Block::PHYSICS_TABLE[size_t(collided_block_type)];
+            if (bounciness > 0.f && glm::length(new_vel) > 1.e-8f) {
+                m_restitution = bounciness;
+                RigidBody::bounce(friction, collision_normal);
+            } else if (collision_normal == glm::vec3(0.f, 1.f, 0.f)) {
+                m_vel = glm::vec3(0.f);
+                m_on_ground = true;
+            } else {
+                m_vel = m_pos - old_pos;
+            }
+        }
 
         if (m_camera != nullptr)
-            m_camera->updatePosConstraint(_deltaTime);
+            m_camera->updatePosConstraint();
 
-        glm::ivec3 chunk_pos = Chunk::posToChunkPos(m_pos);
-        glm::ivec3 current_chunk_pos;
-        while (chunk_pos != current_chunk_pos) {
-            current_chunk_pos = m_current_chunk->getPos();
-            if (chunk_pos.z < current_chunk_pos.z)
-                m_current_chunk = m_current_chunk->getNeighbour(0);
-            else if (chunk_pos.x < current_chunk_pos.x)
-                m_current_chunk = m_current_chunk->getNeighbour(1);
-            else if (chunk_pos.y < current_chunk_pos.y)
-                m_current_chunk = m_current_chunk->getNeighbour(2);
-            else if (chunk_pos.z > current_chunk_pos.z)
-                m_current_chunk = m_current_chunk->getNeighbour(3);
-            else if (chunk_pos.x > current_chunk_pos.x)
-                m_current_chunk = m_current_chunk->getNeighbour(4);
-            else if (chunk_pos.y > current_chunk_pos.y)
-                m_current_chunk = m_current_chunk->getNeighbour(5);
-            if (m_current_chunk == nullptr) {
-                return false;
-            }
+        m_current_chunk = m_current_chunk->getChunk(m_pos);
+        if (m_current_chunk == nullptr) {
+            return false;
         }
 
         return true;
     }
 
-    void initShaderData() {
+    void
+    initShaderData() {
         for (size_t i = 0; i < m_hitbox.size(); i++) {
             m_hitbox[i].initShaderData();
         }

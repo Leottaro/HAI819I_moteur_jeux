@@ -35,8 +35,8 @@ public:
 
     inline bool isChunkLoaded(const glm::ivec3 &_chunk_pos) const { return m_chunks.find(_chunk_pos) != m_chunks.end(); }
     inline bool isChunkFrontier(const glm::ivec3 &_chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
-    inline Block &getBlock(const glm::ivec3 &_block_pos) { return findChunk(Chunk::blockPosToChunkPos(_block_pos))->getBlock(_block_pos); }
     Chunk *findChunk(const glm::ivec3 &_chunk_pos);
+    Block *findBlock(const glm::ivec3 &_block_pos);
     Chunk *addChunk(const glm::ivec3 &_chunk_pos);
     bool removeChunk(const glm::ivec3 &_chunk_pos);
     bool generate(const glm::vec3 &_pos);

@@ -5,7 +5,10 @@
 #include "ShaderProgram.hpp"
 #include "AABB.hpp"
 #include <array>
+#include <vector>
 #include <cstdint>
+
+class World;
 
 class Chunk {
 public:
@@ -47,6 +50,7 @@ private:
     GLuint m_EBO = 0;
     size_t m_vertices_count = 0, m_triangles_count = 0;
 
+    World *m_world;
     glm::ivec3 m_pos;
     std::array<Block, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE> m_blocks;
     AABB<float> m_aabb;
@@ -72,14 +76,16 @@ public:
     Chunk(const Chunk &) = delete;
     Chunk &operator=(const Chunk &) = delete;
     Chunk &operator=(Chunk &&) = delete;
-    Chunk(const glm::ivec3 &_chunk_pos, GenType _type);
+    Chunk(World *_world, const glm::ivec3 &_chunk_pos, GenType _type);
     ~Chunk() { clearShaderData(); }
 
     inline const glm::ivec3 &getPos() const { return m_pos; }
-    inline const AABB<float> &getAABB() { return m_aabb; }
-    inline const Block &getBlock(const glm::ivec3 &_block_pos) const { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
-    inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
+    inline const AABB<float> &getAABB() const { return m_aabb; }
     inline Chunk *getNeighbour(uint8_t _face_i) { return m_neighbours[_face_i]; }
+
+    inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
+    Chunk *getChunk(const glm::vec3 &_pos);
+    Block *getFirstSolidBlock(glm::ivec3 start, glm::ivec3 end);
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
     void updateBlockNeighbours(uint8_t _face_i);
@@ -89,4 +95,6 @@ public:
     void render();
     void renderDebugBox();
     void clearShaderData();
+
+    friend World;
 };

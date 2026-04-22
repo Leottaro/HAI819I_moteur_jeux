@@ -178,7 +178,7 @@ void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
     }
 }
 
-void Camera::updatePosConstraint(float _deltaTime) {
+void Camera::updatePosConstraint() {
     switch (m_type) {
     case Type::FirstPerson:
         break;
@@ -225,7 +225,7 @@ void Camera::update(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cur
     if (!disable_mouse_actions) {
         updateMouseInput(_window, _deltaTime, _cursor_vel, _scroll);
     }
-    updatePosConstraint(_deltaTime);
+    updatePosConstraint();
 
     updateData();
 }

@@ -1,7 +1,75 @@
 // USUAL INCLUDES
 #include "Chunk.hpp"
+#include "World.hpp"
 #include <stdexcept>
 #include <iostream>
+
+Chunk *Chunk::getChunk(const glm::vec3 &_pos) {
+    return m_world->findChunk(Chunk::posToChunkPos(_pos));
+}
+
+// https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
+Block *Chunk::getFirstSolidBlock(glm::ivec3 start, glm::ivec3 end) {
+    glm::vec3 delta = glm::abs(end - start);
+    glm::ivec3 step(start.x < end.x ? 1 : -1, start.y < end.y ? 1 : -1, start.z < end.z ? 1 : -1);
+    float d_length = glm::length(delta);
+    glm::vec3 tdelta = d_length / delta;
+    glm::vec3 tmax = tdelta * 0.5f;
+
+    while (start != end) {
+        if (tmax.x < tmax.y) {
+            if (tmax.x < tmax.z) {
+                start.x += step.x;
+                tmax.x += tdelta.x;
+            } else if (tmax.x > tmax.z) {
+                start.z += step.z;
+                tmax.z += tdelta.z;
+            } else {
+                start.x += step.x;
+                start.z += step.z;
+                tmax.x += tdelta.x;
+                tmax.z += tdelta.z;
+            }
+        } else if (tmax.x > tmax.y) {
+            if (tmax.y < tmax.z) {
+                start.y += step.y;
+                tmax.y += tdelta.y;
+            } else if (tmax.y > tmax.z) {
+                start.z += step.z;
+                tmax.z += tdelta.z;
+            } else {
+                start.y += step.y;
+                start.z += step.z;
+                tmax.y += tdelta.y;
+                tmax.z += tdelta.z;
+            }
+        } else {
+            if (tmax.y < tmax.z) {
+                start.y += step.y;
+                start.x += step.x;
+                tmax.y += tdelta.y;
+                tmax.x += tdelta.x;
+            } else if (tmax.y > tmax.z) {
+                start.z += step.z;
+                tmax.z += tdelta.z;
+            } else {
+                start += step;
+            }
+        }
+
+        glm::ivec3 start_chunk = posToChunkPos(start);
+        if (m_pos != start_chunk) {
+            Chunk *chunk = m_world->findChunk(start_chunk);
+            return chunk == nullptr ? nullptr : chunk->getFirstSolidBlock(start, end);
+        }
+
+        Block &block = getBlock(start);
+        if (block.hasHitbox()) {
+            return &block;
+        }
+    }
+    return nullptr;
+}
 
 void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     uint8_t face_axis = _face_i % 3;
@@ -85,7 +153,7 @@ void Chunk::generate(GenType _type) {
                         block.getType() = Block::Type::Air;
                     }
 
-                    if (std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1)
+                    if ((std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1) && world_pos.y == 11)
                         block.getType() = Block::Type::Glass;
 
                     // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
@@ -98,7 +166,7 @@ void Chunk::generate(GenType _type) {
     }
 }
 
-Chunk::Chunk(const glm::ivec3 &_chunk_pos, GenType _type) : m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
+Chunk::Chunk(World *_world, const glm::ivec3 &_chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     initNeighbours();
     generate(_type);
     initShaderData();

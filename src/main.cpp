@@ -63,16 +63,14 @@ int main(void) {
     Texture specular_map("ressources/textures/specular_map.png");
     specular_map.initShaderData();
 
-    Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(24.f, 24.f, 24.f));
-    truc->m_camera = &camera;
-
     camera.m_type = Camera::Type::ThirdPerson;
-    camera.m_position = glm::vec3(16.f, 16.f, 16.f);
-    camera.m_translation_speed = 32.f;
     camera.m_orientation = glm::vec2(0.f, 0.f);
-    camera.m_rotation_speed = 1.f;
-    camera.m_center = &truc->m_pos;
+    camera.m_distance_to_center = 2.f;
     camera.updateData();
+
+    Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
+    truc->m_vel = glm::vec3(-10.f, 8.f, 0.f);
+    truc->fixCamera(&camera);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
@@ -95,7 +93,7 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         world.generate(camera.m_position);
         if (run_simulation) {
-            world.update(deltaTime);
+            world.update(0.01f);
         }
 
         /**********==========RENDERING==========**********/

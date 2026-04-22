@@ -57,6 +57,17 @@ public:
         {{{{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}}}, // RedstoneLamp
         {{{{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}}}  // DiamondOre
     }};
+    static constexpr std::array<std::array<float, 2>, BLOCK_TYPES_N> PHYSICS_TABLE = {{
+        // friction, bounciness
+        {0.f, 0.f}, // Air
+        {1.f, 0.f}, // Stone
+        {1.f, 0.f}, // Dirt
+        {1.f, 0.f}, // Grass
+        {1.f, 0.f}, // Glass
+        {1.f, 0.f}, // IronBlock
+        {1.f, 0.f}, // RedstoneLamp
+        {1.f, 0.f}  // DiamondOre
+    }};
 
     // TEXTURES
 
@@ -87,4 +98,17 @@ public:
     inline glm::ivec3 &getPos() { return m_pos; }
 
     inline bool isTransparent() const { return m_type == Type::Air || m_type == Type::Glass; }
+    inline float getDensity() const {
+        switch (m_type) {
+        case Type::Air:
+            return 1.f;
+        // case Type::Water:
+        //     return 1000.f;
+        // case Type::Lava:
+        //     return 2000.f;
+        default:
+            return 0.f;
+        }
+    }
+    inline bool hasHitbox() const { return !(m_type == Type::Air); }
 };
