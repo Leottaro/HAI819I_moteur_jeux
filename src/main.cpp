@@ -69,7 +69,7 @@ int main(void) {
     camera.updateData();
 
     Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
-    truc->m_vel = glm::vec3(-10.f, 8.f, 0.f);
+    // truc->m_vel = glm::vec3(-10.f, 8.f, 0.f);
     truc->fixCamera(&camera);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps

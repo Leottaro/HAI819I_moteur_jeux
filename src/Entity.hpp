@@ -2,6 +2,7 @@
 #include "Chunk.hpp"
 #include "AABB.hpp"
 #include "RigidBody.hpp"
+#include <unordered_set>
 
 class Entity : public RigidBody {
 public:
@@ -36,7 +37,8 @@ public:
 
         switch (_type) {
         case Type::Test:
-            m_hitbox = {AABB<float>(glm::vec3(-0.3333333f, 0.f, -0.3333333f), glm::vec3(0.3333333f, 1.74f, 0.3333333f))};
+            m_hitbox = {AABB<float>(glm::vec3(-0.5f), glm::vec3(0.5f))};
+            // m_hitbox = {AABB<float>(glm::vec3(-0.3333333f, 0.f, -0.3333333f), glm::vec3(0.3333333f, 1.74f, 0.3333333f))};
             break;
         }
 
@@ -74,38 +76,45 @@ public:
         // Chunk collision detection
         float collision_t = FLT_MAX;
         glm::vec3 collision_normal;
-        Block::Type collided_block_type;
+        Block::Type collision_block_type;
+        glm::ivec3 old_pos_block(old_pos), m_pos_block(m_pos);
         for (const AABB<float> &hitbox : m_hitbox) {
-            hitbox.forAllCorners([&](const glm::vec3 &_corner) {
-                Block *collided_block = m_current_chunk->getFirstSolidBlock(old_pos + _corner, m_pos + _corner);
-                if (collided_block == nullptr) {
-                    return;
-                }
-                glm::vec3 block_pos = collided_block->getPos();
-                AABB<float> block_aabb(block_pos, block_pos + glm::vec3(1.f));
+            glm::ivec3 hitbox_min(glm::floor(hitbox.min)), hitbox_max(glm::floor(hitbox.max));
+            glm::ivec3 delta;
+            std::unordered_set<Block *> checked_block;
+            for (delta.y = hitbox_min.y; delta.y <= hitbox_max.y; delta.y++) {
+                for (delta.z = hitbox_min.z; delta.z <= hitbox_max.z; delta.z++) {
+                    for (delta.x = hitbox_min.x; delta.x <= hitbox_max.x; delta.x++) {
+                        Block *inside_block = m_current_chunk->getFirstSolidBlock(old_pos_block + delta, m_pos_block + delta);
+                        if (inside_block == nullptr || !checked_block.insert(inside_block).second) {
+                            continue;
+                        }
+                        glm::vec3 block_pos = inside_block->getPos();
+                        AABB<float> block_aabb(block_pos, block_pos + glm::vec3(1.f));
 
-                float t;
-                glm::vec3 normal;
-                if (block_aabb.intersectAABB(old_pos + hitbox, _deltaTime * m_vel, t, normal) && t < collision_t) {
-                    collision_t = t;
-                    collision_normal = normal;
-                    collided_block_type = collided_block->getType();
+                        float t;
+                        glm::vec3 normal;
+                        if (block_aabb.intersectAABB(old_pos + hitbox, _deltaTime * m_vel, t, normal) && t < collision_t) {
+                            collision_t = t;
+                            collision_normal = normal;
+                            collision_block_type = inside_block->getType();
+                        }
+                    }
                 }
-            });
+            }
         }
 
         if (collision_t < FLT_MAX) {
-            glm::vec3 new_vel = collision_t * _deltaTime * m_vel;
-            m_pos = old_pos + new_vel;
-            auto [friction, bounciness] = Block::PHYSICS_TABLE[size_t(collided_block_type)];
-            if (bounciness > 0.f && glm::length(new_vel) > 1.e-8f) {
+            m_vel = collision_t * m_vel;
+            m_pos = old_pos + _deltaTime * m_vel;
+            auto [friction, bounciness] = Block::PHYSICS_TABLE[size_t(collision_block_type)];
+            if (bounciness > 0.f) {
                 m_restitution = bounciness;
                 RigidBody::bounce(friction, collision_normal);
-            } else if (collision_normal == glm::vec3(0.f, 1.f, 0.f)) {
-                m_vel = glm::vec3(0.f);
-                m_on_ground = true;
             } else {
-                m_vel = m_pos - old_pos;
+                if (collision_normal == glm::vec3(0.f, 1.f, 0.f)) {
+                    m_on_ground = true;
+                }
             }
         }
 

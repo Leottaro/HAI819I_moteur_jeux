@@ -131,9 +131,15 @@ struct AABB {
         vec3 other_center = 0.5f * (_other.min + _other.max);
         vec3 other_half = 0.5f * (_other.max - _other.min);
         AABB minkowski(min - other_half, max + other_half);
+        std::cout << std::endl
+                  << "*this : " << *this << std::endl
+                  << "other : " << _other << std::endl
+                  << "vel : " << glm::to_string(_other_vel) << std::endl;
 
         T ttemp;
-        if (minkowski.intersectRay(other_center, _other_vel, t, ttemp) && t >= 0.f && t <= 1.f) {
+        bool intersect = minkowski.intersectRay(other_center, _other_vel, t, ttemp);
+        std::cout << "intersect=" << intersect << "\tt=" << t << "\tttemp=" << ttemp << std::endl;
+        if (intersect && t >= 0.f && t <= 1.f) {
             vec3 dist;
             intersectAABB(_other + (t + 0.01f) * _other_vel, dist);
 
@@ -147,6 +153,8 @@ struct AABB {
                        : dist.z > T(0) ? T(1)
                                        : T(0);
             normal = glm::normalize(normal);
+            std::cout << "normal: " << glm::to_string(normal) << std::endl;
+
             return true;
         }
 

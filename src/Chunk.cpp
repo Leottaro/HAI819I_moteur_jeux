@@ -153,8 +153,8 @@ void Chunk::generate(GenType _type) {
                         block.getType() = Block::Type::Air;
                     }
 
-                    if ((std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1) && world_pos.y == 11)
-                        block.getType() = Block::Type::Glass;
+                    // if ((std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1))
+                    //     block.getType() = Block::Type::Glass;
 
                     // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
                 }
