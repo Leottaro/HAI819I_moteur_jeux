@@ -262,16 +262,17 @@ void Mesh::recomputePerVertexTextureCoordinates() {
     m_uvs.clear();
     m_uvs.resize(m_vertices.size(), glm::vec2(0.0, 0.0));
 
-    float xMin = FLT_MAX, xMax = FLT_MIN;
-    float yMin = FLT_MAX, yMax = FLT_MIN;
+    float x_min, x_max, y_min, y_max;
+    x_min = y_min = std::numeric_limits<float>::max();
+    x_max = y_max = std::numeric_limits<float>::min();
     for (glm::vec3 &p : m_vertices) {
-        xMin = std::min(xMin, p[0]);
-        xMax = std::max(xMax, p[0]);
-        yMin = std::min(yMin, p[1]);
-        yMax = std::max(yMax, p[1]);
+        x_min = std::min(x_min, p[0]);
+        x_max = std::max(x_max, p[0]);
+        y_min = std::min(y_min, p[1]);
+        y_max = std::max(y_max, p[1]);
     }
     for (unsigned int pIt = 0; pIt < m_uvs.size(); ++pIt) {
-        m_uvs[pIt] = glm::vec2((m_vertices[pIt][0] - xMin) / (xMax - xMin), (m_vertices[pIt][1] - yMin) / (yMax - yMin));
+        m_uvs[pIt] = glm::vec2((m_vertices[pIt][0] - x_min) / (x_max - x_min), (m_vertices[pIt][1] - y_min) / (y_max - y_min));
     }
 }
 
@@ -344,7 +345,7 @@ Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
     aabb.max += glm::vec3(1.);
 
     // Constreuire l'octree et y ajouter les points.
-    Octree* octree = new Octree(max_vert_per_leaf, aabb);
+    Octree *octree = new Octree(max_vert_per_leaf, aabb);
     for (size_t i = 0; i < m_vertices.size(); i++) {
         octree->pushVertex(i, m_vertices[i], m_normals[i]);
     }

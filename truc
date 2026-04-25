@@ -1,332 +1,297 @@
-COLLISION: 
-	t: 0.025489
-	normal: vec3(0.000000, 1.000000, 0.000000)
-ivec3(15, 4, 25) -> ivec3(15, 4, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
+Compiling opt executable...
+[  4%] Built target stb
+[  7%] Built target glew
+[ 10%] Built target glm
+[ 78%] Built target glfw
+[ 90%] Built target imgui
+[100%] Built target hai819i_moteur_jeux_opt
 
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=1	t=-7.01269	ttemp=-0.0509781
-ivec3(16, 4, 25) -> ivec3(16, 4, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
 
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=0	t=2.49585	ttemp=14.5598
-ivec3(15, 4, 26) -> ivec3(15, 4, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
 
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=0	t=-7.01269	ttemp=-0.0509781
-ivec3(16, 4, 26) -> ivec3(16, 4, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
+Starting detection: remaining_t=1
+	ivec3(23, 15, 25) -> ivec3(24, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+			intersection: t=0.400008	normal=vec3(-1.000000, 0.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(25, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(24, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(25, 15, 26) found 1 blocks: 
+		3 at ivec3(25, 15, 26)
+	ivec3(23, 16, 25) -> ivec3(24, 16, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(24, 16, 25) -> ivec3(25, 16, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(24, 16, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	ivec3(24, 16, 26) -> ivec3(25, 16, 26) found 1 blocks: 
+		3 at ivec3(25, 16, 26)
+	COLLISION: 
+		t: 0.400008
+		normal: vec3(-1.000000, 0.000000, 0.000000)
+remaining_t=0.599992
+	ivec3(23, 15, 25) -> ivec3(22, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+			intersection: t=-0	normal=vec3(1.000000, 0.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(23, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(22, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(23, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(23, 16, 25) -> ivec3(22, 16, 25) found 1 blocks: 
+		3 at ivec3(22, 16, 25)
+	ivec3(24, 16, 25) -> ivec3(23, 16, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(22, 16, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	ivec3(24, 16, 26) -> ivec3(23, 16, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	COLLISION: 
+		t: -0
+		normal: vec3(1.000000, 0.000000, 0.000000)
+remaining_t=0.599992
+	ivec3(24, 15, 25) -> ivec3(24, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+			intersection: t=0.800016	normal=vec3(-1.000000, 0.000000, 0.000000)
+	ivec3(23, 15, 26) -> ivec3(23, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 16, 25) -> ivec3(24, 16, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(23, 16, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
 
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=0	t=2.49585	ttemp=14.5598
-ivec3(15, 5, 25) -> ivec3(15, 5, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
 
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=1	t=-7.01269	ttemp=-0.0509781
-ivec3(16, 5, 25) -> ivec3(16, 5, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
 
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=0	t=2.49585	ttemp=14.5598
-ivec3(15, 5, 26) -> ivec3(15, 5, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
+Starting detection: remaining_t=1
+	ivec3(23, 15, 25) -> ivec3(24, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+			intersection: t=0.794982	normal=vec3(0.000000, 1.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(25, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+			intersection: t=0.200028	normal=vec3(-1.000000, 0.000000, 0.000000)
+	ivec3(23, 15, 26) -> ivec3(24, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(25, 14, 26) found 1 blocks: 
+		3 at ivec3(25, 14, 26)
+	ivec3(23, 16, 25) -> ivec3(24, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(24, 16, 25) -> ivec3(25, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(24, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	ivec3(24, 16, 26) -> ivec3(25, 15, 26) found 1 blocks: 
+		3 at ivec3(25, 15, 26)
+	COLLISION: 
+		t: 0.200028
+		normal: vec3(-1.000000, 0.000000, 0.000000)
+remaining_t=0.799972
+	ivec3(23, 15, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+			intersection: t=0.594953	normal=vec3(0.000000, 1.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(23, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(23, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(23, 16, 25) -> ivec3(22, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+			intersection: t=0.399976	normal=vec3(1.000000, 0.000000, 0.000000)
+	ivec3(24, 16, 25) -> ivec3(23, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(22, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	ivec3(24, 16, 26) -> ivec3(23, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	COLLISION: 
+		t: 0.399976
+		normal: vec3(1.000000, 0.000000, 0.000000)
+remaining_t=0.399995
+	ivec3(23, 15, 25) -> ivec3(24, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+			intersection: t=0.194977	normal=vec3(0.000000, 1.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(25, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+			intersection: t=8.0112e-05	normal=vec3(-1.000000, 0.000000, 0.000000)
+	ivec3(23, 15, 26) -> ivec3(24, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(25, 14, 26) found 1 blocks: 
+		3 at ivec3(25, 14, 26)
+	ivec3(23, 16, 25) -> ivec3(24, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(24, 16, 25) -> ivec3(25, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(24, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	ivec3(24, 16, 26) -> ivec3(25, 15, 26) found 1 blocks: 
+		3 at ivec3(25, 15, 26)
+	COLLISION: 
+		t: 8.0112e-05
+		normal: vec3(-1.000000, 0.000000, 0.000000)
+remaining_t=0.399915
+	ivec3(23, 15, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+			intersection: t=0.799873	normal=vec3(1.000000, 0.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(23, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(23, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(23, 16, 25) -> ivec3(22, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+	ivec3(24, 16, 25) -> ivec3(23, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 16, 25)
+	ivec3(23, 16, 26) -> ivec3(22, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 16, 26)
+	ivec3(24, 16, 26) -> ivec3(23, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
 
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=0	t=-7.01269	ttemp=-0.0509781
-ivec3(16, 5, 26) -> ivec3(16, 5, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
 
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.5517, 4.00879, 25.4 | max: 15.7517, 4.20879, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.172371, 0.000000)
-intersect=0	t=2.49585	ttemp=14.5598
 
-ivec3(15, 4, 25) -> ivec3(15, 4, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
+Starting detection: remaining_t=1
+	ivec3(23, 14, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+			intersection: t=0.399966	normal=vec3(1.000000, 0.000000, 0.000000)
+	ivec3(24, 14, 25) -> ivec3(23, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+	ivec3(23, 14, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(24, 14, 26) -> ivec3(23, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(23, 15, 25) -> ivec3(22, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+	ivec3(24, 15, 25) -> ivec3(23, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(22, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(23, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	COLLISION: 
+		t: 0.399966
+		normal: vec3(1.000000, 0.000000, 0.000000)
+remaining_t=0.600034
+	ivec3(23, 14, 25) -> ivec3(24, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+			intersection: t=0.000118263	normal=vec3(-1.000000, 0.000000, 0.000000)
+	ivec3(24, 14, 25) -> ivec3(25, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+	ivec3(23, 14, 26) -> ivec3(24, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(24, 14, 26) -> ivec3(25, 14, 26) found 1 blocks: 
+		3 at ivec3(25, 14, 26)
+	ivec3(23, 15, 25) -> ivec3(24, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(24, 15, 25) -> ivec3(25, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(24, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(25, 15, 26) found 1 blocks: 
+		3 at ivec3(25, 15, 26)
+	COLLISION: 
+		t: 0.000118263
+		normal: vec3(-1.000000, 0.000000, 0.000000)
+remaining_t=0.599916
+	ivec3(23, 14, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+			intersection: t=0.799813	normal=vec3(1.000000, 0.000000, 0.000000)
+	ivec3(24, 14, 25) -> ivec3(23, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+	ivec3(23, 14, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(24, 14, 26) -> ivec3(23, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(23, 15, 25) -> ivec3(22, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+	ivec3(24, 15, 25) -> ivec3(23, 15, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(22, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(23, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
 
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=1	t=-8.03292	ttemp=-1.03136
-ivec3(16, 4, 25) -> ivec3(16, 4, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
 
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=0	t=1.52134	ttemp=13.5853
-ivec3(15, 4, 26) -> ivec3(15, 4, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
 
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=0	t=-8.03292	ttemp=-1.03136
-ivec3(16, 4, 26) -> ivec3(16, 4, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=0	t=1.52134	ttemp=13.5853
-ivec3(15, 5, 25) -> ivec3(15, 5, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
-
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=1	t=-8.03292	ttemp=-1.03136
-ivec3(16, 5, 25) -> ivec3(16, 5, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=0	t=1.52134	ttemp=13.5853
-ivec3(15, 5, 26) -> ivec3(15, 5, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
-
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=0	t=-8.03292	ttemp=-1.03136
-ivec3(16, 5, 26) -> ivec3(16, 5, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.6487, 4.17676, 25.4 | max: 15.8487, 4.37676, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.171390, 0.000000)
-intersect=0	t=1.52134	ttemp=13.5853
-
-ivec3(15, 4, 25) -> ivec3(15, 4, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
-
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=1	t=-9.08492	ttemp=-2.04305
-ivec3(16, 4, 25) -> ivec3(16, 4, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=0	t=0.521342	ttemp=12.5853
-ivec3(15, 4, 26) -> ivec3(15, 4, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
-
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=0	t=-9.08492	ttemp=-2.04305
-ivec3(16, 4, 26) -> ivec3(16, 4, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=0	t=0.521342	ttemp=12.5853
-ivec3(15, 5, 25) -> ivec3(15, 5, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
-
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=1	t=-9.08492	ttemp=-2.04305
-ivec3(16, 5, 25) -> ivec3(16, 5, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=0	t=0.521342	ttemp=12.5853
-ivec3(15, 5, 26) -> ivec3(15, 5, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
-
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=0	t=-9.08492	ttemp=-2.04305
-ivec3(16, 5, 26) -> ivec3(16, 5, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.7481, 4.34816, 25.4 | max: 15.9481, 4.54816, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.170409, 0.000000)
-intersect=0	t=0.521342	ttemp=12.5853
-
-ivec3(15, 4, 25) -> ivec3(15, 4, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
-
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=1	t=-10.1433	ttemp=-3.06067
-ivec3(16, 4, 25) -> ivec3(16, 4, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=0	t=-0.478649	ttemp=11.5853
-ivec3(15, 4, 26) -> ivec3(15, 4, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
-
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=0	t=-10.1433	ttemp=-3.06067
-ivec3(16, 4, 26) -> ivec3(16, 4, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=0	t=-0.478649	ttemp=11.5853
-ivec3(15, 5, 25) -> ivec3(15, 5, 25) found 1 blocks: 
-	2 at ivec3(15, 3, 25)
-
-*this : AABB{min: 15, 3, 25 | max: 16, 4, 26}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 24.9 | max: 16.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=1	t=-10.1433	ttemp=-3.06067
-ivec3(16, 5, 25) -> ivec3(16, 5, 25) found 1 blocks: 
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=0	t=-0.478649	ttemp=11.5853
-ivec3(15, 5, 26) -> ivec3(15, 5, 26) found 1 blocks: 
-	2 at ivec3(15, 3, 26)
-
-*this : AABB{min: 15, 3, 26 | max: 16, 4, 27}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 14.9, 2.9, 25.9 | max: 16.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=0	t=-10.1433	ttemp=-3.06067
-ivec3(16, 5, 26) -> ivec3(16, 5, 26) found 1 blocks: 
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.8476, 4.51856, 25.4 | max: 16.0476, 4.71856, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.169428, 0.000000)
-intersect=0	t=-0.478649	ttemp=11.5853
-
-ivec3(15, 4, 25) -> ivec3(16, 4, 25) found 2 blocks: 
-	2 at ivec3(16, 3, 25)
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=-1.47867	ttemp=10.5853
-ivec3(16, 4, 25) -> ivec3(17, 4, 25) found 1 blocks: 
-	0 at ivec3(17, 4, 25)
-
-*this : AABB{min: 17, 4, 25 | max: 18, 5, 26}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 16.9, 3.9, 24.9 | max: 18.1, 5.1, 26.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=8.5746	ttemp=20.6385
-ivec3(15, 4, 26) -> ivec3(16, 4, 26) found 2 blocks: 
-	2 at ivec3(16, 3, 26)
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=-1.47867	ttemp=10.5853
-ivec3(16, 4, 26) -> ivec3(17, 4, 26) found 2 blocks: 
-	3 at ivec3(17, 4, 26)
-	3 at ivec3(17, 4, 26)
-
-*this : AABB{min: 17, 4, 26 | max: 18, 5, 27}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 16.9, 3.9, 25.9 | max: 18.1, 5.1, 27.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=8.5746	ttemp=20.6385
-ivec3(15, 5, 25) -> ivec3(16, 5, 25) found 2 blocks: 
-	2 at ivec3(16, 3, 25)
-	2 at ivec3(16, 3, 25)
-
-*this : AABB{min: 16, 3, 25 | max: 17, 4, 26}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 24.9 | max: 17.1, 4.1, 26.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=-1.47867	ttemp=10.5853
-ivec3(16, 5, 25) -> ivec3(17, 5, 25) found 1 blocks: 
-	0 at ivec3(17, 5, 25)
-
-*this : AABB{min: 17, 5, 25 | max: 18, 6, 26}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 16.9, 4.9, 24.9 | max: 18.1, 6.1, 26.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=8.5746	ttemp=20.6385
-ivec3(15, 5, 26) -> ivec3(16, 5, 26) found 2 blocks: 
-	2 at ivec3(16, 3, 26)
-	2 at ivec3(16, 3, 26)
-
-*this : AABB{min: 16, 3, 26 | max: 17, 4, 27}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 15.9, 2.9, 25.9 | max: 17.1, 4.1, 27.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=-1.47867	ttemp=10.5853
-ivec3(16, 5, 26) -> ivec3(17, 5, 26) found 1 blocks: 
-	0 at ivec3(17, 5, 26)
-
-*this : AABB{min: 17, 5, 26 | max: 18, 6, 27}
-other : AABB{min: 15.9471, 4.68799, 25.4 | max: 16.1471, 4.88799, 25.6}
-minkowski : AABB{min: 16.9, 4.9, 25.9 | max: 18.1, 6.1, 27.1}
-vel : vec3(0.099470, 0.168447, 0.000000)
-intersect=0	t=8.5746	ttemp=20.6385
+Starting detection: remaining_t=1
+	ivec3(23, 14, 25) -> ivec3(22, 13, 25) found 1 blocks: 
+		3 at ivec3(22, 13, 25)
+			intersection: t=0.782314	normal=vec3(0.000000, 1.000000, 0.000000)
+	ivec3(24, 14, 25) -> ivec3(23, 13, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+	ivec3(23, 14, 26) -> ivec3(22, 13, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(24, 14, 26) -> ivec3(23, 13, 26) found 1 blocks: 
+		3 at ivec3(23, 13, 26)
+	ivec3(23, 15, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+			intersection: t=0.199901	normal=vec3(1.000000, 0.000000, 0.000000)
+	ivec3(24, 15, 25) -> ivec3(23, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(23, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	COLLISION: 
+		t: 0.199901
+		normal: vec3(1.000000, 0.000000, 0.000000)
+remaining_t=0.800099
+	ivec3(23, 14, 25) -> ivec3(24, 13, 25) found 1 blocks: 
+		3 at ivec3(24, 13, 25)
+			intersection: t=0.582413	normal=vec3(0.000000, 1.000000, 0.000000)
+	ivec3(24, 14, 25) -> ivec3(25, 13, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+			intersection: t=0.400264	normal=vec3(-1.000000, 0.000000, 0.000000)
+	ivec3(23, 14, 26) -> ivec3(24, 13, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(24, 14, 26) -> ivec3(25, 13, 26) found 1 blocks: 
+		3 at ivec3(25, 13, 26)
+	ivec3(23, 15, 25) -> ivec3(24, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 14, 25)
+	ivec3(24, 15, 25) -> ivec3(25, 14, 25) found 1 blocks: 
+		3 at ivec3(24, 15, 25)
+	ivec3(23, 15, 26) -> ivec3(24, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	ivec3(24, 15, 26) -> ivec3(25, 14, 26) found 1 blocks: 
+		3 at ivec3(25, 14, 26)
+	COLLISION: 
+		t: 0.400264
+		normal: vec3(-1.000000, 0.000000, 0.000000)
+remaining_t=0.399835
+	ivec3(22, 14, 25) -> ivec3(21, 13, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+	ivec3(23, 14, 25) -> ivec3(22, 13, 25) found 1 blocks: 
+		3 at ivec3(22, 13, 25)
+			intersection: t=0.182148	normal=vec3(0.000000, 1.000000, 0.000000)
+	ivec3(22, 14, 26) -> ivec3(21, 13, 26) found 1 blocks: 
+		3 at ivec3(21, 13, 26)
+	ivec3(23, 14, 26) -> ivec3(22, 13, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(22, 15, 25) -> ivec3(21, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+	ivec3(23, 15, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+	ivec3(22, 15, 26) -> ivec3(21, 14, 26) found 1 blocks: 
+		3 at ivec3(21, 14, 26)
+	ivec3(23, 15, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)
+	COLLISION: 
+		t: 0.182148
+		normal: vec3(0.000000, 1.000000, 0.000000)
+remaining_t=0.217687
+	ivec3(22, 14, 25) -> ivec3(21, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+	ivec3(23, 14, 25) -> ivec3(22, 14, 25) found 1 blocks: 
+		3 at ivec3(22, 14, 25)
+	ivec3(22, 14, 26) -> ivec3(21, 14, 26) found 1 blocks: 
+		3 at ivec3(21, 14, 26)
+	ivec3(23, 14, 26) -> ivec3(22, 14, 26) found 1 blocks: 
+		3 at ivec3(23, 14, 26)
+	ivec3(22, 15, 25) -> ivec3(21, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+	ivec3(23, 15, 25) -> ivec3(22, 15, 25) found 1 blocks: 
+		3 at ivec3(22, 15, 25)
+	ivec3(22, 15, 26) -> ivec3(21, 15, 26) found 1 blocks: 
+		3 at ivec3(21, 15, 26)
+	ivec3(23, 15, 26) -> ivec3(22, 15, 26) found 1 blocks: 
+		3 at ivec3(23, 15, 26)

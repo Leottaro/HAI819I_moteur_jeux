@@ -51,7 +51,7 @@ private:
         std::array<float, 2> block_stats;
     };
     bool detectCollision(float _deltaTime, float max_t, CollisionsInfos &res) {
-        res.t = max_t;
+        res.t = std::numeric_limits<float>::max();
         for (const AABB<float> &hitbox : m_hitbox) {
             glm::vec3 hitbox_offset;
             std::set<std::array<int, 6>> seen_path;
@@ -60,32 +60,35 @@ private:
                     for (hitbox_offset.x = hitbox.min.x; hitbox_offset.x <= hitbox.max.x + 1.f; hitbox_offset.x++) {
                         glm::ivec3 start = Block::posToBlockPos(hitbox_offset + m_pos);
                         glm::ivec3 end = Block::posToBlockPos(hitbox_offset + m_pos + _deltaTime * m_vel);
+                        if (!seen_path.insert({start.x, start.y, start.z, end.x, end.y, end.z}).second)
+                            continue;
 
                         std::vector<Block *> solid_blocks;
                         m_current_chunk->findSolidBlocks(start, end, solid_blocks);
-                        if (solid_blocks.empty() || !seen_path.insert({start.x, start.y, start.z, end.x, end.y, end.z}).second) {
+                        if (solid_blocks.empty())
                             continue;
-                        }
                         glm::ivec3 block_pos = solid_blocks[0]->getPos();
                         AABB<float> block_aabb(block_pos, block_pos + glm::ivec3(1));
 
-                        std::cout << glm::to_string(start) << " -> " << glm::to_string(end) << " found " << solid_blocks.size() << " blocks: " << std::endl;
-                        for (const Block *block : solid_blocks)
-                            std::cout << "\t" << size_t(block->getType()) << " at " << glm::to_string(block_pos) << std::endl;
+                        std::cout << "\t" << glm::to_string(start) << " -> " << glm::to_string(end) << " found " << solid_blocks.size() << " blocks: " << std::endl;
+                        for (const Block *block : solid_blocks) {
+                            std::cout << "\t\t" << size_t(block->getType()) << " at " << glm::to_string(block_pos) << std::endl;
 
-                        float t;
-                        glm::vec3 normal;
-                        if (block_aabb.intersectAABB(m_pos + hitbox, _deltaTime * m_vel, t, normal) && t <= res.t) {
-                            res.normal = normal;
-                            res.t = t;
-                            res.block_stats = solid_blocks[0]->getCollisionStats();
+                            float t;
+                            glm::vec3 normal;
+                            if (block_aabb.intersectAABB(m_pos + hitbox, _deltaTime * m_vel, t, normal) && t < res.t) {
+                                std::cout << "\t\t\tintersection: " << "t=" << t << "\tnormal=" << glm::to_string(normal) << std::endl;
+                                res.normal = normal;
+                                res.t = t;
+                                res.block_stats = block->getCollisionStats();
+                            }
                         }
                     }
                 }
             }
         }
 
-        return res.t != max_t;
+        return res.t <= max_t;
     }
 
 public:
@@ -151,22 +154,28 @@ public:
         // Chunk collision detection
         CollisionsInfos collision;
         float remaining_t = 1.f;
-        std::cout << std::endl;
+        std::cout << std::endl
+                  << std::endl
+                  << std::endl
+                  << "Starting detection: remaining_t=" << remaining_t << std::endl;
         while (detectCollision(_deltaTime, remaining_t, collision)) {
-            std::cout << "COLLISION: " << std::endl
-                      << "\tt: " << collision.t << std::endl
-                      << "\tnormal: " << glm::to_string(collision.normal) << std::endl;
+            std::cout << "\tCOLLISION: " << std::endl
+                      << "\t\tt: " << collision.t << std::endl
+                      << "\t\tnormal: " << glm::to_string(collision.normal) << std::endl;
 
             m_friction = collision.block_stats[0];
             m_restitution = collision.block_stats[1];
             RigidBody::bounce(0.f, collision.normal);
             m_pos += collision.t * _deltaTime * m_vel;
             remaining_t -= collision.t;
+            std::cout << "remaining_t=" << remaining_t << std::endl;
         }
         m_pos += remaining_t * _deltaTime * m_vel;
 
-        if (m_camera != nullptr)
+        if (m_camera != nullptr) {
             m_camera->updatePosConstraint();
+            m_camera->updateData();
+        }
 
         m_current_chunk = m_current_chunk->getChunk(m_pos);
         if (m_current_chunk == nullptr) {

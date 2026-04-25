@@ -164,7 +164,7 @@ void Chunk::generate(GenType _type) {
                         block.getType() = Block::Type::Stone;
                     } else if (world_pos.y <= 3) {
                         block.getType() = Block::Type::Dirt;
-                    } else if (world_pos.y <= 6) {
+                    } else if (world_pos.y <= 16) {
                         // uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
                         // block.getType() = Block::Type(truc % Block::BLOCK_TYPES_N);
                         block.getType() = (world_pos.x % 2) == (world_pos.z % 2) ? Block::Type::Air : Block::Type::Grass;

@@ -65,11 +65,11 @@ int main(void) {
 
     camera.m_type = Camera::Type::ThirdPerson;
     camera.m_orientation = glm::vec2(0.f, 0.f);
-    camera.m_distance_to_center = 2.f;
+    camera.m_distance_to_center = 0.75f;
     camera.updateData();
 
     Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
-    truc->m_vel = glm::vec3(10.f, 8.f, 0.f);
+    truc->m_vel = glm::vec3(100.f, -50.f, 0.f);
     truc->fixCamera(&camera);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
@@ -90,8 +90,8 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         world.generate(camera.m_position);
         if (run_simulation) {
-            world.update(deltaTime);
-            // run_simulation = false;
+            world.update(0.01);
+            run_simulation = false;
         }
 
         /**********==========CAMERA UPDATE==========**********/

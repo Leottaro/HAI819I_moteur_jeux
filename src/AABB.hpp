@@ -131,30 +131,29 @@ struct AABB {
         vec3 other_center = 0.5f * (_other.min + _other.max);
         vec3 other_half = 0.5f * (_other.max - _other.min);
         AABB minkowski(min - other_half, max + other_half);
-        std::cout << std::endl
-                  << "*this : " << *this << std::endl
-                  << "other : " << _other << std::endl
-                  << "minkowski : " << minkowski << std::endl
-                  << "vel : " << glm::to_string(_other_vel) << std::endl;
+        // std::cout << std::endl
+        //           << "*this : " << *this << std::endl
+        //           << "other : " << _other << std::endl
+        //           << "minkowski : " << minkowski << std::endl
+        //           << "vel : " << glm::to_string(_other_vel) << std::endl;
 
         T ttemp;
         bool intersect = minkowski.intersectRay(other_center, _other_vel, t, ttemp);
-        std::cout << "intersect=" << intersect << "\tt=" << t << "\tttemp=" << ttemp << std::endl;
+        // std::cout << "intersect=" << intersect << "\tt=" << t << "\tttemp=" << ttemp << std::endl;
         if (intersect && t >= 0.f && t <= 1.f) {
-            vec3 dist;
-            intersectAABB(_other + (t + 0.01f) * _other_vel, dist);
+            vec3 hit = other_center + t * _other_vel;
 
-            normal.x = dist.x < T(0)   ? T(-1)
-                       : dist.x > T(0) ? T(1)
-                                       : T(0);
-            normal.y = dist.y < T(0)   ? T(-1)
-                       : dist.y > T(0) ? T(1)
-                                       : T(0);
-            normal.z = dist.z < T(0)   ? T(-1)
-                       : dist.z > T(0) ? T(1)
-                                       : T(0);
+            normal.x = (hit.x <= minkowski.min.x + 1e-6f)   ? T(-1)
+                       : (hit.x >= minkowski.max.x - 1e-6f) ? T(1)
+                                                            : T(0);
+            normal.y = (hit.y <= minkowski.min.y + 1e-6f)   ? T(-1)
+                       : (hit.y >= minkowski.max.y - 1e-6f) ? T(1)
+                                                            : T(0);
+            normal.z = (hit.z <= minkowski.min.z + 1e-6f)   ? T(-1)
+                       : (hit.z >= minkowski.max.z - 1e-6f) ? T(1)
+                                                            : T(0);
             normal = glm::normalize(normal);
-            std::cout << "normal: " << glm::to_string(normal) << std::endl;
+            // std::cout << "\tnormal: " << glm::to_string(normal) << std::endl;
 
             return true;
         }
