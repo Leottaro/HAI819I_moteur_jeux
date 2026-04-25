@@ -37,18 +37,20 @@ std::string generate_uuid_v4() {
 } // namespace uuid
 
 Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
-    if (isChunkLoaded(_chunk_pos)) {
-        return m_chunks.at(_chunk_pos);
-    }
-    return nullptr;
+    return isChunkLoaded(_chunk_pos) ? m_chunks.at(_chunk_pos)
+                                     : nullptr;
 }
 
 Block *World::findBlock(const glm::ivec3 &_block_pos) {
-    glm::ivec3 chunk_pos = Chunk::posToChunkPos(_block_pos);
-    if (isChunkLoaded(chunk_pos)) {
-        return &m_chunks.at(chunk_pos)->getBlock(_block_pos);
-    }
-    return nullptr;
+    glm::ivec3 chunk_pos = Chunk::blockPosToChunkPos(_block_pos);
+    return isChunkLoaded(chunk_pos) ? &m_chunks.at(chunk_pos)->getBlock(_block_pos)
+                                    : nullptr;
+}
+
+Block *World::findFirstSolidBlock(const glm::ivec3 &start, const glm::ivec3 &end) {
+    Chunk *start_chunk = findChunk(Chunk::blockPosToChunkPos(start));
+    return start_chunk != nullptr ? start_chunk->findFirstSolidBlock(start, end)
+                                  : nullptr;
 }
 
 Chunk *World::addChunk(const glm::ivec3 &_chunk_pos) {

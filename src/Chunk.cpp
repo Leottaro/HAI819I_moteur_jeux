@@ -9,14 +9,21 @@ Chunk *Chunk::getChunk(const glm::vec3 &_pos) {
 }
 
 // https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
-Block *Chunk::getFirstSolidBlock(glm::ivec3 start, glm::ivec3 end) {
+Block *Chunk::findFirstSolidBlock(glm::ivec3 start, glm::ivec3 end) {
     glm::vec3 delta = glm::abs(end - start);
     glm::ivec3 step(start.x < end.x ? 1 : -1, start.y < end.y ? 1 : -1, start.z < end.z ? 1 : -1);
     float d_length = glm::length(delta);
     glm::vec3 tdelta = d_length / delta;
     glm::vec3 tmax = tdelta * 0.5f;
 
-    while (start != end) {
+    Block &block = getBlock(start);
+    glm::ivec3 start_chunk = blockPosToChunkPos(start);
+    if (m_pos != start_chunk) {
+        Chunk *chunk = m_world->findChunk(start_chunk);
+        return chunk == nullptr ? nullptr : chunk->findFirstSolidBlock(start, end);
+    }
+
+    while (start != end && !block.hasHitbox()) {
         if (tmax.x < tmax.y) {
             if (tmax.x < tmax.z) {
                 start.x += step.x;
@@ -57,18 +64,15 @@ Block *Chunk::getFirstSolidBlock(glm::ivec3 start, glm::ivec3 end) {
             }
         }
 
-        glm::ivec3 start_chunk = posToChunkPos(start);
+        start_chunk = blockPosToChunkPos(start);
         if (m_pos != start_chunk) {
             Chunk *chunk = m_world->findChunk(start_chunk);
-            return chunk == nullptr ? nullptr : chunk->getFirstSolidBlock(start, end);
+            return chunk == nullptr ? nullptr : chunk->findFirstSolidBlock(start, end);
         }
 
-        Block &block = getBlock(start);
-        if (block.hasHitbox()) {
-            return &block;
-        }
+        block = getBlock(start);
     }
-    return nullptr;
+    return block.hasHitbox() ? &block : nullptr;
 }
 
 void Chunk::updateBlockNeighbours(uint8_t _face_i) {
@@ -147,14 +151,15 @@ void Chunk::generate(GenType _type) {
                     } else if (world_pos.y <= 3) {
                         block.getType() = Block::Type::Dirt;
                     } else if (world_pos.y <= 4) {
-                        uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
-                        block.getType() = Block::Type(truc % Block::BLOCK_TYPES_N);
+                        // uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
+                        // block.getType() = Block::Type(truc % Block::BLOCK_TYPES_N);
+                        block.getType() = (world_pos.x % 2) == (world_pos.z % 2) ? Block::Type::Air : Block::Type::Grass;
                     } else {
                         block.getType() = Block::Type::Air;
                     }
 
-                    // if ((std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1))
-                    //     block.getType() = Block::Type::Glass;
+                    if (world_pos.x % CHUNK_SIZE == 0 || world_pos.y % CHUNK_SIZE == 0 || world_pos.z % CHUNK_SIZE == 0)
+                        block.getType() = Block::Type::Glass;
 
                     // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
                 }

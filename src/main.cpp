@@ -4,8 +4,8 @@
 // GLM
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
-// #define GLM_ENABLE_EXPERIMENTAL
-// #include <glm/gtx/string_cast.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 
 // GLFW
 #include <GLFW/glfw3.h>
@@ -69,7 +69,7 @@ int main(void) {
     camera.updateData();
 
     Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
-    // truc->m_vel = glm::vec3(-10.f, 8.f, 0.f);
+    truc->m_vel = glm::vec3(10.f, 8.f, 0.f);
     truc->fixCamera(&camera);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
@@ -94,6 +94,7 @@ int main(void) {
         world.generate(camera.m_position);
         if (run_simulation) {
             world.update(0.01f);
+            // run_simulation = false;
         }
 
         /**********==========RENDERING==========**********/

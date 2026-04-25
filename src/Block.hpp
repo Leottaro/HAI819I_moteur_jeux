@@ -60,13 +60,13 @@ public:
     static constexpr std::array<std::array<float, 2>, BLOCK_TYPES_N> PHYSICS_TABLE = {{
         // friction, bounciness
         {0.f, 0.f}, // Air
-        {1.f, 0.f}, // Stone
-        {1.f, 0.f}, // Dirt
-        {1.f, 0.f}, // Grass
-        {1.f, 0.f}, // Glass
-        {1.f, 0.f}, // IronBlock
-        {1.f, 0.f}, // RedstoneLamp
-        {1.f, 0.f}  // DiamondOre
+        {0.f, 1.f}, // Stone
+        {0.f, 1.f}, // Dirt
+        {0.f, 1.f}, // Grass
+        {0.f, 1.f}, // Glass
+        {0.f, 1.f}, // IronBlock
+        {0.f, 1.f}, // RedstoneLamp
+        {0.f, 1.f}  // DiamondOre
     }};
 
     // TEXTURES
@@ -111,4 +111,5 @@ public:
         }
     }
     inline bool hasHitbox() const { return !(m_type == Type::Air); }
+    inline const std::array<float, 2> &getCollisionStats() const { return PHYSICS_TABLE[size_t(m_type)]; }
 };

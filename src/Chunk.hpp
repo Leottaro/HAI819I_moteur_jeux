@@ -85,7 +85,7 @@ public:
 
     inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
     Chunk *getChunk(const glm::vec3 &_pos);
-    Block *getFirstSolidBlock(glm::ivec3 start, glm::ivec3 end);
+    Block *findFirstSolidBlock(glm::ivec3 start, glm::ivec3 end);
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
     void updateBlockNeighbours(uint8_t _face_i);

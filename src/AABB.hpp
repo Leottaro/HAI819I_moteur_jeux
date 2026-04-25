@@ -134,6 +134,7 @@ struct AABB {
         std::cout << std::endl
                   << "*this : " << *this << std::endl
                   << "other : " << _other << std::endl
+                  << "minkowski : " << minkowski << std::endl
                   << "vel : " << glm::to_string(_other_vel) << std::endl;
 
         T ttemp;
