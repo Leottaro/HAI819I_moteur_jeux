@@ -26,7 +26,7 @@ public:
     };
 
     static constexpr glm::ivec3 posToChunkPos(const glm::vec3 &_pos) {
-        return blockPosToChunkPos(glm::ivec3(_pos.x, _pos.y, _pos.z));
+        return blockPosToChunkPos(Block::posToBlockPos(_pos));
     }
     static constexpr glm::ivec3 blockPosToChunkPos(const glm::ivec3 &_block_pos) {
         return glm::ivec3(
@@ -83,9 +83,9 @@ public:
     inline const AABB<float> &getAABB() const { return m_aabb; }
     inline Chunk *getNeighbour(uint8_t _face_i) { return m_neighbours[_face_i]; }
 
-    inline Block &getBlock(const glm::ivec3 &_block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
+    inline Block *getBlock(const glm::ivec3 &_block_pos) { return &m_blocks[posToBlockI(_block_pos - m_pos)]; }
     Chunk *getChunk(const glm::vec3 &_pos);
-    Block *findFirstSolidBlock(glm::ivec3 start, glm::ivec3 end);
+    void findSolidBlocks(glm::ivec3 start, const glm::ivec3 &_end, std::vector<Block *> &blocks);
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
     void updateBlockNeighbours(uint8_t _face_i);

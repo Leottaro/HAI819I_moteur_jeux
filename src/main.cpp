@@ -87,15 +87,15 @@ int main(void) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        /**********==========CAMERA UPDATE==========**********/
-        camera.update(window, deltaTime, cursor_vel, scroll);
-
         /**********==========OBJECTS UPDATE==========**********/
         world.generate(camera.m_position);
         if (run_simulation) {
-            world.update(0.01f);
+            world.update(deltaTime);
             // run_simulation = false;
         }
+
+        /**********==========CAMERA UPDATE==========**********/
+        camera.update(window, deltaTime, cursor_vel, scroll);
 
         /**********==========RENDERING==========**********/
         block_shader.use();

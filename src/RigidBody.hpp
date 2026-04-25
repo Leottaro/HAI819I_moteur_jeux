@@ -18,7 +18,7 @@ struct RigidBody {
     float m_restitution = 0.5f;
     float m_drag = 1.05f;
 
-    void update(float _deltaTime, const std::vector<glm::vec3> &_forces) {
+    void addForces(float _deltaTime, const std::vector<glm::vec3> &_forces) {
         glm::vec3 m_accel = glm::vec3(0.f, 0.f, 0.f);
         for (const glm::vec3 &force : _forces) {
             m_accel += force;
@@ -26,6 +26,9 @@ struct RigidBody {
         m_accel /= m_weight;
 
         m_vel += _deltaTime * m_accel;
+    }
+
+    void updatePos(float _deltaTime) {
         m_pos += _deltaTime * m_vel;
     }
 

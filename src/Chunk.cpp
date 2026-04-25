@@ -9,21 +9,28 @@ Chunk *Chunk::getChunk(const glm::vec3 &_pos) {
 }
 
 // https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
-Block *Chunk::findFirstSolidBlock(glm::ivec3 start, glm::ivec3 end) {
-    glm::vec3 delta = glm::abs(end - start);
-    glm::ivec3 step(start.x < end.x ? 1 : -1, start.y < end.y ? 1 : -1, start.z < end.z ? 1 : -1);
+void Chunk::findSolidBlocks(glm::ivec3 start, const glm::ivec3 &_end, std::vector<Block *> &blocks) {
+    glm::vec3 delta = glm::abs(_end - start);
+    glm::ivec3 step(start.x < _end.x ? 1 : -1, start.y < _end.y ? 1 : -1, start.z < _end.z ? 1 : -1);
     float d_length = glm::length(delta);
     glm::vec3 tdelta = d_length / delta;
     glm::vec3 tmax = tdelta * 0.5f;
 
-    Block &block = getBlock(start);
+    Block *block = getBlock(start);
     glm::ivec3 start_chunk = blockPosToChunkPos(start);
     if (m_pos != start_chunk) {
         Chunk *chunk = m_world->findChunk(start_chunk);
-        return chunk == nullptr ? nullptr : chunk->findFirstSolidBlock(start, end);
+        if (chunk != nullptr) {
+            chunk->findSolidBlocks(start, _end, blocks);
+            return;
+        }
     }
 
-    while (start != end && !block.hasHitbox()) {
+    while (start != _end) {
+        if (block->hasHitbox()) {
+            blocks.push_back(block);
+        }
+
         if (tmax.x < tmax.y) {
             if (tmax.x < tmax.z) {
                 start.x += step.x;
@@ -67,12 +74,18 @@ Block *Chunk::findFirstSolidBlock(glm::ivec3 start, glm::ivec3 end) {
         start_chunk = blockPosToChunkPos(start);
         if (m_pos != start_chunk) {
             Chunk *chunk = m_world->findChunk(start_chunk);
-            return chunk == nullptr ? nullptr : chunk->findFirstSolidBlock(start, end);
+            if (chunk != nullptr) {
+                chunk->findSolidBlocks(start, _end, blocks);
+                return;
+            }
         }
 
         block = getBlock(start);
     }
-    return block.hasHitbox() ? &block : nullptr;
+
+    if (block->hasHitbox()) {
+        blocks.push_back(block);
+    }
 }
 
 void Chunk::updateBlockNeighbours(uint8_t _face_i) {
@@ -144,13 +157,14 @@ void Chunk::generate(GenType _type) {
                 for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
                     Block &block = m_blocks[block_i++];
                     block.getPos() = world_pos;
+
                     if (world_pos.y <= -45) {
                         block.getType() = Block::Type::Air;
                     } else if (world_pos.y <= 0) {
                         block.getType() = Block::Type::Stone;
                     } else if (world_pos.y <= 3) {
                         block.getType() = Block::Type::Dirt;
-                    } else if (world_pos.y <= 4) {
+                    } else if (world_pos.y <= 6) {
                         // uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
                         // block.getType() = Block::Type(truc % Block::BLOCK_TYPES_N);
                         block.getType() = (world_pos.x % 2) == (world_pos.z % 2) ? Block::Type::Air : Block::Type::Grass;

@@ -37,7 +37,7 @@ public:
     inline bool isChunkFrontier(const glm::ivec3 &_chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
     Chunk *findChunk(const glm::ivec3 &_chunk_pos);
     Block *findBlock(const glm::ivec3 &_block_pos);
-    Block *findFirstSolidBlock(const glm::ivec3 &start, const glm::ivec3 &end);
+    std::vector<Block *> findSolidBlocks(const glm::ivec3 &start, const glm::ivec3 &end);
     Chunk *addChunk(const glm::ivec3 &_chunk_pos);
     bool removeChunk(const glm::ivec3 &_chunk_pos);
     bool generate(const glm::vec3 &_pos);

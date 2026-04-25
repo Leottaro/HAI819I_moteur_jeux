@@ -10,6 +10,12 @@ constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
 class Block {
 public:
+    // UTILS
+
+    static constexpr glm::ivec3 posToBlockPos(const glm::vec3 &_pos) {
+        return glm::ivec3(std::floor(_pos.x), std::floor(_pos.y), std::floor(_pos.z));
+    }
+
     // FACE
 
     struct FaceData {
@@ -89,6 +95,10 @@ private:
 public:
     std::array<Block *, 6> m_neighbours{nullptr};
 
+    Block(Block &&) = delete;
+    Block(const Block &) = delete;
+    Block &operator=(const Block &) = delete;
+    Block &operator=(Block &&) = delete;
     Block() : m_type(Type::Air) {}
     Block(Type _type, const glm::ivec3 &_pos) : m_type(_type), m_pos(_pos) {}
 
