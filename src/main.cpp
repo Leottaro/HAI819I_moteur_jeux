@@ -55,6 +55,12 @@ int main(void) {
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
     ShaderProgram block_shader("src/shaders/block_vertex.glsl", "src/shaders/block_fragment.glsl");
 
+    auto [albedo, normal, specular] = Texture::generateAtlasses();
+
+    albedo.savePNG("ressources/textures/atlasses/albedo_atlas");
+    normal.savePNG("ressources/textures/atlasses/normal_atlas");
+    specular.savePNG("ressources/textures/atlasses/specular_atlas");
+
     // Import needed textures
     Texture albedo_atlas("ressources/textures/albedo_atlas.png");
     albedo_atlas.initShaderData();

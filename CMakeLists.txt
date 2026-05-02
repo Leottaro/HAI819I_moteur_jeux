@@ -30,8 +30,10 @@ set(APP_SOURCES
     src/Chunk.cpp
 
     src/Block.hpp
+    src/objects/blocks.hpp
 
     src/Texture.hpp
+    src/objects/textures.hpp
 
     src/Camera.hpp
     src/Camera.cpp

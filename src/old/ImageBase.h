@@ -78,6 +78,8 @@ public:
         return getPixel(int(roundl(u * (width - 1))), int(roundl(v * (height - 1))));
     }
 
+    void drawImage(const ImageBase& img_in, size_t pos_x, size_t pos_y);
+
     void initShaderData(GLuint _location);
     void clearShaderData();
 };

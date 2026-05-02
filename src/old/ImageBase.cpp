@@ -13,10 +13,13 @@
  *
  *******************************************************************************/
 
-#include <GL/glew.h>
 #include "ImageBase.h"
-#include "image_ppm.h"
+
+#include <GL/glew.h>
+
 #include <vector>
+
+#include "image_ppm.h"
 
 ImageBase::ImageBase(void) {
     isValid = false;
@@ -36,11 +39,11 @@ ImageBase::ImageBase(int imWidth, int imHeight, bool isColor) {
         return;
 
     allocation_tableau(data, OCTET, nTaille);
-    dataD = (double *)malloc(sizeof(double) * nTaille);
+    dataD = (double*)malloc(sizeof(double) * nTaille);
     isValid = true;
 }
 
-ImageBase::ImageBase(const char *filename) {
+ImageBase::ImageBase(const char* filename) {
     isValid = false;
     init();
     load(filename);
@@ -71,12 +74,12 @@ void ImageBase::reset() {
     clearShaderData();
 }
 
-void ImageBase::load(const char *filename) {
+void ImageBase::load(const char* filename) {
     init();
 
     int l = strlen(filename);
 
-    if (l <= 4) // Le fichier ne peut pas etre que ".pgm" ou ".ppm"
+    if (l <= 4)  // Le fichier ne peut pas etre que ".pgm" ou ".ppm"
     {
         printf("Chargement de l'image impossible : Le nom de fichier n'est pas conforme, il doit comporter l'extension, et celle ci ne peut �tre que '.pgm' ou '.ppm'");
         exit(0);
@@ -84,46 +87,57 @@ void ImageBase::load(const char *filename) {
 
     int nbPixel = 0;
 
-    if (strcmp(filename + l - 3, "pgm") == 0) // L'image est en niveau de gris
+    if (strcmp(filename + l - 3, "pgm") == 0)  // L'image est en niveau de gris
     {
         color = false;
-        lire_nb_lignes_colonnes_image_pgm(const_cast<char *>(filename), &height, &width);
+        lire_nb_lignes_colonnes_image_pgm(const_cast<char*>(filename), &height, &width);
         nbPixel = height * width;
 
         nTaille = nbPixel;
         allocation_tableau(data, OCTET, nTaille);
-        lire_image_pgm(const_cast<char *>(filename), data, nbPixel);
-    } else if (strcmp(filename + l - 3, "ppm") == 0) // L'image est en couleur
+        lire_image_pgm(const_cast<char*>(filename), data, nbPixel);
+    } else if (strcmp(filename + l - 3, "ppm") == 0)  // L'image est en couleur
     {
         color = true;
-        lire_nb_lignes_colonnes_image_ppm(const_cast<char *>(filename), &height, &width);
+        lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(filename), &height, &width);
         nbPixel = height * width;
 
         nTaille = nbPixel * 3;
         allocation_tableau(data, OCTET, nTaille);
-        lire_image_ppm(const_cast<char *>(filename), data, nbPixel);
+        lire_image_ppm(const_cast<char*>(filename), data, nbPixel);
     } else {
         printf("Chargement de l'image impossible : Le nom de fichier n'est pas conforme, il doit comporter l'extension, et celle ci ne peut �tre que .pgm ou .ppm");
         exit(0);
     }
 
-    dataD = (double *)malloc(sizeof(double) * nTaille);
+    dataD = (double*)malloc(sizeof(double) * nTaille);
 
     isValid = true;
 }
 
-bool ImageBase::save(const char *filename) {
+bool ImageBase::save(const char* filename) {
     if (!isValid) {
         printf("Sauvegarde de l'image impossible : L'image courante n'est pas valide");
         exit(0);
     }
 
     if (color)
-        ecrire_image_ppm(const_cast<char *>(filename), data, height, width);
+        ecrire_image_ppm(const_cast<char*>(filename), data, height, width);
     else
-        ecrire_image_pgm(const_cast<char *>(filename), data, height, width);
+        ecrire_image_pgm(const_cast<char*>(filename), data, height, width);
 
     return true;
+}
+
+void ImageBase::drawImage(const ImageBase& img_in, size_t pos_x, size_t pos_y) {
+    const size_t end_x = img_in.getWidth() + pos_x, end_y = img_in.getHeight() + pos_y;
+
+    assert(end_x <= width && end_y <= height);
+
+    for (size_t y = 0; y < img_in.getHeight() * 3; ++y)
+        for (size_t x = 0; x < img_in.getWidth() * 3; ++x) {
+            data[(y + pos_y) * width * 3 + x + (pos_x * 3)] = img_in.data[y * width * 3 + x];
+        }
 }
 
 void ImageBase::initShaderData(GLuint _location) {
@@ -140,7 +154,7 @@ void ImageBase::initShaderData(GLuint _location) {
     if (getColor()) {
         std::vector<float> image_data(width * height * 4);
         for (int j = 0; j < width * height; j++) {
-            const unsigned char *pixel = getPixel(j);
+            const unsigned char* pixel = getPixel(j);
             image_data[j * 4] = float(pixel[0]) / 255.;
             image_data[j * 4 + 1] = float(pixel[1]) / 255.;
             image_data[j * 4 + 2] = float(pixel[2]) / 255.;
@@ -151,7 +165,7 @@ void ImageBase::initShaderData(GLuint _location) {
     } else {
         std::vector<float> image_data(width * height);
         for (int j = 0; j < width * height; j++) {
-            const unsigned char *pixel = getPixel(j);
+            const unsigned char* pixel = getPixel(j);
             image_data[j] = float(pixel[0]) / 255.;
         }
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, image_data.data());

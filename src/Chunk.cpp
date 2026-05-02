@@ -2,6 +2,8 @@
 #include "Chunk.hpp"
 #include <stdexcept>
 #include <iostream>
+#include "objects/blocks.hpp"
+
 
 void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     uint8_t face_axis = _face_i % 3;
@@ -73,20 +75,20 @@ void Chunk::generate(GenType _type) {
                     Block &block = m_blocks[block_i++];
                     block.getPos() = world_pos;
                     if (world_pos.y <= -45) {
-                        block.getType() = Block::Type::Air;
+                        block.getType() = BlockType::Air;
                     } else if (world_pos.y <= 0) {
-                        block.getType() = Block::Type::Stone;
+                        block.getType() = BlockType::Stone;
                     } else if (world_pos.y <= 3) {
-                        block.getType() = Block::Type::Dirt;
+                        block.getType() = BlockType::Dirt;
                     } else if (world_pos.y <= 4) {
                         uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
-                        block.getType() = Block::Type(truc % Block::BLOCK_TYPES_N);
+                        block.getType() = BlockType(truc % BLOCK_TYPES_N);
                     } else {
-                        block.getType() = Block::Type::Air;
+                        block.getType() = BlockType::Air;
                     }
 
                     if (std::abs(world_pos.x) == 1 || std::abs(world_pos.z) == 1)
-                        block.getType() = Block::Type::Glass;
+                        block.getType() = BlockType::Glass;
 
                     // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
                 }
@@ -148,7 +150,7 @@ void Chunk::updateShaderData() {
             for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
                 block_i++;
                 Block &block = m_blocks[block_i];
-                if (block.getType() == Block::Type::Air) {
+                if (block.getType() == BlockType::Air) {
                     continue;
                 }
 
@@ -156,7 +158,7 @@ void Chunk::updateShaderData() {
                     const Block *neighbour = block.m_neighbours[face_i];
                     if (neighbour != nullptr && (!neighbour->isTransparent() || block.getType() == neighbour->getType()))
                         continue;
-                    const Block::FaceData &face = Block::FACE_DATA[face_i];
+                    const FaceData &face = FACE_DATA[face_i];
 
                     std::array<glm::vec2, 4> face_uvs = Block::getUV(block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {

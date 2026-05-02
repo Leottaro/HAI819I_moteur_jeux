@@ -1,0 +1,5 @@
+textures albedos : Minecraft 26.1 (officiel)
+-> https://piston-meta.mojang.com/mc/game/version_manifest_v2.json
+-> https://piston-meta.mojang.com/v1/packages/19c91f29063126b8e38a7e879f9b977bbea82ce1/26.1.2.json
+textures normales+speculars : UltimaCraft PBR 
+-> https://modrinth.com/resourcepack/ultimacraft-pbr
