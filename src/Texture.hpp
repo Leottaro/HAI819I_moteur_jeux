@@ -135,11 +135,7 @@ class Texture {
         size_t x = 0;
         size_t y = 0;
         for (const std::string_view c : texture_names) {
-            std::cout << "on analyse " << c << "\n";
-            if (c == "air") {
-                std::cout << "en fait non mdr c'était un poisson d'avril\n";
-                continue;
-            }
+            if (c == "air") continue;
 
             if (x == atlas_dims) {
                 x = 0;

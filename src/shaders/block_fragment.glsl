@@ -49,6 +49,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
 
 void main() {
   vec4 f_albedo = texture(albedo_atlas, f_uv).rgba;
+  vec4 f_normal_map = texture(normal_atlas, f_uv).rgba;
   vec3 albedo = pow(f_albedo.xyz, vec3(2.2));
   float transparency = f_albedo.a;
   if (transparency == 0.f)
@@ -68,7 +69,9 @@ void main() {
   vec3 lightPositions[3] = vec3[](vec3(0.f, 1.f, 1.f) + f_worldpos, vec3(16.f, 10.f, 16.f), vec3(24.f, 10.f, 12.f));
   vec3 lightColors[3] = vec3[](vec3(1.f), vec3(1.f), vec3(1.f, 0.f, 0.f));
 
-  vec3 N = normalize(f_normal);
+  float normal_ratio = 255.f - f_normal_map.w;
+
+  vec3 N = normalize(f_normal_map.xyz * f_normal_map.w + normal_ratio * f_normal);
   vec3 V = normalize(camera_pos - f_worldpos);
 
   // vec3 F0 = vec3(0.04);

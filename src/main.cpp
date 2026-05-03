@@ -55,19 +55,19 @@ int main(void) {
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
     ShaderProgram block_shader("src/shaders/block_vertex.glsl", "src/shaders/block_fragment.glsl");
 
-    auto [albedo, normal, specular] = Texture::generateAtlasses();
+    auto [albedo_atlas, normal_atlas, specular_atlas] = Texture::generateAtlasses();
 
-    albedo.savePNG("ressources/textures/atlasses/albedo_atlas");
-    normal.savePNG("ressources/textures/atlasses/normal_atlas");
-    specular.savePNG("ressources/textures/atlasses/specular_atlas");
+    albedo_atlas.savePNG("ressources/textures/atlasses/albedo_atlas");
+    normal_atlas.savePNG("ressources/textures/atlasses/normal_atlas");
+    specular_atlas.savePNG("ressources/textures/atlasses/specular_atlas");
 
     // Import needed textures
-    Texture albedo_atlas("ressources/textures/albedo_atlas.png");
+    // Texture albedo_atlas("ressources/textures/albedo_atlas.png");
     albedo_atlas.initShaderData();
-    Texture normal_atlas("ressources/textures/normal_atlas.png");
+    // Texture normal_atlas("ressources/textures/normal_atlas.png");
     normal_atlas.initShaderData();
-    Texture specular_map("ressources/textures/specular_map.png");
-    specular_map.initShaderData();
+    // Texture specular_atlas("ressources/textures/specular_map.png");
+    specular_atlas.initShaderData();
 
     camera.m_type = Camera::Type::Free;
     camera.m_position = glm::vec3(16.f, 16.f, 16.f);
@@ -103,7 +103,7 @@ int main(void) {
         block_shader.use();
         albedo_atlas.bind(0);
         normal_atlas.bind(1);
-        specular_map.bind(2);
+        specular_atlas.bind(2);
 
         world.render(block_shader, camera);
         if (display_debug) {
