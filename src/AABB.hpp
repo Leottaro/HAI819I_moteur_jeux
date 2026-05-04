@@ -9,6 +9,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 // USUAL INCLUDESs
+#include "Block.hpp"
 #include <iostream>
 
 template <typename T>
@@ -61,35 +62,68 @@ struct AABB {
                  v.x > max.x || v.y > max.y || v.z > max.z);
     }
 
-    bool intersectRay(const vec3 &origin, const vec3 &direction, T &tmin, T &tmax) const {
-        // https://www.rose-hulman.edu/class/cs/csse451/AABB/#:~:text=Axis%2DAligned%20Bounding%20Boxes%20(AABBs,bound%20and%20a%20maximum%20bound.
+    // Face indices: -Z=0, -X=1, -Y=2, +Z=3, +X=4, +Y=5
+    bool intersectRay(const vec3 &origin, const vec3 &direction, T &tmin, T &tmax, uint &face_min, uint &face_max) const {
         vec3 delta_min = min - origin;
         vec3 delta_max = max - origin;
 
-        tmin = delta_min.x / direction.x;
-        tmax = delta_max.x / direction.x;
-        if (tmin > tmax)
-            std::swap(tmin, tmax);
+        T t0, t1;
+        int f0, f1;
 
+        // X slab: -X=1, +X=4
+        t0 = delta_min.x / direction.x;
+        t1 = delta_max.x / direction.x;
+        f0 = 1;
+        f1 = 4; // -X, +X
+        if (t0 > t1) {
+            std::swap(t0, t1);
+            std::swap(f0, f1);
+        }
+        tmin = t0;
+        tmax = t1;
+        face_min = f0;
+        face_max = f1;
+
+        // Y slab: -Y=2, +Y=5
         T tmin_tmp = delta_min.y / direction.y;
         T tmax_tmp = delta_max.y / direction.y;
-        if (tmin_tmp > tmax_tmp)
+        int fmin_tmp = 2, fmax_tmp = 5; // -Y, +Y
+        if (tmin_tmp > tmax_tmp) {
             std::swap(tmin_tmp, tmax_tmp);
+            std::swap(fmin_tmp, fmax_tmp);
+        }
 
         if (tmax_tmp < tmin || tmin_tmp > tmax)
             return false;
-        tmin = std::max(tmin, tmin_tmp);
-        tmax = std::min(tmax, tmax_tmp);
+        if (tmin_tmp > tmin) {
+            tmin = tmin_tmp;
+            face_min = fmin_tmp;
+        }
+        if (tmax_tmp < tmax) {
+            tmax = tmax_tmp;
+            face_max = fmax_tmp;
+        }
 
+        // Z slab: -Z=0, +Z=3
         tmin_tmp = delta_min.z / direction.z;
         tmax_tmp = delta_max.z / direction.z;
-        if (tmin_tmp > tmax_tmp)
+        fmin_tmp = 0;
+        fmax_tmp = 3; // -Z, +Z
+        if (tmin_tmp > tmax_tmp) {
             std::swap(tmin_tmp, tmax_tmp);
+            std::swap(fmin_tmp, fmax_tmp);
+        }
 
         if (tmax_tmp < tmin || tmin_tmp > tmax)
             return false;
-        tmin = std::max(tmin, tmin_tmp);
-        tmax = std::min(tmax, tmax_tmp);
+        if (tmin_tmp > tmin) {
+            tmin = tmin_tmp;
+            face_min = fmin_tmp;
+        }
+        if (tmax_tmp < tmax) {
+            tmax = tmax_tmp;
+            face_max = fmax_tmp;
+        }
 
         return true;
     }
@@ -138,23 +172,11 @@ struct AABB {
         //           << "vel : " << glm::to_string(_other_vel) << std::endl;
 
         T ttemp;
-        bool intersect = minkowski.intersectRay(other_center, _other_vel, t, ttemp);
+        uint face_min, face_max;
+        bool intersect = minkowski.intersectRay(other_center, _other_vel, t, ttemp, face_min, face_max);
         // std::cout << "intersect=" << intersect << "\tt=" << t << "\tttemp=" << ttemp << std::endl;
         if (intersect && t >= T(0) && t <= T(1)) {
-            vec3 hit = other_center + t * _other_vel;
-
-            normal.x = (hit.x <= minkowski.min.x)   ? T(-1)
-                       : (hit.x >= minkowski.max.x) ? T(1)
-                                                    : T(0);
-            normal.y = (hit.y <= minkowski.min.y)   ? T(-1)
-                       : (hit.y >= minkowski.max.y) ? T(1)
-                                                    : T(0);
-            normal.z = (hit.z <= minkowski.min.z)   ? T(-1)
-                       : (hit.z >= minkowski.max.z) ? T(1)
-                                                    : T(0);
-            normal = glm::normalize(normal);
-            // std::cout << "\tnormal: " << glm::to_string(normal) << std::endl;
-
+            normal = Block::FACE_DATA[face_min].normal;
             return true;
         }
 

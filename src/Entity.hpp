@@ -137,13 +137,13 @@ public:
                 m_vel *= ground_friction - 1.f;
             }
         } else {
-            // forces.push_back(glm::vec3(0.f, -9.81f, 0.f) * m_weight); // g
-            // Block *block = m_current_chunk->getBlock(m_pos);
-            // float densite_fluide = block->getDensity();
-            // if (densite_fluide > 0.f) {
-            //     forces.push_back(densite_fluide * -forces[0] * m_volume / (m_weight / m_volume)); // flottaison
-            //     forces.push_back(densite_fluide * m_vel * -m_drag);                               // drag
-            // }
+            forces.push_back(glm::vec3(0.f, -9.81f, 0.f) * m_weight); // g
+            Block *block = m_current_chunk->getBlock(m_pos);
+            float densite_fluide = block->getDensity();
+            if (densite_fluide > 0.f) {
+                forces.push_back(densite_fluide * -forces[0] * m_volume / (m_weight / m_volume)); // flottaison
+                forces.push_back(densite_fluide * m_vel * -m_drag);                               // drag
+            }
         }
 
         RigidBody::addForces(_deltaTime, forces);
@@ -165,6 +165,9 @@ public:
             m_friction = collision.block->getCollisionStats()[0];
             m_restitution = collision.block->getCollisionStats()[1];
             RigidBody::bounce(0.f, collision.normal);
+            if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && m_vel.y == 0.f) {
+                m_on_ground = true;
+            }
             m_pos = collision.pos;
             m_current_chunk = m_current_chunk->getChunk(m_pos);
             if (m_current_chunk == nullptr) {
@@ -194,8 +197,7 @@ public:
         return true;
     }
 
-    void
-    initShaderData() {
+    void initShaderData() {
         for (size_t i = 0; i < m_hitbox.size(); i++) {
             m_hitbox[i].initShaderData();
         }
