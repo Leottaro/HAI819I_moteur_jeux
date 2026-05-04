@@ -1,26 +1,27 @@
 // USUAL INCLUDES
 #include "World.hpp"
+
 #include <list>
 
-Chunk *World::findChunk(const glm::ivec3 &_chunk_pos) {
+Chunk* World::findChunk(const glm::ivec3& _chunk_pos) {
     if (isChunkLoaded(_chunk_pos)) {
         return m_chunks.at(_chunk_pos);
     }
     return nullptr;
 }
 
-bool World::addChunk(const glm::ivec3 &_chunk_pos) {
+bool World::addChunk(const glm::ivec3& _chunk_pos) {
     if (isChunkLoaded(_chunk_pos))
         return false;
 
-    m_chunks.insert({_chunk_pos, new Chunk(_chunk_pos, Chunk::GenType::SUPERFLAT)});
+    m_chunks.insert({_chunk_pos, new Chunk(_chunk_pos, m_gentype)});
     m_chunks_frontier.erase(_chunk_pos);
-    Chunk *inserted_chunk = m_chunks.at(_chunk_pos);
+    Chunk* inserted_chunk = m_chunks.at(_chunk_pos);
 
     // on ajoute tous ses voisins dans la frontière si ils ne sont pas déjà chargé sinon on update le chunk car il a un nouveau voisin !
     for (int face_i = 0; face_i < 6; face_i++) {
         glm::ivec3 neighbour_pos = _chunk_pos + Chunk::NEIGHBOURS_POS[face_i];
-        Chunk *neighbour = findChunk(neighbour_pos);
+        Chunk* neighbour = findChunk(neighbour_pos);
         if (neighbour == nullptr) {
             m_chunks_frontier.insert(neighbour_pos);
         } else {
@@ -36,8 +37,8 @@ bool World::addChunk(const glm::ivec3 &_chunk_pos) {
 
     return true;
 }
-bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
-    Chunk *removed_chunk = findChunk(_chunk_pos);
+bool World::removeChunk(const glm::ivec3& _chunk_pos) {
+    Chunk* removed_chunk = findChunk(_chunk_pos);
     if (removed_chunk == nullptr)
         return false;
     delete removed_chunk;
@@ -46,7 +47,7 @@ bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
 
     for (int face_i = 0; face_i < 6; face_i++) {
         glm::ivec3 neighbour_pos = _chunk_pos + Chunk::NEIGHBOURS_POS[face_i];
-        Chunk *neighbour = findChunk(neighbour_pos);
+        Chunk* neighbour = findChunk(neighbour_pos);
         if (neighbour != nullptr) {
             // neighbour chunk is loaded, we update it and put the current chunk in the frontier
             m_chunks_frontier.insert(_chunk_pos);
@@ -72,7 +73,7 @@ bool World::removeChunk(const glm::ivec3 &_chunk_pos) {
     return true;
 }
 
-bool World::generate(const glm::vec3 &_pos) {
+bool World::generate(const glm::vec3& _pos) {
     glm::ivec3 _chunk_pos = Chunk::posToChunkPos(_pos);
     if (!isChunkLoaded(_chunk_pos)) {
         addChunk(_chunk_pos);
@@ -80,12 +81,12 @@ bool World::generate(const glm::vec3 &_pos) {
     }
 
     std::list<glm::ivec3> chunk_to_remove;
-    for (auto &[chunk_pos, chunk] : m_chunks) {
+    for (auto& [chunk_pos, chunk] : m_chunks) {
         if (Chunk::chunkDistance(_pos, chunk_pos) > RENDER_DISTANCE) {
             chunk_to_remove.push_back(chunk_pos);
         }
     }
-    for (const glm::ivec3 &chunk_pos : chunk_to_remove) {
+    for (const glm::ivec3& chunk_pos : chunk_to_remove) {
         removeChunk(chunk_pos);
     }
     if (!chunk_to_remove.empty()) {
@@ -93,7 +94,7 @@ bool World::generate(const glm::vec3 &_pos) {
     }
 
     std::map<float, glm::ivec3> chunk_to_add;
-    for (const glm::ivec3 &chunk_pos : m_chunks_frontier) {
+    for (const glm::ivec3& chunk_pos : m_chunks_frontier) {
         float chunk_dist = Chunk::chunkDistance(_pos, chunk_pos);
         if (chunk_dist <= RENDER_DISTANCE) {
             chunk_to_add.insert({chunk_dist, chunk_pos});

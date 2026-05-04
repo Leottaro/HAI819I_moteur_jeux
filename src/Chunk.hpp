@@ -38,7 +38,8 @@ public:
     }
 
     enum class GenType {
-        SUPERFLAT,
+        DEBUG = 0,
+        SUPERFLAT
     };
 
 private:

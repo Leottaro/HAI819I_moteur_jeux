@@ -7,7 +7,6 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include <vector>
-#include "Scene.hpp"
 #include <iostream>
 
 #define G 6.6742e-11f

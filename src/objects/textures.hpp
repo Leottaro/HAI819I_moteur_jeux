@@ -17,7 +17,7 @@ enum class Textures : size_t {
 };
 
 constexpr size_t TEXTURE_NUMBER = static_cast<size_t>(Textures::NUMBER_OF_TEXTURES);
-constexpr std::array<char*, TEXTURE_NUMBER> texture_names = {{
+constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{
     "air",
     "stone",
     "dirt",
