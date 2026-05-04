@@ -41,8 +41,8 @@ struct RigidBody {
             v_tangent *= 0.f;
         }
         v_normal *= -m_restitution;
-        if (glm::length(v_normal) < 1.f) {
-            v_normal *= 0.f;
+        if (glm::length(v_normal) < 0.1f * glm::length(m_vel)) {
+            v_normal = glm::vec3(0.f);
         }
         m_vel = v_normal + v_tangent;
     }

@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 
 // USUAL INCLUDES
+#include <functional>
 
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
@@ -65,7 +66,7 @@ public:
     }};
     static constexpr std::array<std::array<float, 2>, BLOCK_TYPES_N> PHYSICS_TABLE = {{
         // friction, bounciness
-        {0.f, 0.f}, // Air
+        {0.f, 1.f}, // Air
         {0.f, 1.f}, // Stone
         {0.f, 1.f}, // Dirt
         {0.f, 1.f}, // Grass

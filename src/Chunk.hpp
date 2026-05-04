@@ -34,7 +34,6 @@ public:
             (_block_pos.y < 0 && _block_pos.y % CHUNK_SIZE != 0 ? _block_pos.y / CHUNK_SIZE - 1 : _block_pos.y / CHUNK_SIZE) * CHUNK_SIZE,
             (_block_pos.z < 0 && _block_pos.z % CHUNK_SIZE != 0 ? _block_pos.z / CHUNK_SIZE - 1 : _block_pos.z / CHUNK_SIZE) * CHUNK_SIZE);
     }
-
     static constexpr float chunkDistance(const glm::vec3 &_a, const glm::vec3 &_b) {
         float dist = std::sqrt(std::pow(_a.x - _b.x - 16, 2) + std::pow(_a.y - _b.y - 16, 2) + std::pow(_a.z - _b.z - 16, 2));
         return dist / CHUNK_SIZE;
@@ -85,7 +84,8 @@ public:
 
     inline Block *getBlock(const glm::ivec3 &_block_pos) { return &m_blocks[posToBlockI(_block_pos - m_pos)]; }
     Chunk *getChunk(const glm::vec3 &_pos);
-    void findSolidBlocks(glm::ivec3 start, const glm::ivec3 &_end, std::vector<Block *> &blocks);
+    Block *findBlock(const glm::ivec3 &_block_pos);
+    void findSolidBlocks(const glm::vec3 &_start, const glm::vec3 &_end, std::vector<Block *> &blocks);
 
     // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
     void updateBlockNeighbours(uint8_t _face_i);

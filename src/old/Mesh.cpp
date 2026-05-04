@@ -264,7 +264,7 @@ void Mesh::recomputePerVertexTextureCoordinates() {
 
     float x_min, x_max, y_min, y_max;
     x_min = y_min = std::numeric_limits<float>::max();
-    x_max = y_max = std::numeric_limits<float>::min();
+    x_max = y_max = -std::numeric_limits<float>::max();
     for (glm::vec3 &p : m_vertices) {
         x_min = std::min(x_min, p[0]);
         x_max = std::max(x_max, p[0]);

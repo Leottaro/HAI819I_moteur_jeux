@@ -8,83 +8,55 @@ Chunk *Chunk::getChunk(const glm::vec3 &_pos) {
     return m_world->findChunk(Chunk::posToChunkPos(_pos));
 }
 
+Block *Chunk::findBlock(const glm::ivec3 &_block_pos) {
+    return m_world->findBlock(_block_pos);
+}
+
 // https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
-void Chunk::findSolidBlocks(glm::ivec3 start, const glm::ivec3 &_end, std::vector<Block *> &blocks) {
-    glm::vec3 delta = glm::abs(_end - start);
-    glm::ivec3 step(start.x < _end.x ? 1 : -1, start.y < _end.y ? 1 : -1, start.z < _end.z ? 1 : -1);
+void Chunk::findSolidBlocks(const glm::vec3 &_start, const glm::vec3 &_end, std::vector<Block *> &blocks) {
+    glm::vec3 delta = glm::abs(_end - _start);
     float d_length = glm::length(delta);
     glm::vec3 tdelta = d_length / delta;
     glm::vec3 tmax = tdelta * 0.5f;
 
-    Block *block = getBlock(start);
-    glm::ivec3 start_chunk = blockPosToChunkPos(start);
-    if (m_pos != start_chunk) {
-        Chunk *chunk = m_world->findChunk(start_chunk);
-        if (chunk != nullptr) {
-            chunk->findSolidBlocks(start, _end, blocks);
-            return;
-        }
-    }
+    glm::ivec3 current_block = Block::posToBlockPos(_start);
+    glm::ivec3 end_block = Block::posToBlockPos(_end);
+    glm::ivec3 step(
+        current_block.x < _end.x   ? 1
+        : current_block.x > _end.x ? -1
+                                   : 0,
+        current_block.y < _end.y   ? 1
+        : current_block.y > _end.y ? -1
+                                   : 0,
+        current_block.z < _end.z   ? 1
+        : current_block.z > _end.z ? -1
+                                   : 0);
 
-    while (start != _end) {
-        if (block->hasHitbox()) {
-            blocks.push_back(block);
-        }
-
-        if (tmax.x < tmax.y) {
-            if (tmax.x < tmax.z) {
-                start.x += step.x;
-                tmax.x += tdelta.x;
-            } else if (tmax.x > tmax.z) {
-                start.z += step.z;
-                tmax.z += tdelta.z;
-            } else {
-                start.x += step.x;
-                start.z += step.z;
-                tmax.x += tdelta.x;
-                tmax.z += tdelta.z;
-            }
-        } else if (tmax.x > tmax.y) {
-            if (tmax.y < tmax.z) {
-                start.y += step.y;
-                tmax.y += tdelta.y;
-            } else if (tmax.y > tmax.z) {
-                start.z += step.z;
-                tmax.z += tdelta.z;
-            } else {
-                start.y += step.y;
-                start.z += step.z;
-                tmax.y += tdelta.y;
-                tmax.z += tdelta.z;
-            }
-        } else {
-            if (tmax.y < tmax.z) {
-                start.y += step.y;
-                start.x += step.x;
-                tmax.y += tdelta.y;
-                tmax.x += tdelta.x;
-            } else if (tmax.y > tmax.z) {
-                start.z += step.z;
-                tmax.z += tdelta.z;
-            } else {
-                start += step;
-            }
-        }
-
-        start_chunk = blockPosToChunkPos(start);
-        if (m_pos != start_chunk) {
-            Chunk *chunk = m_world->findChunk(start_chunk);
+    glm::ivec3 block_delta = glm::abs(end_block - current_block);
+    uint nb_blocks = block_delta.x + block_delta.y + block_delta.z;
+    for (uint _ = 0; _ <= nb_blocks; _++) {
+        glm::ivec3 current_chunk_pos = blockPosToChunkPos(current_block);
+        if (m_pos != current_chunk_pos) {
+            Chunk *chunk = m_world->findChunk(current_chunk_pos);
             if (chunk != nullptr) {
-                chunk->findSolidBlocks(start, _end, blocks);
+                chunk->findSolidBlocks(current_block, _end, blocks);
                 return;
             }
         }
+        Block *block = getBlock(current_block);
+        if (block->hasHitbox())
+            blocks.push_back(block);
 
-        block = getBlock(start);
-    }
-
-    if (block->hasHitbox()) {
-        blocks.push_back(block);
+        if (tmax.x <= tmax.y && tmax.x <= tmax.z) {
+            current_block.x += step.x;
+            tmax.x += tdelta.x;
+        } else if (tmax.y <= tmax.z) {
+            current_block.y += step.y;
+            tmax.y += tdelta.y;
+        } else {
+            current_block.z += step.z;
+            tmax.z += tdelta.z;
+        }
     }
 }
 

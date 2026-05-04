@@ -140,18 +140,18 @@ struct AABB {
         T ttemp;
         bool intersect = minkowski.intersectRay(other_center, _other_vel, t, ttemp);
         // std::cout << "intersect=" << intersect << "\tt=" << t << "\tttemp=" << ttemp << std::endl;
-        if (intersect && t >= 0.f && t <= 1.f) {
+        if (intersect && t >= T(0) && t <= T(1)) {
             vec3 hit = other_center + t * _other_vel;
 
-            normal.x = (hit.x <= minkowski.min.x + 1e-6f)   ? T(-1)
-                       : (hit.x >= minkowski.max.x - 1e-6f) ? T(1)
-                                                            : T(0);
-            normal.y = (hit.y <= minkowski.min.y + 1e-6f)   ? T(-1)
-                       : (hit.y >= minkowski.max.y - 1e-6f) ? T(1)
-                                                            : T(0);
-            normal.z = (hit.z <= minkowski.min.z + 1e-6f)   ? T(-1)
-                       : (hit.z >= minkowski.max.z - 1e-6f) ? T(1)
-                                                            : T(0);
+            normal.x = (hit.x <= minkowski.min.x)   ? T(-1)
+                       : (hit.x >= minkowski.max.x) ? T(1)
+                                                    : T(0);
+            normal.y = (hit.y <= minkowski.min.y)   ? T(-1)
+                       : (hit.y >= minkowski.max.y) ? T(1)
+                                                    : T(0);
+            normal.z = (hit.z <= minkowski.min.z)   ? T(-1)
+                       : (hit.z >= minkowski.max.z) ? T(1)
+                                                    : T(0);
             normal = glm::normalize(normal);
             // std::cout << "\tnormal: " << glm::to_string(normal) << std::endl;
 

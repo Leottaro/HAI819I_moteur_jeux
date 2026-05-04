@@ -91,7 +91,7 @@ int main(void) {
         world.generate(camera.m_position);
         if (run_simulation) {
             world.update(0.01);
-            run_simulation = false;
+            // run_simulation = false;
         }
 
         /**********==========CAMERA UPDATE==========**********/

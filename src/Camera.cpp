@@ -97,13 +97,13 @@ bool Camera::updateInterface(float _deltaTime) {
 
         ImGui::Separator();
 
-        if (m_type == Type::FirstPerson) { // Free position Controls
-            bool position_changed = ImGui::DragFloat3("Position", &m_position[0], 0.1f);
-            if (position_changed) {
-                updateData();
-            }
-            ImGui::Separator();
+        ImGui::BeginDisabled(m_type != Type::FirstPerson); // Free position Controls
+        bool position_changed = ImGui::DragFloat3("Position", &m_position[0], 0.1f);
+        if (position_changed) {
+            updateData();
         }
+        ImGui::Separator();
+        ImGui::EndDisabled();
 
         // Orientation Controls
         glm::vec2 angles_degree = glm::degrees(m_orientation);
