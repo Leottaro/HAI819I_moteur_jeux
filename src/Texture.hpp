@@ -22,14 +22,14 @@
 #include "old/ImageBase.h"
 
 class Texture {
-   private:
+private:
     GLuint m_texture_id;
 
     std::vector<glm::u8vec4> m_data;
     int m_width, m_height, m_channels;
     bool m_synchronized;
 
-   public:
+public:
     Texture(const std::string& _path) {
         unsigned char* data = stbi_load(_path.c_str(), &m_width, &m_height, &m_channels, 4);
         if (!data) {
@@ -135,7 +135,8 @@ class Texture {
         size_t x = 0;
         size_t y = 0;
         for (const std::string_view c : texture_names) {
-            if (c == "air") continue;
+            if (c == "air")
+                continue;
 
             if (x == atlas_dims) {
                 x = 0;

@@ -9,7 +9,7 @@
 
 // GLFW
 #include <GLFW/glfw3.h>
-GLFWwindow* window;
+GLFWwindow *window;
 
 // IMGUI
 #include <imgui.h>
@@ -40,7 +40,7 @@ glm::vec2 cursor_pos{0, 0};
 glm::vec2 cursor_vel{0, 0};
 glm::vec2 scroll{0, 0};
 
-bool run_simulation = true;
+bool run_simulation = false;
 float deltaTime = 0.f;
 float lastFrame = 0.f;
 
@@ -71,14 +71,16 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
-    camera.m_type = Camera::Type::Free;
-    camera.m_position = glm::vec3(16.f, 16.f, 16.f);
-    camera.m_translation_speed = 32.f;
+    camera.m_type = Camera::Type::ThirdPerson;
     camera.m_orientation = glm::vec2(0.f, 0.f);
-    camera.m_rotation_speed = 1.f;
+    camera.m_distance_to_center = 0.75f;
     camera.updateData();
 
-    glfwSwapInterval(1);  // VSync - avoid having 3000 fps
+    Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
+    truc->m_vel = glm::vec3(1.f, -0.5f, 0.f);
+    truc->fixCamera(&camera);
+
+    glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -97,13 +99,15 @@ int main(void) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        /**********==========OBJECTS UPDATE==========**********/
+        world.generate(camera.m_position);
+        if (run_simulation) {
+            world.update(0.01);
+            // run_simulation = false;
+        }
+
         /**********==========CAMERA UPDATE==========**********/
         camera.update(window, deltaTime, cursor_vel, scroll);
-
-        /**********==========OBJECTS UPDATE==========**********/
-        if (run_simulation) {
-            world.generate(camera.m_position);
-        }
 
         /**********==========RENDERING==========**********/
         block_shader.use();
@@ -111,7 +115,7 @@ int main(void) {
         normal_atlas.bind(1);
         specular_atlas.bind(2);
 
-        world.render(block_shader, camera);
+        world.render(block_shader, line_shader, camera);
         world.updateWindow(camera);
         if (display_debug) {
             world.renderDebugBoxes(line_shader, camera);
@@ -132,7 +136,7 @@ int main(void) {
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     // cout << "framebuffer size: " << width << ", " << height << endl;
     window_width = width;
     window_height = height;
@@ -144,7 +148,7 @@ bool w_key_pressed = false;
 bool p_key_pressed = false;
 bool r_key_pressed = false;
 bool g_key_pressed = false;
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     // cout << "key:" << key << " scancode:" << scancode << " action:" << action << " mods:" << mods << endl;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -203,14 +207,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
     // cout << "mouse button:" << button << " action:" << action << " mods:" << mods << endl;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         glfwSetInputMode(window, GLFW_CURSOR, action == GLFW_PRESS ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
 }
 
-void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
+void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos) {
     cursor_vel.x = xpos - cursor_pos.x;
     cursor_vel.y = ypos - cursor_pos.y;
     cursor_pos.x = xpos;
@@ -218,7 +222,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     // cout << "cursor_pos: (" << cursor_pos.x << ", " << cursor_pos.y << ")\tcursor_vel: (" << cursor_vel.x << ", " << cursor_vel.y << ")" << endl;
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
     // cout << "scroll: (" << xoffset << ", " << yoffset << ")" << endl;
     scroll.x = xoffset;
     scroll.y = yoffset;
@@ -228,9 +232,9 @@ void initWindow() {
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // To make MacOS happy; should not be needed
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE);  // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
+    glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE); // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
     window = glfwCreateWindow(window_width, window_height, "Moteur de jeux", NULL, NULL);
@@ -248,12 +252,12 @@ void initWindow() {
 }
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
-    glEnable(GL_DEPTH_TEST);                            // Enable depth test
-    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
-    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }
 
 void globalInit() {
@@ -283,7 +287,7 @@ void globalInit() {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();

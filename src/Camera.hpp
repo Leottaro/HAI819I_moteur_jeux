@@ -22,19 +22,18 @@ class Camera {
 
         Frustum() {};
 
-        void updatePlanes(Camera *_camera);
+        void updatePlanes(Camera* _camera);
     };
 
 public:
-#define CAMERA_TYPES_N 3
-#define CAMERA_TYPES "Free\0FirstPerson\0Orbital\0"
+#define CAMERA_TYPES_N 2
+#define CAMERA_TYPES "FirstPerson\0ThirdPerson\0"
     enum class Type {
-        Free = 0,
-        FirstPerson = 1,
-        Orbital = 2,
+        FirstPerson = 0,
+        ThirdPerson,
     };
 
-    Type m_type = Type::Free;
+    Type m_type = Type::FirstPerson;
     glm::vec3 m_position = glm::vec3(1.0f, 1.0f, 1.0f);
     float m_translation_speed = 2.5f;
 
@@ -45,7 +44,7 @@ public:
     float m_fovy = M_PI_2f;
     glm::vec2 m_near_far = glm::vec2(1.e-1f, 1.e8f);
 
-    const glm::vec3 *m_center = &VEC_ZERO; // Only in oribtal type
+    const glm::vec3* m_center = &VEC_ZERO; // Only in oribtal type
     float m_distance_to_center = 5.f;      // Only in oribtal type
     float m_zoom_rate = 0.05f;             // Only in oribtal type
 
@@ -59,22 +58,22 @@ private:
 
     Frustum m_frustum;
 
-    bool updateInterface(float _deltaTime);
-    void updateKeyboardInput(GLFWwindow *_window, float _deltaTime);
-    void updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll, bool _disable_actions);
-
 public:
     Camera() {}
 
     void updateData();
-    void update(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll);
+    void updatePosConstraint();
+    bool updateInterface(float _deltaTime);
+    void updateKeyboardInput(GLFWwindow* _window, float _deltaTime);
+    void updateMouseInput(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll);
+    void update(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll);
 
-    inline const glm::vec3 &getFront() const { return m_front; }
-    inline const glm::vec3 &getRight() const { return m_right; }
-    inline const glm::vec3 &getUp() const { return m_real_up; }
+    inline const glm::vec3& getFront() const { return m_front; }
+    inline const glm::vec3& getRight() const { return m_right; }
+    inline const glm::vec3& getUp() const { return m_real_up; }
 
-    inline const glm::mat4 &getViewMatrix() const { return m_view; }
-    inline const glm::mat4 &getProjectionMatrix() const { return m_projection; }
+    inline const glm::mat4& getViewMatrix() const { return m_view; }
+    inline const glm::mat4& getProjectionMatrix() const { return m_projection; }
 
-    bool isVisible(const AABB<float> &_aabb) const;
+    bool isVisible(const AABB<float>& _aabb) const;
 };

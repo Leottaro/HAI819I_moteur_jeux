@@ -1,10 +1,67 @@
 // USUAL INCLUDES
 #include "Chunk.hpp"
 
+#include "World.hpp"
+#include "objects/blocks.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "objects/textures.hpp"
 
-#include "objects/blocks.hpp"
+Chunk *Chunk::getChunk(const glm::vec3 &_pos) {
+    return m_world->findChunk(Chunk::posToChunkPos(_pos));
+}
+
+Block *Chunk::findBlock(const glm::ivec3 &_block_pos) {
+    return m_world->findBlock(_block_pos);
+}
+
+// https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
+void Chunk::findSolidBlocks(const glm::vec3 &_start, const glm::vec3 &_end, std::vector<Block *> &blocks) {
+    glm::vec3 delta = glm::abs(_end - _start);
+    float d_length = glm::length(delta);
+    glm::vec3 tdelta = d_length / delta;
+    glm::vec3 tmax = tdelta * 0.5f;
+
+    glm::ivec3 current_block = Block::posToBlockPos(_start);
+    glm::ivec3 end_block = Block::posToBlockPos(_end);
+    glm::ivec3 step(
+        current_block.x < _end.x   ? 1
+        : current_block.x > _end.x ? -1
+                                   : 0,
+        current_block.y < _end.y   ? 1
+        : current_block.y > _end.y ? -1
+                                   : 0,
+        current_block.z < _end.z   ? 1
+        : current_block.z > _end.z ? -1
+                                   : 0);
+
+    glm::ivec3 block_delta = glm::abs(end_block - current_block);
+    uint nb_blocks = block_delta.x + block_delta.y + block_delta.z;
+    for (uint _ = 0; _ <= nb_blocks; _++) {
+        glm::ivec3 current_chunk_pos = blockPosToChunkPos(current_block);
+        if (m_pos != current_chunk_pos) {
+            Chunk *chunk = m_world->findChunk(current_chunk_pos);
+            if (chunk != nullptr) {
+                chunk->findSolidBlocks(current_block, _end, blocks);
+                return;
+            }
+        }
+        Block *block = getBlock(current_block);
+        if (block->hasHitbox())
+            blocks.push_back(block);
+
+        if (tmax.x <= tmax.y && tmax.x <= tmax.z) {
+            current_block.x += step.x;
+            tmax.x += tdelta.x;
+        } else if (tmax.y <= tmax.z) {
+            current_block.y += step.y;
+            tmax.y += tdelta.y;
+        } else {
+            current_block.z += step.z;
+            tmax.z += tdelta.z;
+        }
+    }
+}
 
 void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     uint8_t face_axis = _face_i % 3;
@@ -26,11 +83,11 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     bool has_neighbour = m_neighbours[_face_i] == nullptr;
     for (size_t j = 0; j < CHUNK_SIZE; j++) {
         for (size_t i = 0; i < CHUNK_SIZE; i++) {
-            Block* block = &m_blocks[block_i];
+            Block *block = &m_blocks[block_i];
             if (has_neighbour) {
                 block->m_neighbours[_face_i] = nullptr;
             } else {
-                Block* neighbour_block = &m_neighbours[_face_i]->m_blocks[neighbour_i];
+                Block *neighbour_block = &m_neighbours[_face_i]->m_blocks[neighbour_i];
                 block->m_neighbours[_face_i] = neighbour_block;
                 neighbour_block->m_neighbours[OPPOSITE_FACE[_face_i]] = block;
             }
@@ -69,57 +126,57 @@ void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     size_t block_i = 0;
     switch (_type) {
-        case GenType::DEBUG:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= 0) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= 4) {
-                            uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
-                            block.getType() = BlockType(truc % BLOCK_TYPES_N);
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
-                        // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
+    case GenType::DEBUG_:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block &block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = Block::Type::Air;
+                    } else if (world_pos.y <= 0) {
+                        block.getType() = Block::Type::Stone;
+                    } else if (world_pos.y <= 3) {
+                        block.getType() = Block::Type::Dirt;
+                    } else if (world_pos.y <= 4) {
+                        uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
+                        block.getType() = Block::Type(truc % BLOCK_TYPES_N);
+                    } else {
+                        block.getType() = Block::Type::Air;
                     }
+                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? Block::Type::Stone : Block::Type::Air;
                 }
             }
-            break;
-        case GenType::SUPERFLAT:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= 0) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= 4) {
-                            block.getType() = BlockType::Grass;
+        }
+        break;
+    case GenType::SUPERFLAT:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block &block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = Block::Type::Air;
+                    } else if (world_pos.y <= 0) {
+                        block.getType() = Block::Type::Stone;
+                    } else if (world_pos.y <= 3) {
+                        block.getType() = Block::Type::Dirt;
+                    } else if (world_pos.y <= 4) {
+                        block.getType() = Block::Type::Grass;
 
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
+                    } else {
+                        block.getType() = Block::Type::Air;
                     }
                 }
             }
-            break;
-        default:
-            throw std::runtime_error("ChunkGenType not supported in Chunk generation");
+        }
+        break;
+    default:
+        throw std::runtime_error("ChunkGenType not supported in Chunk generation");
     }
 }
 
-Chunk::Chunk(const glm::ivec3& _chunk_pos, GenType _type) : m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
+Chunk::Chunk(World *_world, const glm::ivec3 &_chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     initNeighbours();
     generate(_type);
     initShaderData();
@@ -129,14 +186,14 @@ Chunk::Chunk(const glm::ivec3& _chunk_pos, GenType _type) : m_pos(_chunk_pos), m
 struct ChunkVertex {
     glm::u8vec3 position;
     glm::i8vec3 normal;
-    uint8_t _pad[2];  // explicit 2-byte pad
+    uint8_t _pad[2]; // explicit 2-byte pad
     glm::vec2 uv;
 };
 // Si mes comptes sont bons on a 28.5MiB pour tout les chunks (c'est OK)
 namespace ChunkMeshScratch {
 std::array<ChunkVertex, Chunk::MAX_VERTICES> vertices;
 std::array<glm::uvec3, Chunk::MAX_TRIANGLES> triangles;
-};  // namespace ChunkMeshScratch
+}; // namespace ChunkMeshScratch
 void Chunk::initShaderData() {
     glGenVertexArrays(1, &m_VAO);
     glBindVertexArray(m_VAO);
@@ -145,13 +202,13 @@ void Chunk::initShaderData() {
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
     // Attribute 0: position
     glEnableVertexAttribArray(0);
-    glVertexAttribIPointer(0, 3, GL_UNSIGNED_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, position));
+    glVertexAttribIPointer(0, 3, GL_UNSIGNED_BYTE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, position));
     // Attribute 1: normal
     glEnableVertexAttribArray(1);
-    glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, normal));
+    glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, normal));
     // Attribute 0: uv
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, uv));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, uv));
 
     glGenBuffers(1, &m_EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
@@ -168,18 +225,18 @@ void Chunk::updateShaderData() {
         for (local_pos.z = 0; local_pos.z < CHUNK_SIZE; local_pos.z++) {
             for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
                 block_i++;
-                Block& block = m_blocks[block_i];
-                if (block.getType() == BlockType::Air) {
+                Block &block = m_blocks[block_i];
+                if (block.getType() == Block::Type::Air) {
                     continue;
                 }
 
                 for (int face_i = 0; face_i < 6; face_i++) {
-                    const Block* neighbour = block.m_neighbours[face_i];
+                    const Block *neighbour = block.m_neighbours[face_i];
                     if (neighbour != nullptr && (!neighbour->isTransparent() || block.getType() == neighbour->getType()))
                         continue;
-                    const FaceData& face = FACE_DATA[face_i];
+                    const FaceData &face = FACE_DATA[face_i];
 
-                    std::array<glm::vec2, 4> face_uvs = Block::getUV(block.getType(), face_i);
+                    std::array<glm::vec2, 4> face_uvs = Block::getUV(atlas_dims, block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {
                         ChunkMeshScratch::vertices[m_vertices_count].position = local_pos + face.vertices[i];
                         ChunkMeshScratch::vertices[m_vertices_count].normal = face.normal;

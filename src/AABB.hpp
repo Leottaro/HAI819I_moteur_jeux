@@ -5,8 +5,12 @@
 
 // GLM
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 
 // USUAL INCLUDESs
+#include "Block.hpp"
+#include <iostream>
 
 template <typename T>
 struct AABB {
@@ -15,10 +19,22 @@ struct AABB {
     vec3 min;
     vec3 max;
 
-    AABB() : min(std::numeric_limits<T>::max()), max(std::numeric_limits<T>::min()) {}
-    AABB(vec3 const &_min, vec3 const &_max) : min(_min), max(_max) {}
+    AABB() : min(std::numeric_limits<T>::max()), max(-std::numeric_limits<T>::max()) {}
+    AABB(vec3 const& _min, vec3 const& _max) : min(_min), max(_max) {}
 
-    inline void addPosition(vec3 const &v) {
+    friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
+        os << "AABB{min: " << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z
+           << " | max: " << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}";
+        return os;
+    }
+    friend AABB operator+(const AABB& _a, const vec3& _offset) {
+        return AABB(_a.min + _offset, _a.max + _offset);
+    }
+    friend AABB operator+(const vec3& _offset, const AABB& _a) {
+        return AABB(_offset + _a.min, _offset + _a.max);
+    }
+
+    inline void addPosition(vec3 const& v) {
         min.x = std::min(min.x, v.x);
         min.y = std::min(min.y, v.y);
         min.z = std::min(min.z, v.z);
@@ -27,42 +43,144 @@ struct AABB {
         max.z = std::max(max.z, v.z);
     }
 
-    inline bool isInside(vec3 const &v) const {
+    inline vec3 getCorner(int idx) const {
+        return vec3(
+            (idx & 1) ? max.x : min.x,
+            (idx & 2) ? max.y : min.y,
+            (idx & 4) ? max.z : min.z);
+    }
+
+    template <typename Func>
+    inline void forAllCorners(Func&& _func) const {
+        for (int i = 0; i < 8; ++i) {
+            _func(getCorner(i));
+        }
+    }
+
+    inline bool isInside(vec3 const& v) const {
         return !(v.x < min.x || v.y < min.y || v.z < min.z ||
                  v.x > max.x || v.y > max.y || v.z > max.z);
     }
 
-    bool intersect(const vec3 &origin, const vec3 &direction, T &tmin, T &tmax) const {
-        // https://www.rose-hulman.edu/class/cs/csse451/AABB/#:~:text=Axis%2DAligned%20Bounding%20Boxes%20(AABBs,bound%20and%20a%20maximum%20bound.
+    // Face indices: -Z=0, -X=1, -Y=2, +Z=3, +X=4, +Y=5
+    bool intersectRay(const vec3& origin, const vec3& direction, T& tmin, T& tmax, uint& face_min, uint& face_max) const {
         vec3 delta_min = min - origin;
         vec3 delta_max = max - origin;
 
-        tmin = delta_min.x / direction.x;
-        tmax = delta_max.x / direction.x;
-        if (tmin > tmax)
-            std::swap(tmin, tmax);
+        T t0, t1;
+        int f0, f1;
 
+        // X slab: -X=1, +X=4
+        t0 = delta_min.x / direction.x;
+        t1 = delta_max.x / direction.x;
+        f0 = 1;
+        f1 = 4; // -X, +X
+        if (t0 > t1) {
+            std::swap(t0, t1);
+            std::swap(f0, f1);
+        }
+        tmin = t0;
+        tmax = t1;
+        face_min = f0;
+        face_max = f1;
+
+        // Y slab: -Y=2, +Y=5
         T tmin_tmp = delta_min.y / direction.y;
         T tmax_tmp = delta_max.y / direction.y;
-        if (tmin_tmp > tmax_tmp)
+        int fmin_tmp = 2, fmax_tmp = 5; // -Y, +Y
+        if (tmin_tmp > tmax_tmp) {
             std::swap(tmin_tmp, tmax_tmp);
+            std::swap(fmin_tmp, fmax_tmp);
+        }
 
         if (tmax_tmp < tmin || tmin_tmp > tmax)
             return false;
-        tmin = std::max(tmin, tmin_tmp);
-        tmax = std::min(tmax, tmax_tmp);
+        if (tmin_tmp > tmin) {
+            tmin = tmin_tmp;
+            face_min = fmin_tmp;
+        }
+        if (tmax_tmp < tmax) {
+            tmax = tmax_tmp;
+            face_max = fmax_tmp;
+        }
 
+        // Z slab: -Z=0, +Z=3
         tmin_tmp = delta_min.z / direction.z;
         tmax_tmp = delta_max.z / direction.z;
-        if (tmin_tmp > tmax_tmp)
+        fmin_tmp = 0;
+        fmax_tmp = 3; // -Z, +Z
+        if (tmin_tmp > tmax_tmp) {
             std::swap(tmin_tmp, tmax_tmp);
+            std::swap(fmin_tmp, fmax_tmp);
+        }
 
         if (tmax_tmp < tmin || tmin_tmp > tmax)
             return false;
-        tmin = std::max(tmin, tmin_tmp);
-        tmax = std::min(tmax, tmax_tmp);
+        if (tmin_tmp > tmin) {
+            tmin = tmin_tmp;
+            face_min = fmin_tmp;
+        }
+        if (tmax_tmp < tmax) {
+            tmax = tmax_tmp;
+            face_max = fmax_tmp;
+        }
 
         return true;
+    }
+
+    // Return if there is an intersection and the minimal vector "dist" to move "_other" so it doesn't intersect
+    bool intersectAABB(const AABB& _other, vec3& dist) const {
+        const T overlapX = std::min(max.x, _other.max.x) - std::max(min.x, _other.min.x);
+        const T overlapY = std::min(max.y, _other.max.y) - std::max(min.y, _other.min.y);
+        const T overlapZ = std::min(max.z, _other.max.z) - std::max(min.z, _other.min.z);
+
+        if (overlapX < std::numeric_limits<T>::min() || overlapY < std::numeric_limits<T>::min() || overlapZ < std::numeric_limits<T>::min()) {
+            dist = vec3(T(0));
+            return false;
+        }
+
+        const vec3 center = (min + max) * T(0.5);
+        const vec3 other_center = (_other.min + _other.max) * T(0.5);
+
+        dist = vec3(T(0));
+        bool changed = false;
+        if (overlapX <= overlapY && overlapX <= overlapZ) {
+            dist.x = (other_center.x < center.x) ? -overlapX : overlapX;
+            changed = true;
+        } else if (overlapY <= overlapZ) {
+            dist.y = (other_center.y < center.y) ? -overlapY : overlapY;
+            changed = true;
+        } else {
+            dist.z = (other_center.z < center.z) ? -overlapZ : overlapZ;
+            changed = true;
+        }
+        return changed;
+    }
+
+    // Returns true if _other moving by _other_vel will intersect *this.
+    // Sets t to the earliest time in [0,1] at which (_other + vel*t) first touches *this.
+    // Sets normal to the collision surface normal (points from *this toward _other).
+    bool intersectAABB(const AABB& _other, const vec3& _other_vel, T& t, vec3& normal) const {
+        // https://emanueleferonato.com/2021/10/21/understanding-physics-continuous-collision-detection-using-swept-aabb-method-and-minkowski-sum/
+        vec3 other_center = 0.5f * (_other.min + _other.max);
+        vec3 other_half = 0.5f * (_other.max - _other.min);
+        AABB minkowski(min - other_half, max + other_half);
+        // std::cout << std::endl
+        //           << "*this : " << *this << std::endl
+        //           << "other : " << _other << std::endl
+        //           << "minkowski : " << minkowski << std::endl
+        //           << "vel : " << glm::to_string(_other_vel) << std::endl;
+
+        T ttemp;
+        uint face_min, face_max;
+        bool intersect = minkowski.intersectRay(other_center, _other_vel, t, ttemp, face_min, face_max);
+        // std::cout << "intersect=" << intersect << "\tt=" << t << "\tttemp=" << ttemp << std::endl;
+        if (intersect && t >= T(0) && t <= T(1)) {
+            normal = Block::FACE_DATA[face_min].normal;
+            return true;
+        }
+
+        return false;
     }
 
 private:
@@ -76,21 +194,9 @@ public:
         glGenVertexArrays(1, &m_VAO);
         glBindVertexArray(m_VAO);
 
-        std::vector<glm::vec3> m_vertices{
-            glm::vec3(min.x, min.y, min.z),
-            glm::vec3(min.x, min.y, max.z),
-            glm::vec3(min.x, max.y, min.z),
-            glm::vec3(min.x, max.y, max.z),
-            glm::vec3(max.x, min.y, min.z),
-            glm::vec3(max.x, min.y, max.z),
-            glm::vec3(max.x, max.y, min.z),
-            glm::vec3(max.x, max.y, max.z)};
-
         glGenBuffers(1, &m_vertices_VBO);
         glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
-        glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
         std::vector<glm::uvec2> m_lines{
@@ -117,7 +223,19 @@ public:
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_lines.size() * sizeof(glm::uvec2), m_lines.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        glBindVertexArray(0);
+        updateShaderData();
+    }
+
+    void updateShaderData() {
+        std::vector<glm::vec3> m_vertices;
+        m_vertices.reserve(8);
+        forAllCorners([&m_vertices](const vec3& corner) {
+            m_vertices.push_back(glm::vec3(corner.x, corner.y, corner.z));
+        });
+
+        glBindVertexArray(m_VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
+        glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
     }
 
     void render() const {

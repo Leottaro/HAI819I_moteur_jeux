@@ -32,6 +32,8 @@ set(APP_SOURCES
     src/Block.hpp
     src/objects/blocks.hpp
 
+    src/Entity.hpp
+
     src/Texture.hpp
     src/objects/textures.hpp
 
@@ -41,6 +43,7 @@ set(APP_SOURCES
     # src/Mesh.hpp
     # src/Mesh.cpp
     # src/Octree.hpp
+    src/RigidBody.hpp
     src/AABB.hpp
 
     src/Transformation.hpp

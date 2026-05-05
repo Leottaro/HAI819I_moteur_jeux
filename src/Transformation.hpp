@@ -23,7 +23,7 @@ constexpr glm::vec3 VEC_RIGHT(1.f, 0.f, 0.f);
 constexpr glm::vec3 VEC_UP(0.f, 1.f, 0.f);
 constexpr glm::vec3 VEC_FRONT(0.f, 0.f, 1.f);
 
-inline glm::vec3 applyTransformation(const glm::vec3 &vec, float w, const glm::mat4 &transfo) {
+inline glm::vec3 applyTransformation(const glm::vec3& vec, float w, const glm::mat4& transfo) {
     glm::vec4 temp = transfo * glm::vec4(vec.x, vec.y, vec.z, w);
     return temp.w == 0. ? glm::vec3(temp.x, temp.y, temp.z) : glm::vec3(temp.x, temp.y, temp.z) / temp.w;
 }
@@ -46,7 +46,7 @@ public:
         return _angle;
     }
 
-    static glm::vec3 EulerToEuclidian(const glm::vec2 &_angles) {
+    static glm::vec3 EulerToEuclidian(const glm::vec2& _angles) {
         float sinPhi = cosf(_angles.x);
         float x = sinPhi * sinf(_angles.y);
         float y = sinf(_angles.x);
@@ -55,7 +55,7 @@ public:
         return glm::vec3(x, y, z);
     }
 
-    static glm::vec2 EuclidianToEuler(const glm::vec3 &xyz) {
+    static glm::vec2 EuclidianToEuler(const glm::vec3& xyz) {
         float angles_x = asin(xyz[1] / glm::length(xyz)); // polar angle from +y axis, 0..π
 
         float angles_y = atan2(xyz[0], xyz[2]); // azimuth around y-axis, 0..2π
@@ -66,22 +66,22 @@ public:
     }
 
     // GETTERS
-    inline const glm::vec3 &getTranslation() const { return m_translation; }
-    inline const glm::vec3 &getEulerAngles() const { return m_euler_angles; }
-    inline const glm::vec3 &getScale() const { return m_scale; }
+    inline const glm::vec3& getTranslation() const { return m_translation; }
+    inline const glm::vec3& getEulerAngles() const { return m_euler_angles; }
+    inline const glm::vec3& getScale() const { return m_scale; }
 
     // SETTERS
-    inline void setTranslation(const glm::vec3 &t) { m_translation = t; }
+    inline void setTranslation(const glm::vec3& t) { m_translation = t; }
     inline void setTranslationX(float tx) { m_translation.x = tx; }
     inline void setTranslationY(float ty) { m_translation.y = ty; }
     inline void setTranslationZ(float tz) { m_translation.z = tz; }
 
-    inline void setEulerAngles(const glm::vec3 &r) { m_euler_angles = r; }
-    inline void setEulerAnglesFromFront(const glm::vec3 &_front) { m_euler_angles = glm::vec3(Transformation::EuclidianToEuler(_front), 0.f); }
+    inline void setEulerAngles(const glm::vec3& r) { m_euler_angles = r; }
+    inline void setEulerAnglesFromFront(const glm::vec3& _front) { m_euler_angles = glm::vec3(Transformation::EuclidianToEuler(_front), 0.f); }
     inline void setPitch(float p) { m_euler_angles.x = p; }
     inline void setYaw(float y) { m_euler_angles.y = y; }
     inline void setRoll(float r) { m_euler_angles.z = r; }
-    inline void addEulerAngles(const glm::vec3 &r) { m_euler_angles += r; }
+    inline void addEulerAngles(const glm::vec3& r) { m_euler_angles += r; }
     inline void addPitch(float p) { m_euler_angles.x += p; }
     inline void addYaw(float y) { m_euler_angles.y += y; }
     inline void addRoll(float r) { m_euler_angles.z += r; }
