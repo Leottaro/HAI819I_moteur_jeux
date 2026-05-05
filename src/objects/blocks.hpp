@@ -24,9 +24,9 @@ enum class BlockType : size_t {
     IronBlock,
     RedstoneLamp,
     DiamondOre,
-    NUMBER_OF_TYPES
+    __NUMBER_OF_TYPES
 };
-static constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::NUMBER_OF_TYPES);
+static constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::__NUMBER_OF_TYPES);
 static constexpr std::array<std::array<std::array<float, 2>, 6>, BLOCK_TYPES_N - 1> UB_TABLE_DATA = {{
     // Front (-Z)    Left  (-X)    Bottom(-Y)    Back  (+Z)    Right (+X)    Top   (+Y)
     {{{{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}}}, // Stone

@@ -25,13 +25,13 @@ private:
     Chunk* m_current_chunk;
     bool m_on_ground;
 
-    // Return true if it detected a collision
     struct CollisionsInfos {
         float t;
         glm::vec3 normal;
         glm::vec3 pos;
         Block* block;
     };
+    // Return true if it detected a collision
     bool detectCollision(float _deltaTime, CollisionsInfos& res) {
         res.t = std::numeric_limits<float>::max();
 

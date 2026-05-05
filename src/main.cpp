@@ -24,6 +24,7 @@ GLFWwindow* window;
 #include <iostream>
 #include <string>
 
+#include "ECS/Component.hpp"
 #include "Camera.hpp"
 #include "Chunk.hpp"
 #include "ShaderProgram.hpp"
