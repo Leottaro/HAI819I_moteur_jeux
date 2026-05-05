@@ -7,16 +7,16 @@
 #include <stdexcept>
 #include "objects/textures.hpp"
 
-Chunk *Chunk::getChunk(const glm::vec3 &_pos) {
+Chunk* Chunk::getChunk(const glm::vec3& _pos) {
     return m_world->findChunk(Chunk::posToChunkPos(_pos));
 }
 
-Block *Chunk::findBlock(const glm::ivec3 &_block_pos) {
+Block* Chunk::findBlock(const glm::ivec3& _block_pos) {
     return m_world->findBlock(_block_pos);
 }
 
 // https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
-void Chunk::findSolidBlocks(const glm::vec3 &_start, const glm::vec3 &_end, std::vector<Block *> &blocks) {
+void Chunk::findSolidBlocks(const glm::vec3& _start, const glm::vec3& _end, std::vector<Block*>& blocks) {
     glm::vec3 delta = glm::abs(_end - _start);
     float d_length = glm::length(delta);
     glm::vec3 tdelta = d_length / delta;
@@ -40,13 +40,13 @@ void Chunk::findSolidBlocks(const glm::vec3 &_start, const glm::vec3 &_end, std:
     for (uint _ = 0; _ <= nb_blocks; _++) {
         glm::ivec3 current_chunk_pos = blockPosToChunkPos(current_block);
         if (m_pos != current_chunk_pos) {
-            Chunk *chunk = m_world->findChunk(current_chunk_pos);
+            Chunk* chunk = m_world->findChunk(current_chunk_pos);
             if (chunk != nullptr) {
                 chunk->findSolidBlocks(current_block, _end, blocks);
                 return;
             }
         }
-        Block *block = getBlock(current_block);
+        Block* block = getBlock(current_block);
         if (block->hasHitbox())
             blocks.push_back(block);
 
@@ -83,11 +83,11 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     bool has_neighbour = m_neighbours[_face_i] == nullptr;
     for (size_t j = 0; j < CHUNK_SIZE; j++) {
         for (size_t i = 0; i < CHUNK_SIZE; i++) {
-            Block *block = &m_blocks[block_i];
+            Block* block = &m_blocks[block_i];
             if (has_neighbour) {
                 block->m_neighbours[_face_i] = nullptr;
             } else {
-                Block *neighbour_block = &m_neighbours[_face_i]->m_blocks[neighbour_i];
+                Block* neighbour_block = &m_neighbours[_face_i]->m_blocks[neighbour_i];
                 block->m_neighbours[_face_i] = neighbour_block;
                 neighbour_block->m_neighbours[OPPOSITE_FACE[_face_i]] = block;
             }
@@ -130,7 +130,7 @@ void Chunk::generate(GenType _type) {
         for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
             for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
                 for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                    Block &block = m_blocks[block_i++];
+                    Block& block = m_blocks[block_i++];
                     block.getPos() = world_pos;
                     if (world_pos.y <= -45) {
                         block.getType() = Block::Type::Air;
@@ -153,7 +153,7 @@ void Chunk::generate(GenType _type) {
         for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
             for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
                 for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                    Block &block = m_blocks[block_i++];
+                    Block& block = m_blocks[block_i++];
                     block.getPos() = world_pos;
                     if (world_pos.y <= -45) {
                         block.getType() = Block::Type::Air;
@@ -176,7 +176,7 @@ void Chunk::generate(GenType _type) {
     }
 }
 
-Chunk::Chunk(World *_world, const glm::ivec3 &_chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
+Chunk::Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     initNeighbours();
     generate(_type);
     initShaderData();
@@ -202,13 +202,13 @@ void Chunk::initShaderData() {
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
     // Attribute 0: position
     glEnableVertexAttribArray(0);
-    glVertexAttribIPointer(0, 3, GL_UNSIGNED_BYTE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, position));
+    glVertexAttribIPointer(0, 3, GL_UNSIGNED_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, position));
     // Attribute 1: normal
     glEnableVertexAttribArray(1);
-    glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, normal));
+    glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, normal));
     // Attribute 0: uv
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void *)offsetof(ChunkVertex, uv));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, uv));
 
     glGenBuffers(1, &m_EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
@@ -225,16 +225,16 @@ void Chunk::updateShaderData() {
         for (local_pos.z = 0; local_pos.z < CHUNK_SIZE; local_pos.z++) {
             for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
                 block_i++;
-                Block &block = m_blocks[block_i];
+                Block& block = m_blocks[block_i];
                 if (block.getType() == Block::Type::Air) {
                     continue;
                 }
 
                 for (int face_i = 0; face_i < 6; face_i++) {
-                    const Block *neighbour = block.m_neighbours[face_i];
+                    const Block* neighbour = block.m_neighbours[face_i];
                     if (neighbour != nullptr && (!neighbour->isTransparent() || block.getType() == neighbour->getType()))
                         continue;
-                    const FaceData &face = FACE_DATA[face_i];
+                    const FaceData& face = FACE_DATA[face_i];
 
                     std::array<glm::vec2, 4> face_uvs = Block::getUV(atlas_dims, block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {

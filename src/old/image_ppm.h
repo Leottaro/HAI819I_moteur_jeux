@@ -13,7 +13,7 @@
 #include <math.h>
 
 #define allocation_tableau(nom, type, nombre)                                     \
-    if ((nom = (type *)calloc(nombre, sizeof(type))) == NULL) {                   \
+    if ((nom = (type*)calloc(nombre, sizeof(type))) == NULL) {                    \
         printf("\n Allocation dynamique impossible pour un pointeur-tableau \n"); \
         exit(EXIT_FAILURE);                                                       \
     }
@@ -21,7 +21,7 @@
 typedef unsigned char OCTET;
 
 /*===========================================================================*/
-void ignorer_commentaires(FILE *f) {
+void ignorer_commentaires(FILE* f) {
     unsigned char c;
     while ((c = fgetc(f)) == '#')
         while ((c = fgetc(f)) != '\n')
@@ -31,8 +31,8 @@ void ignorer_commentaires(FILE *f) {
 /*===========================================================================*/
 
 /*===========================================================================*/
-void ecrire_image_ppm(char nom_image[], OCTET *pt_image, int nb_lignes, int nb_colonnes) {
-    FILE *f_image;
+void ecrire_image_ppm(char nom_image[], OCTET* pt_image, int nb_lignes, int nb_colonnes) {
+    FILE* f_image;
     int taille_image = 3 * nb_colonnes * nb_lignes;
 
     if ((f_image = fopen(nom_image, "wb")) == NULL) {
@@ -42,7 +42,7 @@ void ecrire_image_ppm(char nom_image[], OCTET *pt_image, int nb_lignes, int nb_c
         fprintf(f_image, "P6\r"); /*ecriture entete*/
         fprintf(f_image, "%d %d\r255\r", nb_colonnes, nb_lignes);
 
-        if ((fwrite((OCTET *)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)(taille_image)) {
+        if ((fwrite((OCTET*)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)(taille_image)) {
             printf("\nErreur d'ecriture de l'image %s \n", nom_image);
             exit(EXIT_FAILURE);
         }
@@ -52,8 +52,8 @@ void ecrire_image_ppm(char nom_image[], OCTET *pt_image, int nb_lignes, int nb_c
 /*===========================================================================*/
 
 /*===========================================================================*/
-void lire_nb_lignes_colonnes_image_ppm(char nom_image[], int *nb_lignes, int *nb_colonnes) {
-    FILE *f_image;
+void lire_nb_lignes_colonnes_image_ppm(char nom_image[], int* nb_lignes, int* nb_colonnes) {
+    FILE* f_image;
     int max_grey_val;
 
     /* cf : l'entete d'une image .ppm : P6                   */
@@ -72,8 +72,8 @@ void lire_nb_lignes_colonnes_image_ppm(char nom_image[], int *nb_lignes, int *nb
 }
 /*===========================================================================*/
 /*===========================================================================*/
-void lire_image_ppm(char nom_image[], OCTET *pt_image, int taille_image) {
-    FILE *f_image;
+void lire_image_ppm(char nom_image[], OCTET* pt_image, int taille_image) {
+    FILE* f_image;
     int nb_colonnes, nb_lignes, max_grey_val;
     taille_image = 3 * taille_image;
 
@@ -86,7 +86,7 @@ void lire_image_ppm(char nom_image[], OCTET *pt_image, int taille_image) {
         fscanf(f_image, "%d %d %d%*c",
                &nb_colonnes, &nb_lignes, &max_grey_val); /*lecture entete*/
 
-        if ((fread((OCTET *)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)(taille_image)) {
+        if ((fread((OCTET*)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)(taille_image)) {
             printf("\nErreur de lecture de l'image %s \n", nom_image);
             exit(EXIT_FAILURE);
         }
@@ -97,7 +97,7 @@ void lire_image_ppm(char nom_image[], OCTET *pt_image, int taille_image) {
 /*===========================================================================*/
 /*===========================================================================*/
 
-void planR(OCTET *pt_image, OCTET *src, int taille_image) {
+void planR(OCTET* pt_image, OCTET* src, int taille_image) {
     int i;
     for (i = 0; i < taille_image; i++) {
         pt_image[i] = src[3 * i];
@@ -107,7 +107,7 @@ void planR(OCTET *pt_image, OCTET *src, int taille_image) {
 /*===========================================================================*/
 /*===========================================================================*/
 
-void planV(OCTET *pt_image, OCTET *src, int taille_image) {
+void planV(OCTET* pt_image, OCTET* src, int taille_image) {
     int i;
     for (i = 0; i < taille_image; i++) {
         pt_image[i] = src[3 * i + 1];
@@ -117,7 +117,7 @@ void planV(OCTET *pt_image, OCTET *src, int taille_image) {
 /*===========================================================================*/
 /*===========================================================================*/
 
-void planB(OCTET *pt_image, OCTET *src, int taille_image) {
+void planB(OCTET* pt_image, OCTET* src, int taille_image) {
     int i;
     for (i = 0; i < taille_image; i++) {
         pt_image[i] = src[3 * i + 2];
@@ -127,8 +127,8 @@ void planB(OCTET *pt_image, OCTET *src, int taille_image) {
 /*===========================================================================*/
 /*===========================================================================*/
 
-void ecrire_image_pgm(char nom_image[], OCTET *pt_image, int nb_lignes, int nb_colonnes) {
-    FILE *f_image;
+void ecrire_image_pgm(char nom_image[], OCTET* pt_image, int nb_lignes, int nb_colonnes) {
+    FILE* f_image;
     int taille_image = nb_colonnes * nb_lignes;
 
     if ((f_image = fopen(nom_image, "wb")) == NULL) {
@@ -138,7 +138,7 @@ void ecrire_image_pgm(char nom_image[], OCTET *pt_image, int nb_lignes, int nb_c
         fprintf(f_image, "P5\r"); /*ecriture entete*/
         fprintf(f_image, "%d %d\r255\r", nb_colonnes, nb_lignes);
 
-        if ((fwrite((OCTET *)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)taille_image) {
+        if ((fwrite((OCTET*)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)taille_image) {
             printf("\nErreur de lecture de l'image %s \n", nom_image);
             exit(EXIT_FAILURE);
         }
@@ -147,8 +147,8 @@ void ecrire_image_pgm(char nom_image[], OCTET *pt_image, int nb_lignes, int nb_c
 }
 /*===========================================================================*/
 
-void lire_nb_lignes_colonnes_image_pgm(char nom_image[], int *nb_lignes, int *nb_colonnes) {
-    FILE *f_image;
+void lire_nb_lignes_colonnes_image_pgm(char nom_image[], int* nb_lignes, int* nb_colonnes) {
+    FILE* f_image;
     int max_grey_val;
 
     /* cf : l'entete d'une image .pgm : P5                    */
@@ -167,8 +167,8 @@ void lire_nb_lignes_colonnes_image_pgm(char nom_image[], int *nb_lignes, int *nb
 }
 /*===========================================================================*/
 /*===========================================================================*/
-void lire_image_pgm(char nom_image[], OCTET *pt_image, int taille_image) {
-    FILE *f_image;
+void lire_image_pgm(char nom_image[], OCTET* pt_image, int taille_image) {
+    FILE* f_image;
     int nb_colonnes, nb_lignes, max_grey_val;
 
     if ((f_image = fopen(nom_image, "rb")) == NULL) {
@@ -180,7 +180,7 @@ void lire_image_pgm(char nom_image[], OCTET *pt_image, int taille_image) {
         fscanf(f_image, "%d %d %d%*c",
                &nb_colonnes, &nb_lignes, &max_grey_val); /*lecture entete*/
 
-        if ((fread((OCTET *)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)taille_image) {
+        if ((fread((OCTET*)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)taille_image) {
             printf("\nErreur de lecture de l'image %s \n", nom_image);
             exit(EXIT_FAILURE);
         }

@@ -58,7 +58,7 @@ vec3 bakeLight(vec3 lightPos, vec3 lightCol, vec3 N, vec3 V, float roughness, fl
   float attenuation = 1.0 / (distance * distance);
   vec3 radiance = lightCol * attenuation;
 
-    // cook-torrance brdf
+  // cook-torrance brdf
   float NDF = DistributionGGX(N, H, roughness);
   float G = GeometrySmith(N, V, L, roughness);
   vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
@@ -71,7 +71,7 @@ vec3 bakeLight(vec3 lightPos, vec3 lightCol, vec3 N, vec3 V, float roughness, fl
   float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
   vec3 specular = numerator / denominator;
 
-    // add to outgoing radiance Lo
+  // add to outgoing radiance Lo
   float NdotL = max(dot(N, L), 0.0);
   return (kD * albedo / PI + specular) * radiance * NdotL;
 }
@@ -81,7 +81,7 @@ void main() {
   vec4 f_normal_map = texture(normal_atlas, f_uv).rgba;
   vec3 albedo = pow(f_albedo.xyz, vec3(2.2));
   float transparency = f_albedo.a;
-  if(transparency == 0.)
+  if (transparency == 0.)
     discard;
   out_color = vec4(0., 0., 0., transparency);
 
@@ -109,7 +109,7 @@ void main() {
 
   // reflectance equation
   vec3 Lo = vec3(0.);
-  for(int i = 0; i < 1; i++) {
+  for (int i = 0; i < 1; i++) {
     // calculate per-light radiance
     vec3 L = vec3(sin(sun_pos.x), cos(sun_pos.x) * sin(sun_pos.y), cos(sun_pos.x) * cos(sun_pos.y));
     vec3 H = normalize(V + L);

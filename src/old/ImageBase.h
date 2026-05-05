@@ -28,8 +28,8 @@ public:
 
     ///////////// Attributs
 protected:
-    unsigned char *data;
-    double *dataD;
+    unsigned char* data;
+    double* dataD;
 
     bool color;
     int height;
@@ -50,12 +50,12 @@ protected:
 public:
     ImageBase(void);
     ImageBase(int imWidth, int imHeight, bool isColor);
-    ImageBase(const char *filename);
+    ImageBase(const char* filename);
     ~ImageBase(void);
 
     ///////////// Methodes
 protected:
-    void copy(const ImageBase &copy);
+    void copy(const ImageBase& copy);
 
 public:
     int getHeight() const { return height; };
@@ -63,18 +63,18 @@ public:
     int getTotalSize() const { return nTaille; };
     int getValidity() const { return isValid; };
     bool getColor() const { return color; };
-    unsigned char *getData() { return data; };
+    unsigned char* getData() { return data; };
 
-    void load(const char *filename);
-    bool save(const char *filename);
+    void load(const char* filename);
+    bool save(const char* filename);
 
-    const unsigned char *getPixel(int i) const {
+    const unsigned char* getPixel(int i) const {
         return data + i * (color ? 3 : 1);
     }
-    unsigned char *getPixel(int x, int y) const {
+    unsigned char* getPixel(int x, int y) const {
         return data + y * width * (color ? 3 : 1) + x * (color ? 3 : 1);
     }
-    unsigned char *getPixel(float u, float v) const {
+    unsigned char* getPixel(float u, float v) const {
         return getPixel(int(roundl(u * (width - 1))), int(roundl(v * (height - 1))));
     }
 

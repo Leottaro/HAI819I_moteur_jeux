@@ -91,7 +91,7 @@ protected:
     size_t getCellY(glm::vec3 pos) { return 2 * (pos.y - aabb.min.y) / (aabb.max.y - aabb.min.y); }
     size_t getCellZ(glm::vec3 pos) { return 2 * (pos.z - aabb.min.z) / (aabb.max.z - aabb.min.z); }
     size_t getIndex(glm::vec3 pos) { return getCellX(pos) * 4 + getCellY(pos) * 2 + getCellZ(pos); }
-    bool isInside(glm::vec3 const &v) {
+    bool isInside(glm::vec3 const& v) {
         return aabb.min.x - FLT_EPSILON <= v.x && v.x <= aabb.max.x + FLT_EPSILON &&
                aabb.min.y - FLT_EPSILON <= v.y && v.y <= aabb.max.y + FLT_EPSILON &&
                aabb.min.z - FLT_EPSILON <= v.z && v.z <= aabb.max.z + FLT_EPSILON;
@@ -99,14 +99,14 @@ protected:
 
 public:
     Octree() : max_vert_per_leaf(), aabb(), is_leaf(true), data(), children({}) {}
-    Octree(const size_t &max_vert_per_leaf, const AABB<float> &aabb) : max_vert_per_leaf(max_vert_per_leaf), aabb(aabb), is_leaf(true), data(), children({}) {}
+    Octree(const size_t& max_vert_per_leaf, const AABB<float>& aabb) : max_vert_per_leaf(max_vert_per_leaf), aabb(aabb), is_leaf(true), data(), children({}) {}
 
     // recalculates the Representants of all the tree
     void calcRepresentants() {
         if (data.element_count > 0) {
             data.calcRepresentants();
         } else if (!is_leaf) {
-            for (Octree &child : children) {
+            for (Octree& child : children) {
                 child.calcRepresentants();
             }
         }
@@ -129,7 +129,7 @@ public:
     }
 
     // Exctract the Octree data in 3 separate std::vectors
-    void fillRepresentantsData(std::vector<std::vector<size_t>> &vertices_indices, std::vector<glm::vec3> &vertices, std::vector<glm::vec3> &normals) const {
+    void fillRepresentantsData(std::vector<std::vector<size_t>>& vertices_indices, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals) const {
         if (!is_leaf) {
             for (size_t i = 0; i < 8; i++) {
                 children[i].fillRepresentantsData(vertices_indices, vertices, normals);

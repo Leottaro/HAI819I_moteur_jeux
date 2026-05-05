@@ -9,7 +9,7 @@
 
 // GLFW
 #include <GLFW/glfw3.h>
-GLFWwindow *window;
+GLFWwindow* window;
 
 // IMGUI
 #include <imgui.h>
@@ -76,7 +76,7 @@ int main(void) {
     camera.m_distance_to_center = 0.75f;
     camera.updateData();
 
-    Entity *truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
+    Entity* truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
     truc->m_vel = glm::vec3(1.f, -0.5f, 0.f);
     truc->fixCamera(&camera);
 
@@ -136,7 +136,7 @@ int main(void) {
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // cout << "framebuffer size: " << width << ", " << height << endl;
     window_width = width;
     window_height = height;
@@ -148,7 +148,7 @@ bool w_key_pressed = false;
 bool p_key_pressed = false;
 bool r_key_pressed = false;
 bool g_key_pressed = false;
-void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     // cout << "key:" << key << " scancode:" << scancode << " action:" << action << " mods:" << mods << endl;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -207,14 +207,14 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
 }
 
-void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     // cout << "mouse button:" << button << " action:" << action << " mods:" << mods << endl;
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         glfwSetInputMode(window, GLFW_CURSOR, action == GLFW_PRESS ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
 }
 
-void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos) {
+void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     cursor_vel.x = xpos - cursor_pos.x;
     cursor_vel.y = ypos - cursor_pos.y;
     cursor_pos.x = xpos;
@@ -222,7 +222,7 @@ void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos) {
     // cout << "cursor_pos: (" << cursor_pos.x << ", " << cursor_pos.y << ")\tcursor_vel: (" << cursor_vel.x << ", " << cursor_vel.y << ")" << endl;
 }
 
-void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     // cout << "scroll: (" << xoffset << ", " << yoffset << ")" << endl;
     scroll.x = xoffset;
     scroll.y = yoffset;

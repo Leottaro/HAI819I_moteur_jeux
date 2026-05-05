@@ -24,7 +24,7 @@ void Mesh::centerAndScaleToUnit() {
         m_vertices[i] = (m_vertices[i] - center) / maxD;
 }
 
-void Mesh::loadOFF(const std::string &filename) {
+void Mesh::loadOFF(const std::string& filename) {
     ifstream in(filename.c_str());
     if (!in)
         return;
@@ -88,7 +88,7 @@ void Mesh::setSingleTriangle() {
     recomputePerVertexTextureCoordinates();
 }
 
-void Mesh::setSimpleGrid(const glm::uvec2 &_resolution) {
+void Mesh::setSimpleGrid(const glm::uvec2& _resolution) {
     m_vertices.resize(_resolution[0] * _resolution[1]);
     m_normals.resize(_resolution[0] * _resolution[1]);
     m_uvs.resize(_resolution[0] * _resolution[1]);
@@ -122,7 +122,7 @@ void Mesh::setSimpleGrid(const glm::uvec2 &_resolution) {
     }
 }
 
-void Mesh::setSimpleTerrain(const glm::uvec2 &_resolution, glm::vec2 y_range) {
+void Mesh::setSimpleTerrain(const glm::uvec2& _resolution, glm::vec2 y_range) {
     setSimpleGrid(_resolution);
     for (size_t i = 0; i < _resolution[0] * _resolution[1]; i++) {
         float rng = float(rand()) / float(RAND_MAX);
@@ -131,7 +131,7 @@ void Mesh::setSimpleTerrain(const glm::uvec2 &_resolution, glm::vec2 y_range) {
     recomputePerVertexNormals();
 }
 
-void Mesh::setSimpleTerrain(const glm::uvec2 &_resolution, const ImageBase &_heightmap) {
+void Mesh::setSimpleTerrain(const glm::uvec2& _resolution, const ImageBase& _heightmap) {
     setSimpleGrid(_resolution);
     for (size_t iz = 0; iz < _resolution[1]; iz++) {
         float z = float(iz) / (_resolution[1] - 1);
@@ -229,15 +229,15 @@ void Mesh::setSphere(size_t nTheta, size_t nPhi) {
     }
 }
 
-void Mesh::computeBoundingSphere(glm::vec3 &center, float &radius) const {
+void Mesh::computeBoundingSphere(glm::vec3& center, float& radius) const {
     center = glm::vec3(0.0);
-    for (const glm::vec3 &p : m_vertices) {
+    for (const glm::vec3& p : m_vertices) {
         center += p;
     }
     center /= m_vertices.size();
 
     radius = 0.f;
-    for (const glm::vec3 &p : m_vertices) {
+    for (const glm::vec3& p : m_vertices) {
         radius = std::max(radius, distance(center, p));
     }
 }
@@ -265,7 +265,7 @@ void Mesh::recomputePerVertexTextureCoordinates() {
     float x_min, x_max, y_min, y_max;
     x_min = y_min = std::numeric_limits<float>::max();
     x_max = y_max = -std::numeric_limits<float>::max();
-    for (glm::vec3 &p : m_vertices) {
+    for (glm::vec3& p : m_vertices) {
         x_min = std::min(x_min, p[0]);
         x_max = std::max(x_max, p[0]);
         y_min = std::min(y_min, p[1]);
@@ -276,7 +276,7 @@ void Mesh::recomputePerVertexTextureCoordinates() {
     }
 }
 
-bool computeBarycentrics(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &normal, const glm::vec3 &p, glm::vec3 &barycentrics) {
+bool computeBarycentrics(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& normal, const glm::vec3& p, glm::vec3& barycentrics) {
     double total_area = glm::length(normal); // this is actually the 2 times the area but it doesn't matter for the barycentric coordinates
     barycentrics.x = glm::length(glm::cross(v1 - p, v2 - p)) / total_area;
     barycentrics.y = glm::length(glm::cross(p - v0, v2 - v0)) / total_area;
@@ -291,7 +291,7 @@ bool computeBarycentrics(const glm::vec3 &v0, const glm::vec3 &v1, const glm::ve
     return true;
 }
 
-std::pair<glm::vec3, size_t> Mesh::computeheight(const glm::uvec2 &_grid_resolution, float _x, float _z) const {
+std::pair<glm::vec3, size_t> Mesh::computeheight(const glm::uvec2& _grid_resolution, float _x, float _z) const {
     // On part du principe que le terrain est une "grille" régulière et va de (0,0,0) à (1,0,1)
 
     uint iz = _z * (_grid_resolution[1] - 1);
@@ -320,7 +320,7 @@ std::pair<glm::vec3, size_t> Mesh::computeheight(const glm::uvec2 &_grid_resolut
     return {glm::vec3(NAN), NAN};
 }
 
-std::pair<glm::vec3, glm::vec3> Mesh::computeheight(const glm::uvec2 &_grid_resolution, const glm::mat4 &_transfo, const glm::vec3 &_p) const {
+std::pair<glm::vec3, glm::vec3> Mesh::computeheight(const glm::uvec2& _grid_resolution, const glm::mat4& _transfo, const glm::vec3& _p) const {
     glm::mat4 inverse = glm::inverse(_transfo);
     glm::vec4 p_terrain = inverse * glm::vec4(_p, 1.f);
 
@@ -338,14 +338,14 @@ Mesh Mesh::adaptiveSimplify(size_t max_vert_per_leaf) const {
 
     // calculer min et max
     AABB<float> aabb;
-    for (const glm::vec3 &v : m_vertices) {
+    for (const glm::vec3& v : m_vertices) {
         aabb.addPosition(v);
     }
     aabb.min -= glm::vec3(1.);
     aabb.max += glm::vec3(1.);
 
     // Constreuire l'octree et y ajouter les points.
-    Octree *octree = new Octree(max_vert_per_leaf, aabb);
+    Octree* octree = new Octree(max_vert_per_leaf, aabb);
     for (size_t i = 0; i < m_vertices.size(); i++) {
         octree->pushVertex(i, m_vertices[i], m_normals[i]);
     }

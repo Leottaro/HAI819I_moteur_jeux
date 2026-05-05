@@ -7,7 +7,7 @@
 #include "Camera.hpp"
 #include <iostream>
 
-void Camera::Frustum::updatePlanes(Camera *_camera) {
+void Camera::Frustum::updatePlanes(Camera* _camera) {
     float far_height = _camera->m_near_far[1] * std::tan(_camera->m_fovy * 0.5f);
     float far_width = far_height * _camera->m_aspect_ratio;
 
@@ -40,8 +40,8 @@ void Camera::Frustum::updatePlanes(Camera *_camera) {
     m_far = glm::vec4(far_normal, -glm::dot(far_normal, far_point));
 }
 
-bool Camera::isVisible(const AABB<float> &_aabb) const {
-    auto visible = [&_aabb](const glm::vec4 &plane) -> bool {
+bool Camera::isVisible(const AABB<float>& _aabb) const {
+    auto visible = [&_aabb](const glm::vec4& plane) -> bool {
         return (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.min.y, _aabb.min.z, 1.f)) >= 0.f) ||
                (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.min.y, _aabb.min.z, 1.f)) >= 0.f) ||
                (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.max.y, _aabb.min.z, 1.f)) >= 0.f) ||
@@ -142,7 +142,7 @@ bool Camera::updateInterface(float _deltaTime) {
     return disable_mouse_actions;
 }
 
-void Camera::updateKeyboardInput(GLFWwindow *_window, float _deltaTime) {
+void Camera::updateKeyboardInput(GLFWwindow* _window, float _deltaTime) {
     static bool c_was_pressed = false;
     bool c_is_pressed = glfwGetKey(_window, GLFW_KEY_C) == GLFW_PRESS;
     if (c_is_pressed && !c_was_pressed) {
@@ -193,7 +193,7 @@ void Camera::updatePosConstraint() {
     }
 }
 
-void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll) {
+void Camera::updateMouseInput(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll) {
     float rotation_speed = _deltaTime * m_rotation_speed;
     switch (m_type) {
     case Type::FirstPerson:
@@ -214,7 +214,7 @@ void Camera::updateMouseInput(GLFWwindow *_window, float _deltaTime, const glm::
     }
 }
 
-void Camera::update(GLFWwindow *_window, float _deltaTime, const glm::vec2 &_cursor_vel, const glm::vec2 &_scroll) {
+void Camera::update(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll) {
     bool disable_mouse_actions = updateInterface(_deltaTime);
 
     int window_width, window_height;

@@ -79,7 +79,7 @@ void ImageBase::load(const char* filename) {
 
     int l = strlen(filename);
 
-    if (l <= 4)  // Le fichier ne peut pas etre que ".pgm" ou ".ppm"
+    if (l <= 4) // Le fichier ne peut pas etre que ".pgm" ou ".ppm"
     {
         printf("Chargement de l'image impossible : Le nom de fichier n'est pas conforme, il doit comporter l'extension, et celle ci ne peut �tre que '.pgm' ou '.ppm'");
         exit(0);
@@ -87,7 +87,7 @@ void ImageBase::load(const char* filename) {
 
     int nbPixel = 0;
 
-    if (strcmp(filename + l - 3, "pgm") == 0)  // L'image est en niveau de gris
+    if (strcmp(filename + l - 3, "pgm") == 0) // L'image est en niveau de gris
     {
         color = false;
         lire_nb_lignes_colonnes_image_pgm(const_cast<char*>(filename), &height, &width);
@@ -96,7 +96,7 @@ void ImageBase::load(const char* filename) {
         nTaille = nbPixel;
         allocation_tableau(data, OCTET, nTaille);
         lire_image_pgm(const_cast<char*>(filename), data, nbPixel);
-    } else if (strcmp(filename + l - 3, "ppm") == 0)  // L'image est en couleur
+    } else if (strcmp(filename + l - 3, "ppm") == 0) // L'image est en couleur
     {
         color = true;
         lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(filename), &height, &width);
