@@ -223,10 +223,6 @@ public:
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_lines.size() * sizeof(glm::uvec2), m_lines.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        updateShaderData();
-    }
-
-    void updateShaderData() {
         std::vector<glm::vec3> m_vertices;
         m_vertices.reserve(8);
         forAllCorners([&m_vertices](const vec3& corner) {

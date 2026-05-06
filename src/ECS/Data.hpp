@@ -20,6 +20,10 @@
 #include <map>
 #include <vector>
 
+// -------------------------------------------------------------------------
+// ECS HELPERS
+// -------------------------------------------------------------------------
+
 namespace ECS_HELPERS {
 // Helper that checks if the type T is in the Tuple
 template <typename Tuple, typename T, std::size_t I = 0>
@@ -59,27 +63,26 @@ constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
     ((str[N - 1 - type_index<Tuple, Ts>()] = '1'), ...); // reverse indexing
     return std::bitset<N>(str);
 }
-
-// Helper that checks if type T is an implementation of template Template
-template <typename T, template <typename...> typename Template>
-concept ImplementationOf = requires {
-    []<typename... Args>(Template<Args...>&) {}(std::declval<T&>());
-};
 } // namespace ECS_HELPERS
+
+// -------------------------------------------------------------------------
+// ECS DATA
+// -------------------------------------------------------------------------
 
 namespace ECS {
 using ComponentId = std::uint8_t;
-using SystemId = std::uint8_t;
 using EntityId = std::uint16_t;
 constexpr EntityId MAX_ENTITIES = 65535;
 
+// -------------------------------------------------------------------------
 // COMPONENTS
+// -------------------------------------------------------------------------
 
 struct Position {
     Chunk* current_chunk{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
-struct BoundingBox {
+struct Collision {
     std::vector<AABB<float>> hitboxes;
 };
 struct Velocity {
@@ -93,14 +96,16 @@ struct PhysicsStats {
     float volume{1.f};
     float drag{1.05f};
 };
+struct CollisionDisplay {};
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
 using ComponentList = std::tuple<
     Position,
-    BoundingBox,
+    Collision,
     Velocity,
     Groundable,
-    PhysicsStats>;
+    PhysicsStats,
+    CollisionDisplay>;
 
 // Le nombre total de composants
 constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;
@@ -128,7 +133,9 @@ constexpr void for_each_component(F&& f) {
         std::make_index_sequence<NB_COMPONENTS>{});
 }
 
+// -------------------------------------------------------------------------
 // ENTITIES
+// -------------------------------------------------------------------------
 
 // Les différentes entitiées et leurs signatures
 enum class EntityType : std::uint8_t {
@@ -138,22 +145,29 @@ enum class EntityType : std::uint8_t {
 constexpr std::size_t NB_ENTITY_TYPES = static_cast<std::size_t>(EntityType::__NUMBER_OF_TYPES);
 
 constexpr std::array<ComponentSignature, NB_ENTITY_TYPES> SIGNATURES{{
-    ECS_HELPERS::make_signature<ComponentList, Position, BoundingBox, Velocity, Groundable, PhysicsStats>(), // Test
+    ECS_HELPERS::make_signature<ComponentList, Position, Collision, Velocity, Groundable, PhysicsStats, CollisionDisplay>(), // Test
 }};
 constexpr ComponentSignature GET_SIGNATURE(EntityType type) { return SIGNATURES[static_cast<std::size_t>(type)]; }
 
+// -------------------------------------------------------------------------
 // SYSTEMS
-template <ECS::Component... Components>
+// -------------------------------------------------------------------------
+
+template <ECS::Component... Cs>
 class SystemBase;
+
 class PhysicsSystem;
 class WorldCollisionSystem;
-
+class HitBoxDisplaySystem;
 using SystemList = std::tuple<
     PhysicsSystem,
-    WorldCollisionSystem>;
+    WorldCollisionSystem,
+    HitBoxDisplaySystem>;
+
+using SystemId = std::uint8_t;
 constexpr std::size_t NB_SYSTEMS = std::tuple_size_v<SystemList>;
 template <typename T>
-concept System = ECS_HELPERS::ImplementationOf<T, SystemBase>;
+concept System = ECS_HELPERS::is_type_in_tuple<SystemList, T>();
 template <System S>
 constexpr SystemId system_id = static_cast<SystemId>(ECS_HELPERS::type_index<SystemList, S>());
 template <typename F>

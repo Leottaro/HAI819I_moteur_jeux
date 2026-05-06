@@ -204,12 +204,6 @@ public:
         }
     }
 
-    void updateShaderData() {
-        for (size_t i = 0; i < m_hitbox.size(); i++) {
-            m_hitbox[i].updateShaderData();
-        }
-    }
-
     void render() const {
         for (size_t i = 0; i < m_hitbox.size(); i++) {
             m_hitbox[i].render();

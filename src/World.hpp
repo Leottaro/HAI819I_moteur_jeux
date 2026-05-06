@@ -1,20 +1,16 @@
 #pragma once
 
 // USUAL INCLUDES
+#include "Camera.hpp"
+#include "Chunk.hpp"
+#include "ECS/ECS.hpp"
 #include <map>
 #include <set>
 #include <list>
 #include <imgui.h>
-
-#include "Entity.hpp"
-
 #include <random>
 #include <sstream>
 #include <vector>
-
-#include "Camera.hpp"
-#include "Chunk.hpp"
-#include "RigidBody.hpp"
 
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
 constexpr uint16_t TICK_SPEED = 20;    // ticks par seconde
@@ -41,7 +37,8 @@ private:
 
     std::map<glm::ivec3, Chunk*, glmVecLexicoGraphic<int, 3>> m_chunks;
     std::set<glm::ivec3, glmVecLexicoGraphic<int, 3>> m_chunks_frontier;
-    std::map<std::string, Entity*> m_entities;
+    ECSManager m_ecs_manager;
+
     double m_last_update = glfwGetTime();
     bool m_time_ff = true;
     bool m_play = true;
@@ -66,11 +63,13 @@ public:
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
 
-    inline bool isEntityLoaded(const std::string& _uuid) const { return m_entities.find(_uuid) != m_entities.end(); }
-    Entity* findEntity(const std::string& _uuid);
-    Entity* addEntity(Entity::Type _type, const glm::vec3& _pos);
-    bool removeEntity(const std::string& _uuid);
-    void update(float _deltaTime);
+    inline ECSManager& getComponentManager() { return m_ecs_manager; }
+    // inline bool isEntityLoaded(const std::string& _uuid) const { return m_entities.find(_uuid) != m_entities.end(); }
+    // Entity* findEntity(const std::string& _uuid);
+    // Entity* addEntity(Entity::Type _type, const glm::vec3& _pos);
+    // bool removeEntity(const std::string& _uuid);
+    void updateEntities(float _deltaTime) { m_ecs_manager.update(_deltaTime); }
+    void renderEntities(const Camera& _camera, ShaderProgram& _line_shader) { m_ecs_manager.render(_camera, _line_shader); }
 
     inline uint64_t* getWorldTime() { return &m_world_time; }
     inline void play() { m_play = m_time_ff = true; }
@@ -79,7 +78,7 @@ public:
 
     // RENDERING
 
-    inline void render(ShaderProgram& _block_shader, ShaderProgram& _line_shader, const Camera& _camera) {
+    inline void renderChunks(const Camera& _camera, ShaderProgram& _block_shader) {
         if (m_play) {
             if (m_time_ff) {
                 m_last_update = glfwGetTime();
@@ -113,15 +112,6 @@ public:
                 _block_shader.set("chunk_pos", chunk_pos);
                 chunk->render();
             }
-        }
-
-        _line_shader.use();
-        _line_shader.set("view", _camera.getViewMatrix());
-        _line_shader.set("projection", _camera.getProjectionMatrix());
-        _line_shader.set("color", glm::vec3(1.f));
-        for (auto& [uuid, entity] : m_entities) {
-            _line_shader.set("position", entity->m_pos);
-            entity->render();
         }
     }
     inline void renderDebugBoxes(ShaderProgram& _line_shader, const Camera& _camera) {

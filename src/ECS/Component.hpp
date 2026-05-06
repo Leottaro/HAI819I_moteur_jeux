@@ -1,22 +1,5 @@
 #pragma once
-
-// GLEW
-#include <GL/glew.h>
-
-// GLM
-#include <glm/ext.hpp>
-#include <glm/glm.hpp>
-// #define GLM_ENABLE_EXPERIMENTAL
-// #include <glm/gtx/string_cast.hpp>
-
-// USUAL INCLUDES
 #include "Data.hpp"
-#include "src/AABB.hpp"
-#include <concepts>
-#include <bitset>
-#include <set>
-#include <queue>
-#include <map>
 
 template <ECS::Component C>
 class ComponentArray {

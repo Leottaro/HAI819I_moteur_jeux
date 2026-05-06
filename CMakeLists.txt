@@ -32,23 +32,21 @@ set(APP_SOURCES
     src/Block.hpp
     src/objects/blocks.hpp
 
-    src/Entity.hpp
-
     src/Texture.hpp
     src/objects/textures.hpp
 
     src/Camera.hpp
     src/Camera.cpp
 
+    src/ECS/ECS.hpp
     src/ECS/Entity.hpp
     src/ECS/Component.hpp
+    src/ECS/Systems.hpp
     src/ECS/Data.hpp
-    src/ECS/Systems.cpp
 
     # src/Mesh.hpp
     # src/Mesh.cpp
     # src/Octree.hpp
-    src/RigidBody.hpp
     src/AABB.hpp
 
     src/Transformation.hpp
