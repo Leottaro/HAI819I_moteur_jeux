@@ -156,6 +156,9 @@ bool World::generate(const glm::vec3& _pos) {
 
 ECS::EntityId World::addTestEntity(const glm::vec3& _pos) {
     ECS::Position pos = ECSPosition(_pos);
+    if (pos.current_chunk == nullptr) {
+        pos.current_chunk = addChunk(Chunk::posToChunkPos(_pos));
+    }
     return m_ecs_manager.createEntity<ECS::TestEntity>({pos});
 }
 

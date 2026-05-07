@@ -71,9 +71,6 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
-    for (uint i = 0; i < 100; i++)
-        world.generate(glm::vec3(16.f));
-
     camera.m_type = Camera::Type::ThirdPerson;
     camera.m_distance_to_center = 0.75f;
 
@@ -101,7 +98,7 @@ int main(void) {
         ImGui::NewFrame();
 
         /**********==========OBJECTS UPDATE==========**********/
-        // world.generate(camera.m_position);
+        world.generate(camera.m_position);
         if (run_simulation) {
             world.updateEntities(0.01);
             // run_simulation = false;
