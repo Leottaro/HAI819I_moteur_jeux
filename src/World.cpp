@@ -154,43 +154,40 @@ bool World::generate(const glm::vec3& _pos) {
     return false;
 }
 
-Entity* World::findEntity(const std::string& _uuid) {
-    if (isEntityLoaded(_uuid)) {
-        return m_entities.at(_uuid);
+ECS::EntityId World::addTestEntity(const glm::vec3& _pos) {
+    ECS::Position pos = ECSPosition(_pos);
+    if (pos.current_chunk == nullptr) {
+        pos.current_chunk = addChunk(Chunk::posToChunkPos(_pos));
     }
-    return nullptr;
+    return m_ecs_manager.createEntity<ECS::TestEntity>({pos});
 }
 
-Entity* World::addEntity(Entity::Type _type, const glm::vec3& _pos) {
-    glm::ivec3 chunk_pos = Chunk::posToChunkPos(_pos);
-    Chunk* chunk = addChunk(chunk_pos);
-    if (chunk == nullptr)
-        return nullptr;
+// Entity* World::findEntity(const std::string& _uuid) {
+//     if (isEntityLoaded(_uuid)) {
+//         return m_entities.at(_uuid);
+//     }
+//     return nullptr;
+// }
 
-    std::string uuid = uuid::generate_uuid_v4();
-    m_entities.insert({uuid, new Entity(_type, uuid, chunk, _pos)});
-    return m_entities.at(uuid);
-}
+// bool World::removeEntity(const std::string& _uuid) {
+//     Entity* removed_entity = findEntity(_uuid);
+//     if (removed_entity == nullptr)
+//         return false;
+//     delete removed_entity;
+//     m_entities.erase(_uuid);
+//     return true;
+// }
 
-bool World::removeEntity(const std::string& _uuid) {
-    Entity* removed_entity = findEntity(_uuid);
-    if (removed_entity == nullptr)
-        return false;
-    delete removed_entity;
-    m_entities.erase(_uuid);
-    return true;
-}
+// void World::update(float _deltaTime) {
+//     std::vector<std::string> entities_to_destroy;
+//     entities_to_destroy.reserve(m_entities.size());
+//     for (auto& [uuid, entity] : m_entities) {
+//         if (!entity->update(_deltaTime)) {
+//             entities_to_destroy.push_back(uuid);
+//         }
+//     }
 
-void World::update(float _deltaTime) {
-    std::vector<std::string> entities_to_destroy;
-    entities_to_destroy.reserve(m_entities.size());
-    for (auto& [uuid, entity] : m_entities) {
-        if (!entity->update(_deltaTime)) {
-            entities_to_destroy.push_back(uuid);
-        }
-    }
-
-    for (const std::string& uuid : entities_to_destroy) {
-        removeEntity(uuid);
-    }
-}
+//     for (const std::string& uuid : entities_to_destroy) {
+//         removeEntity(uuid);
+//     }
+// }

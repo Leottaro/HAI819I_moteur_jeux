@@ -41,7 +41,7 @@ void Camera::Frustum::updatePlanes(Camera* _camera) {
 }
 
 bool Camera::isVisible(const AABB<float>& _aabb) const {
-    auto visible = [&_aabb](const glm::vec4& plane) -> bool {
+    auto check_visible = [&_aabb](const glm::vec4& plane) -> bool {
         return (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.min.y, _aabb.min.z, 1.f)) >= 0.f) ||
                (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.min.y, _aabb.min.z, 1.f)) >= 0.f) ||
                (glm::dot(plane, glm::vec4(_aabb.min.x, _aabb.max.y, _aabb.min.z, 1.f)) >= 0.f) ||
@@ -52,12 +52,29 @@ bool Camera::isVisible(const AABB<float>& _aabb) const {
                (glm::dot(plane, glm::vec4(_aabb.max.x, _aabb.max.y, _aabb.max.z, 1.f)) >= 0.f);
     };
 
-    return visible(m_frustum.m_near) &&
-           visible(m_frustum.m_far) &&
-           visible(m_frustum.m_top) &&
-           visible(m_frustum.m_bottom) &&
-           visible(m_frustum.m_right) &&
-           visible(m_frustum.m_left);
+    bool is_skipped = false;
+    is_skipped = is_skipped || !check_visible(m_frustum.m_near);
+    is_skipped = is_skipped || !check_visible(m_frustum.m_far);
+    is_skipped = is_skipped || !check_visible(m_frustum.m_top);
+    is_skipped = is_skipped || !check_visible(m_frustum.m_bottom);
+    is_skipped = is_skipped || !check_visible(m_frustum.m_right);
+    is_skipped = is_skipped || !check_visible(m_frustum.m_left);
+    return !is_skipped;
+}
+
+void Camera::changeType(Type _new_type) {
+    m_type = _new_type;
+    switch (m_type) {
+    case Type::FreeCam:
+        break;
+    case Type::FirstPerson:
+        break;
+    case Type::ThirdPerson:
+        m_position = *m_center + *m_relative_eye_pos - m_front * m_distance_to_center;
+        break;
+    case Type::__COUNT:
+        break;
+    }
 }
 
 void Camera::updateData() {
@@ -74,34 +91,23 @@ void Camera::updateData() {
     m_frustum.updatePlanes(this);
 }
 
-bool Camera::updateInterface(float _deltaTime) {
+bool Camera::updateInterface(GLFWwindow* _window, float _deltaTime) {
     bool disable_mouse_actions = false;
     if (ImGui::Begin("Camera Interface")) {
         disable_mouse_actions = ImGui::IsWindowHovered() || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
+        bool update_data = false;
 
         // Camera Type Selection
         int current_type = static_cast<int>(m_type);
-        if (ImGui::Combo("Camera Type", &current_type, CAMERA_TYPES)) {
-            m_type = Type(current_type);
-            switch (m_type) {
-            case Type::FirstPerson:
-                break;
-            case Type::ThirdPerson:
-                m_distance_to_center = glm::distance(m_position, *m_center);
-                m_front = glm::normalize(*m_center - m_position);
-                m_orientation = Transformation::EuclidianToEuler(m_front);
-                break;
-            }
-            updateData();
+        if (ImGui::Combo("Camera Type", &current_type, TYPES_STR)) {
+            changeType(Type(std::clamp(current_type, 0, static_cast<int>(NB_TYPES))));
+            update_data = true;
         }
 
         ImGui::Separator();
 
         ImGui::BeginDisabled(m_type != Type::FirstPerson); // Free position Controls
-        bool position_changed = ImGui::DragFloat3("Position", &m_position[0], 0.1f);
-        if (position_changed) {
-            updateData();
-        }
+        update_data = ImGui::DragFloat3("Position", &m_position[0], 0.1f) || update_data;
         ImGui::Separator();
         ImGui::EndDisabled();
 
@@ -111,7 +117,7 @@ bool Camera::updateInterface(float _deltaTime) {
         bool yaw_changed = ImGui::DragFloat("Yaw", &angles_degree[1], -1.f, -180.f, 180.f, "%.3f°");
         if (pitch_changed || yaw_changed) {
             m_orientation = glm::radians(angles_degree);
-            updateData();
+            update_data = true;
         }
 
         ImGui::Separator();
@@ -126,16 +132,17 @@ bool Camera::updateInterface(float _deltaTime) {
         ImGui::Separator();
 
         // Speed Controls
-        if (m_type == Type::FirstPerson) {
-            ImGui::DragFloat("Translation Speed", &m_translation_speed, 1.e-2f, 0.f, 1.e2f);
-        } else {
-            bool distance_changed = ImGui::DragFloat("Distance to Center", &m_distance_to_center, 0.1f, 1.e-4f, 1.e4f);
-            if (distance_changed) {
-                updateData();
-            }
-            ImGui::DragFloat("Zoom Rate", &m_zoom_rate, 1.e-4f, 0.f, 1.f);
-        }
         ImGui::DragFloat("Rotation Speed", &m_rotation_speed, 1.e-4f, 0.f, 1.e2f);
+        ImGui::BeginDisabled(m_type != Type::FreeCam);
+        ImGui::DragFloat("Translation Speed", &m_translation_speed, 1.e-2f, 0.f, 1.e2f);
+        ImGui::EndDisabled();
+        ImGui::BeginDisabled(m_type != Type::ThirdPerson);
+        update_data = ImGui::DragFloat("Distance to Center", &m_distance_to_center, 0.1f, 1.e-4f, 1.e4f) || update_data;
+        ImGui::DragFloat("Zoom Rate", &m_zoom_rate, 1.e-4f, 0.f, 1.f);
+        ImGui::EndDisabled();
+
+        if (update_data)
+            updateData();
     }
 
     ImGui::End();
@@ -146,16 +153,7 @@ void Camera::updateKeyboardInput(GLFWwindow* _window, float _deltaTime) {
     static bool c_was_pressed = false;
     bool c_is_pressed = glfwGetKey(_window, GLFW_KEY_C) == GLFW_PRESS;
     if (c_is_pressed && !c_was_pressed) {
-        m_type = Type((int(m_type) + 1) % CAMERA_TYPES_N);
-        switch (m_type) {
-        case Type::FirstPerson:
-            break;
-        case Type::ThirdPerson:
-            m_distance_to_center = glm::distance(m_position, *m_center);
-            m_front = glm::normalize(*m_center - m_position);
-            m_orientation = Transformation::EuclidianToEuler(m_front);
-            break;
-        }
+        changeType(Type((int(m_type) + 1) % NB_TYPES));
     }
     c_was_pressed = c_is_pressed;
 
@@ -167,28 +165,34 @@ void Camera::updateKeyboardInput(GLFWwindow* _window, float _deltaTime) {
 
     glm::vec3 flat_front = glm::cross(VEC_UP, m_right);
     switch (m_type) {
-    case Type::FirstPerson:
+    case Type::FreeCam:
         m_position += motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front;
         break;
+    case Type::FirstPerson:
+        break;
     case Type::ThirdPerson:
-        m_distance_to_center = glm::distance(m_position, *m_center);
-        m_front = glm::normalize(*m_center - m_position);
-        m_orientation = Transformation::EuclidianToEuler(m_front);
+        break;
+    case Type::__COUNT:
         break;
     }
 }
 
 void Camera::updatePosConstraint() {
     switch (m_type) {
+    case Type::FreeCam:
+        break;
     case Type::FirstPerson:
+        m_position = *m_center + *m_relative_eye_pos;
         break;
     case Type::ThirdPerson:
         // update target pos
-        m_position = *m_center - m_distance_to_center * m_front;
+        m_position = *m_center + *m_relative_eye_pos - m_distance_to_center * m_front;
 
         // re update angle
-        m_front = *m_center - m_position;
+        m_front = *m_center + *m_relative_eye_pos - m_position;
         m_orientation = Transformation::EuclidianToEuler(m_front);
+        break;
+    case Type::__COUNT:
         break;
     }
 }
@@ -196,6 +200,7 @@ void Camera::updatePosConstraint() {
 void Camera::updateMouseInput(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll) {
     float rotation_speed = _deltaTime * m_rotation_speed;
     switch (m_type) {
+    case Type::FreeCam:
     case Type::FirstPerson:
         if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_orientation.x -= rotation_speed * _cursor_vel.y;
@@ -208,14 +213,16 @@ void Camera::updateMouseInput(GLFWwindow* _window, float _deltaTime, const glm::
             m_orientation.x -= rotation_speed * _cursor_vel.y;
             m_orientation.y -= rotation_speed * _cursor_vel.x;
             updateData();
-            m_position = *m_center - m_distance_to_center * m_front;
+            m_position = *m_center + *m_relative_eye_pos - m_distance_to_center * m_front;
         }
+        break;
+    case Type::__COUNT:
         break;
     }
 }
 
 void Camera::update(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll) {
-    bool disable_mouse_actions = updateInterface(_deltaTime);
+    bool disable_mouse_actions = updateInterface(_window, _deltaTime);
 
     int window_width, window_height;
     glfwGetWindowSize(_window, &window_width, &window_height);
@@ -226,6 +233,5 @@ void Camera::update(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cur
         updateMouseInput(_window, _deltaTime, _cursor_vel, _scroll);
     }
     updatePosConstraint();
-
     updateData();
 }

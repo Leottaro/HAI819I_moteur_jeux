@@ -26,29 +26,36 @@ class Camera {
     };
 
 public:
-#define CAMERA_TYPES_N 2
-#define CAMERA_TYPES "FirstPerson\0ThirdPerson\0"
     enum class Type {
         FirstPerson = 0,
         ThirdPerson,
+        FreeCam,
+        __COUNT
     };
+    static constexpr size_t NB_TYPES = static_cast<size_t>(Type::__COUNT);
+    static constexpr const char* TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
 
-    Type m_type = Type::FirstPerson;
-    glm::vec3 m_position = glm::vec3(1.0f, 1.0f, 1.0f);
-    float m_translation_speed = 2.5f;
+    Type m_type{Type::ThirdPerson};
+    glm::vec3 m_position{1.0f, 1.0f, 1.0f};
+    float m_translation_speed{16.f};
 
-    glm::vec2 m_orientation = glm::vec2(-M_PI_4 * 0.5, 0.); // (pitch, yaw)
-    float m_rotation_speed = 0.5f;
+    glm::vec2 m_orientation{0.f, 0.f}; // (pitch, yaw)
+    float m_rotation_speed{0.5f};
 
-    float m_aspect_ratio = 1.f;
-    float m_fovy = M_PI_2f;
-    glm::vec2 m_near_far = glm::vec2(1.e-1f, 1.e8f);
+    float m_aspect_ratio{1.f};
+    float m_fovy{M_PI_2f};
+    glm::vec2 m_near_far{1.e-1f, 1.e8f};
 
-    const glm::vec3* m_center = &VEC_ZERO; // Only in oribtal type
-    float m_distance_to_center = 5.f;      // Only in oribtal type
-    float m_zoom_rate = 0.05f;             // Only in oribtal type
+    const glm::vec3* m_center{&VEC_ZERO}; // Only in first and third person
+
+    const glm::vec3* m_relative_eye_pos{&VEC_ZERO}; // Only in first person
+
+    float m_distance_to_center{5.f}; // Only in third person
+    float m_zoom_rate{0.05f};        // Only in third person
 
 private:
+    void changeType(Type _new_type);
+
     glm::vec3 m_front;
     glm::vec3 m_right;
     glm::vec3 m_real_up;
@@ -59,11 +66,13 @@ private:
     Frustum m_frustum;
 
 public:
-    Camera() {}
+    Camera() {
+        updateData();
+    }
 
     void updateData();
     void updatePosConstraint();
-    bool updateInterface(float _deltaTime);
+    bool updateInterface(GLFWwindow* _window, float _deltaTime);
     void updateKeyboardInput(GLFWwindow* _window, float _deltaTime);
     void updateMouseInput(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll);
     void update(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cursor_vel, const glm::vec2& _scroll);

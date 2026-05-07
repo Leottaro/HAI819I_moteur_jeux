@@ -3,7 +3,7 @@ project(hai819i_moteur_jeux)
 set(APP_VERSION_MAJOR 1)
 set(APP_VERSION_MINOR 0)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(OpenGL_GL_PREFERENCE GLVND) # asked me to set this to GLVND or LEGACY
 # set(CMAKE_VERBOSE_MAKEFILE 1) # If you want verbose
@@ -33,18 +33,21 @@ set(APP_SOURCES
     src/Block.hpp
     src/objects/blocks.hpp
 
-    src/Entity.hpp
-
     src/Texture.hpp
     src/objects/textures.hpp
 
     src/Camera.hpp
     src/Camera.cpp
 
+    src/ECS/ECS.hpp
+    src/ECS/Entity.hpp
+    src/ECS/Component.hpp
+    src/ECS/Systems.hpp
+    src/ECS/Data.hpp
+
     # src/Mesh.hpp
     # src/Mesh.cpp
     # src/Octree.hpp
-    src/RigidBody.hpp
     src/AABB.hpp
 
     src/Transformation.hpp
@@ -69,12 +72,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         # -Ofast
         -march=native
         -mtune=native
-        -flto
+        # -flto
         -funroll-loops
         # -ffast-math
         -DNDEBUG
     )
-    target_link_options(${APP_TARGET_OPT} PRIVATE -flto)
+    target_link_options(${APP_TARGET_OPT} PRIVATE)
 else()
     target_compile_options(${APP_TARGET_OPT} PRIVATE -Wall -O3 -DNDEBUG)
 endif()

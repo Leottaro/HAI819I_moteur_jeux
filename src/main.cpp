@@ -24,7 +24,7 @@ GLFWwindow* window;
 #include <iostream>
 #include <string>
 
-#include "Camera.hpp"
+#include "ECS/ECS.hpp"
 #include "Chunk.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
@@ -33,8 +33,9 @@ GLFWwindow* window;
 using namespace std;
 
 // window state
-GLuint window_width = 1600, window_height = 900;
-double window_aspect_ratio = double(window_width) / window_height;
+glm::uvec2 window_pos, window_size(1600, 900);
+bool window_fullscreen = false;
+double window_aspect_ratio = double(window_size.x) / window_size.y;
 GLenum polygon_mode = GL_FILL;
 glm::vec2 cursor_pos{0, 0};
 glm::vec2 cursor_vel{0, 0};
@@ -72,13 +73,11 @@ int main(void) {
     specular_atlas.initShaderData();
 
     camera.m_type = Camera::Type::ThirdPerson;
-    camera.m_orientation = glm::vec2(0.f, 0.f);
     camera.m_distance_to_center = 0.75f;
-    camera.updateData();
 
-    Entity* truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
-    truc->m_vel = glm::vec3(1.f, -0.5f, 0.f);
-    truc->fixCamera(&camera);
+    ECS::EntityId truc = world.addTestEntity(glm::vec3(23.5f, 16.f, 25.5f));
+    world.getEntityComponent<ECS::Velocity>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
+    world.fixCamera(&camera, truc);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
@@ -104,7 +103,7 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         world.generate(camera.m_position);
         if (run_simulation) {
-            world.update(0.01);
+            world.updateEntities(0.01);
             // run_simulation = false;
         }
 
@@ -117,7 +116,8 @@ int main(void) {
         normal_atlas.bind(1);
         specular_atlas.bind(2);
 
-        world.render(block_shader, line_shader, camera);
+        world.renderChunks(camera, block_shader);
+        world.renderEntities(camera, line_shader);
         world.updateWindow(camera);
         if (display_debug) {
             world.renderDebugBoxes(line_shader, camera);
@@ -138,14 +138,25 @@ int main(void) {
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    // cout << "framebuffer size: " << width << ", " << height << endl;
-    window_width = width;
-    window_height = height;
-    window_aspect_ratio = double(window_width) / window_height;
+void window_size_callback(GLFWwindow* window, int width, int height) {
+    // cout << "window size: " << width << ", " << height << endl;
     glViewport(0, 0, width, height);
+    if (window_fullscreen)
+        return;
+    window_size.x = width;
+    window_size.y = height;
+    window_aspect_ratio = double(window_size.x) / window_size.y;
 }
 
+void window_pos_callback(GLFWwindow* window, int width, int height) {
+    // cout << "window pos: " << width << ", " << height << endl;
+    if (window_fullscreen)
+        return;
+    window_pos.x = width;
+    window_pos.y = height;
+}
+
+// TODO: mieux
 bool w_key_pressed = false;
 bool p_key_pressed = false;
 bool r_key_pressed = false;
@@ -156,8 +167,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+        if (!window_fullscreen) {
+            window_fullscreen = true;
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, 0);
+        } else {
+            window_fullscreen = false;
+            glfwSetWindowMonitor(window, nullptr, window_pos.x, window_pos.y, window_size.x, window_size.y, 0);
+        }
+    }
+
     if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
         if (!w_key_pressed) {
+            w_key_pressed = true;
             if (polygon_mode == GL_FILL) {
                 polygon_mode = GL_LINE;
             } else if (polygon_mode == GL_LINE) {
@@ -166,11 +190,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 polygon_mode = GL_FILL;
             }
             glPolygonMode(GL_FRONT_AND_BACK, polygon_mode);
-            w_key_pressed = true;
-        }
-    } else {
-        if (w_key_pressed) {
-            w_key_pressed = false;
+        } else {
+            if (w_key_pressed) {
+                w_key_pressed = false;
+            }
         }
     }
 
@@ -239,13 +262,14 @@ void initWindow() {
     glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE); // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
-    window = glfwCreateWindow(window_width, window_height, "Moteur de jeux", NULL, NULL);
+    window = glfwCreateWindow(window_size.x, window_size.y, "Moteur de jeux", NULL, NULL);
     if (!window) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetWindowSizeCallback(window, window_size_callback);
+    glfwSetWindowPosCallback(window, window_pos_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_pos_callback);
