@@ -20,6 +20,8 @@
 #include <map>
 #include <vector>
 
+// Inspired by https://austinmorlan.com/posts/entity_component_system/
+
 // -------------------------------------------------------------------------
 // ECS HELPERS
 // -------------------------------------------------------------------------
@@ -28,7 +30,7 @@ namespace ECS_HELPERS {
 // Helper that checks if the type T is in the Tuple
 template <typename Tuple, typename T, std::size_t I = 0>
 constexpr bool is_type_in_tuple() {
-    if constexpr (I == std::tuple_size_v<Tuple>)
+    if constexpr (I >= std::tuple_size_v<Tuple>)
         return false;
     else if constexpr (std::is_same_v<T, std::tuple_element_t<I, Tuple>>)
         return true;
@@ -52,16 +54,33 @@ constexpr void for_each_type_impl(F&& f, std::index_sequence<Is...>) {
     (f.template operator()<std::tuple_element_t<Is, Tuple>>(), ...);
 }
 
-// Helper that creates the bitset in Tuple of the list of Ts
-template <typename Tuple, typename... Ts>
-constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
+// Helper that checks if the Tuple1 is a superset of the Tuple2
+template <typename Tuple1, typename Tuple2>
+constexpr bool is_superset() {
+    bool res = true;
+    for_each_type_impl<Tuple2>([&]<typename T>() {
+        if (!is_type_in_tuple<Tuple1, T>())
+            res = false;
+    },
+                               std::make_index_sequence<std::tuple_size_v<Tuple2>>{});
+    return res;
+}
+
+template <typename Tuple, typename SubTuple, std::size_t... Is>
+constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature_impl(std::index_sequence<Is...>) {
     constexpr std::size_t N = std::tuple_size_v<Tuple>;
     char str[N + 1];
     for (std::size_t i = 0; i < N; ++i)
-        str[i] = '0'; // fill with '0'
+        str[i] = '0';
     str[N] = '\0';
-    ((str[N - 1 - type_index<Tuple, Ts>()] = '1'), ...); // reverse indexing
+    ((str[N - 1 - type_index<Tuple, std::tuple_element_t<Is, SubTuple>>()] = '1'), ...);
     return std::bitset<N>(str);
+}
+
+template <typename Tuple, typename SubTuple>
+constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
+    return make_signature_impl<Tuple, SubTuple>(
+        std::make_index_sequence<std::tuple_size_v<SubTuple>>{});
 }
 } // namespace ECS_HELPERS
 
@@ -83,13 +102,13 @@ struct Position {
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
 struct Collision {
-    std::vector<AABB<float>> hitboxes;
+    std::vector<AABB<float>> hitboxes{};
 };
 struct Velocity {
     glm::vec3 vel{0.f, 0.f, 0.f};
 };
 struct Groundable {
-    bool on_ground;
+    bool on_ground{true};
 };
 struct PhysicsStats {
     float weight{500.f};
@@ -114,10 +133,15 @@ constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;
 // Permets de savoir quels composants a une entitée
 using ComponentSignature = std::bitset<NB_COMPONENTS>;
 
-// Permets de savoir si un type est un component en vérifiant si il est dans ComponentList
+// Permets de templater un Component en vérifiant si il est dans ComponentList
 // S'uttilise dans un template a la place d'un typename
 template <typename T>
 concept Component = ECS_HELPERS::is_type_in_tuple<ComponentList, T>();
+
+// Permets de templater un Tuple de component en vérifiant si ComponentList est son superset
+// S'uttilise dans un template a la place d'un typename
+template <typename Tuple>
+concept ComponentTuple = ECS_HELPERS::is_superset<ComponentList, Tuple>();
 
 // Permets de récuper l'indice d'un composant dans ComponentList
 // S'uttilise comme ça: ECS::component_id<T>
@@ -126,8 +150,14 @@ constexpr ComponentId component_id = static_cast<ComponentId>(ECS_HELPERS::type_
 
 // Permets d'éxécuter une fonction pour tout types de composants
 // S'uttilise comme ça: ECS::for_each_component([&]<ECS::Component C>() { ... });
+template <ComponentTuple Tuple, typename F>
+constexpr void for_each_component_tuple(F&& f) {
+    ECS_HELPERS::for_each_type_impl<Tuple, F>(
+        std::forward<F>(f),
+        std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+}
 template <typename F>
-constexpr void for_each_component(F&& f) {
+constexpr void for_each_components(F&& f) {
     ECS_HELPERS::for_each_type_impl<ComponentList, F>(
         std::forward<F>(f),
         std::make_index_sequence<NB_COMPONENTS>{});
@@ -137,17 +167,44 @@ constexpr void for_each_component(F&& f) {
 // ENTITIES
 // -------------------------------------------------------------------------
 
-// Les différentes entitiées et leurs signatures
-enum class EntityType : std::uint8_t {
-    Test,
-    __NUMBER_OF_TYPES
-};
-constexpr std::size_t NB_ENTITY_TYPES = static_cast<std::size_t>(EntityType::__NUMBER_OF_TYPES);
+struct TestEntity {};
+using EntityList = std::tuple<TestEntity>;
+constexpr std::size_t NB_ENTITY_TYPES = std::tuple_size_v<EntityList>;
+template <typename T>
+concept Entity = ECS_HELPERS::is_type_in_tuple<EntityList, T>();
+template <typename Tuple>
+concept EntityTuple = ECS_HELPERS::is_superset<EntityList, Tuple>();
 
-constexpr std::array<ComponentSignature, NB_ENTITY_TYPES> SIGNATURES{{
-    ECS_HELPERS::make_signature<ComponentList, Position, Collision, Velocity, Groundable, PhysicsStats, CollisionDisplay>(), // Test
-}};
-constexpr ComponentSignature GET_SIGNATURE(EntityType type) { return SIGNATURES[static_cast<std::size_t>(type)]; }
+// The components list enabled for this entity
+template <Entity E>
+struct __EntityComponents;
+
+// The input passed to create an entity
+template <Entity E>
+struct __EntityInputs;
+
+// Specialize the structs above with every entitiy types
+
+template <>
+struct __EntityComponents<TestEntity> {
+    using type = std::tuple<Position, Collision, Velocity, Groundable, PhysicsStats, CollisionDisplay>;
+};
+template <>
+struct __EntityInputs<TestEntity> {
+    using type = Position;
+};
+
+// Convenience aliases so call sites stay clean:
+// EntityComponents<TestEntity> instead of __EntityComponents<TestEntity>::type
+template <Entity E>
+using EntityComponents = typename __EntityComponents<E>::type;
+template <Entity E>
+using EntityInputs = typename __EntityInputs<E>::type;
+
+template <Entity E>
+constexpr ComponentSignature entity_signature = ECS_HELPERS::make_signature<ComponentList, EntityComponents<E>>();
+template <ComponentTuple Tuple>
+constexpr ComponentSignature tuple_signature = ECS_HELPERS::make_signature<ComponentList, Tuple>();
 
 // -------------------------------------------------------------------------
 // SYSTEMS
@@ -168,13 +225,14 @@ using SystemId = std::uint8_t;
 constexpr std::size_t NB_SYSTEMS = std::tuple_size_v<SystemList>;
 template <typename T>
 concept System = ECS_HELPERS::is_type_in_tuple<SystemList, T>();
+template <typename Tuple>
+concept SystemTuple = ECS_HELPERS::is_superset<SystemList, Tuple>();
 template <System S>
 constexpr SystemId system_id = static_cast<SystemId>(ECS_HELPERS::type_index<SystemList, S>());
 template <typename F>
-constexpr void for_each_system(F&& f) {
+constexpr void for_each_systems(F&& f) {
     ECS_HELPERS::for_each_type_impl<SystemList, F>(
         std::forward<F>(f),
         std::make_index_sequence<NB_SYSTEMS>{});
 }
-
 }; // namespace ECS

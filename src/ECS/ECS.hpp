@@ -5,6 +5,29 @@
 #include "Systems.hpp"
 #include "src/Camera.hpp"
 
+// Outside the class — one specialisation per entity type
+template <ECS::Entity E>
+struct EntityFactory; // primary left undefined
+
+template <>
+struct EntityFactory<ECS::TestEntity> {
+    static ECS::EntityId create(ComponentManager& cm, EntityManager& em, SystemManager& sm,
+                                ECS::EntityInputs<ECS::TestEntity> inputs) {
+        ECS::EntityId id = em.createEntity(ECS::entity_signature<ECS::TestEntity>);
+        ECS::for_each_component_tuple<ECS::EntityComponents<ECS::TestEntity>>([&]<ECS::Component C>() {
+            cm.addComponent<C>(id, C{});
+        });
+
+        // Entity-specific initialisation
+        cm.getComponent<ECS::Position>(id) = inputs;
+        cm.getComponent<ECS::Collision>(id).hitboxes = {AABB<float>(glm::vec3(-0.1f), glm::vec3(0.1f))};
+
+        // Let this
+        sm.onEntitySignatureChanged(cm, id, ECS::entity_signature<ECS::TestEntity>);
+        return id;
+    }
+};
+
 class ECSManager {
     ComponentManager cm;
     EntityManager em;
@@ -21,18 +44,23 @@ public:
     // Entity management
     // -------------------------------------------------------------------------
 
-    ECS::EntityId createEntity(const ECS::ComponentSignature& signature) {
-        ECS::EntityId entity = em.createEntity(signature);
-        sm.onEntitySignatureChanged(cm, entity, signature);
-        return entity;
+    // Single clean entry point — dispatches to the right EntityFactory specialisation
+    template <ECS::Entity E>
+    inline ECS::EntityId createEntity(ECS::EntityInputs<E> inputs) {
+        return EntityFactory<E>::create(cm, em, sm, inputs);
     }
-    ECS::EntityId createEntity(ECS::EntityType type) {
-        return createEntity(ECS::GET_SIGNATURE(type));
+
+    inline bool hasEntity(ECS::EntityId entity) {
+        return em.hasEntity(entity);
     }
-    void destroyEntity(ECS::EntityId entity) {
-        em.destroyEntity(entity);
-        cm.entityDestroyed(entity);
-        sm.onEntitySignatureChanged(cm, entity, ECS::ComponentSignature{});
+
+    bool destroyEntity(ECS::EntityId entity) {
+        if (em.destroyEntity(entity)) {
+            cm.entityDestroyed(entity);
+            sm.onEntitySignatureChanged(cm, entity, ECS::ComponentSignature{});
+            return true;
+        }
+        return false;
     }
 
     // -------------------------------------------------------------------------

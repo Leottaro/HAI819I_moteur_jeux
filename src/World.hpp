@@ -50,6 +50,10 @@ private:
 
     Chunk::GenType m_gentype = Chunk::GenType::DEBUG_;
 
+    inline ECS::Position ECSPosition(const glm::vec3& _pos) {
+        return ECS::Position{findChunk(Block::posToBlockPos(_pos)), _pos};
+    }
+
 public:
     World() {}
     ~World() { clear(); }
@@ -63,13 +67,15 @@ public:
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
 
-    inline ECSManager& getComponentManager() { return m_ecs_manager; }
-    // inline bool isEntityLoaded(const std::string& _uuid) const { return m_entities.find(_uuid) != m_entities.end(); }
-    // Entity* findEntity(const std::string& _uuid);
-    // Entity* addEntity(Entity::Type _type, const glm::vec3& _pos);
-    // bool removeEntity(const std::string& _uuid);
-    void updateEntities(float _deltaTime) { m_ecs_manager.update(_deltaTime); }
-    void renderEntities(const Camera& _camera, ShaderProgram& _line_shader) { m_ecs_manager.render(_camera, _line_shader); }
+    // ECS manager
+    template <ECS::Component C>
+    inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
+
+    inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
+    inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
+    inline void updateEntities(float _deltaTime) { m_ecs_manager.update(_deltaTime); }
+    inline void renderEntities(const Camera& _camera, ShaderProgram& _line_shader) { m_ecs_manager.render(_camera, _line_shader); }
+    ECS::EntityId addTestEntity(const glm::vec3& _pos);
 
     inline uint64_t* getWorldTime() { return &m_world_time; }
     inline void play() { m_play = m_time_ff = true; }

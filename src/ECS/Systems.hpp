@@ -244,7 +244,7 @@ public:
 
     // Called whenever an entity's signature changes (add/remove component, destroy)
     void onEntitySignatureChanged(ComponentManager& cm, ECS::EntityId _entity, const ECS::ComponentSignature& _entity_sig) {
-        ECS::for_each_system([&]<ECS::System S>() {
+        ECS::for_each_systems([&]<ECS::System S>() {
             S& system = getSystem<S>();
             if ((_entity_sig & system.signature) == system.signature) {
                 auto it = std::lower_bound(system.m_entities.begin(), system.m_entities.end(), _entity);

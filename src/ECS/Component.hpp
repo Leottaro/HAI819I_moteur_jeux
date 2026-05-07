@@ -45,6 +45,10 @@ class ComponentManager {
 
 public:
     template <ECS::Component C>
+    constexpr void addComponent(ECS::EntityId entity) {
+        getComponentArray<C>().insertData(entity, C());
+    }
+    template <ECS::Component C>
     constexpr void addComponent(ECS::EntityId entity, C component) {
         getComponentArray<C>().insertData(entity, component);
     }
@@ -60,7 +64,7 @@ public:
     }
 
     constexpr void entityDestroyed(ECS::EntityId entity) {
-        ECS::for_each_component([&]<ECS::Component C>() {
+        ECS::for_each_components([&]<ECS::Component C>() {
             auto arr = getComponentArray<C>();
             if (arr.hasData(entity))
                 arr.removeData(entity);

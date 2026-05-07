@@ -21,15 +21,19 @@ public:
         m_nb_entities++;
         return id;
     }
-    inline ECS::EntityId createEntity(ECS::EntityType type) {
-        return createEntity(ECS::GET_SIGNATURE(type));
+
+    inline bool hasEntity(ECS::EntityId entity) {
+        return m_entities[entity];
     }
 
-    inline void destroyEntity(ECS::EntityId entity) {
+    inline bool destroyEntity(ECS::EntityId entity) {
+        if (!m_entities[entity])
+            return false;
         m_signatures[entity].reset();
         m_available_entities.push(entity);
         m_entities[entity] = false;
         m_nb_entities--;
+        return true;
     }
 
     inline ECS::ComponentSignature& entitySignature(ECS::EntityId entity) {

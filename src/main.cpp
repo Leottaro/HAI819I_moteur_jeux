@@ -72,12 +72,17 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
-    camera.m_type = Camera::Type::FirstPerson;
+    camera.m_type = Camera::Type::ThirdPerson;
     camera.m_orientation = glm::vec2(0.f, 0.f);
     camera.m_distance_to_center = 0.75f;
     camera.updateData();
 
-    // Entity* truc = world.addEntity(Entity::Type::Test, glm::vec3(23.5f, 16.f, 25.5f));
+    ECS::EntityId truc = world.addTestEntity(glm::vec3(23.5f, 16.f, 25.5f));
+    world.getEntityComponent<ECS::Velocity>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
+    camera.m_center = &world.getEntityComponent<ECS::Position>(truc).pos;
+    camera.updatePosConstraint();
+    camera.updateData();
+
     // truc->m_vel = glm::vec3(1.f, -0.5f, 0.f);
     // truc->fixCamera(&camera);
 

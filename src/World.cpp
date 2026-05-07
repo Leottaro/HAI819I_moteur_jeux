@@ -154,22 +154,16 @@ bool World::generate(const glm::vec3& _pos) {
     return false;
 }
 
+ECS::EntityId World::addTestEntity(const glm::vec3& _pos) {
+    ECS::Position pos = ECSPosition(_pos);
+    return m_ecs_manager.createEntity<ECS::TestEntity>({pos});
+}
+
 // Entity* World::findEntity(const std::string& _uuid) {
 //     if (isEntityLoaded(_uuid)) {
 //         return m_entities.at(_uuid);
 //     }
 //     return nullptr;
-// }
-
-// Entity* World::addEntity(Entity::Type _type, const glm::vec3& _pos) {
-//     glm::ivec3 chunk_pos = Chunk::posToChunkPos(_pos);
-//     Chunk* chunk = addChunk(chunk_pos);
-//     if (chunk == nullptr)
-//         return nullptr;
-
-//     std::string uuid = uuid::generate_uuid_v4();
-//     m_entities.insert({uuid, new Entity(_type, uuid, chunk, _pos)});
-//     return m_entities.at(uuid);
 // }
 
 // bool World::removeEntity(const std::string& _uuid) {
