@@ -142,6 +142,16 @@ class World {
         m_chunks_frontier.clear();
     }
 
+    
+    inline glm::vec4 skyColor() const {
+        glm::vec4 SKY_DAY(187.f, 255.f, 250.f, 255.f);
+        SKY_DAY /= 255.f;
+        glm::vec4 SKY_NIGHT(14.f, 5.f, 61.f, 255.f);
+        SKY_NIGHT /= 255.f;
+        float daylight_factor = sin(m_world_time * M_PI * 2 / DAY_LENGTH);
+        return daylight_factor * SKY_DAY + (1 - daylight_factor) * SKY_NIGHT;
+    }
+
     void updateWindow(Camera _camera) {
         if (ImGui::Begin("World Info")) {
             int current_type = static_cast<int>(m_gentype);
