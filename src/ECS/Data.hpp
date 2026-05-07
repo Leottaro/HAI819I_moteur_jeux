@@ -12,6 +12,7 @@
 // USUAL INCLUDES
 #include "src/AABB.hpp"
 #include "src/Chunk.hpp"
+#include "src/Camera.hpp"
 #include <concepts>
 #include <array>
 #include <bitset>
@@ -116,6 +117,9 @@ struct PhysicsStats {
     float drag{1.05f};
 };
 struct CollisionDisplay {};
+struct Camerable {
+    Camera* current_camera{nullptr};
+};
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
 using ComponentList = std::tuple<
@@ -124,7 +128,8 @@ using ComponentList = std::tuple<
     Velocity,
     Groundable,
     PhysicsStats,
-    CollisionDisplay>;
+    CollisionDisplay,
+    Camerable>;
 
 // Le nombre total de composants
 constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;
@@ -187,7 +192,7 @@ struct __EntityInputs;
 
 template <>
 struct __EntityComponents<TestEntity> {
-    using type = std::tuple<Position, Collision, Velocity, Groundable, PhysicsStats, CollisionDisplay>;
+    using type = std::tuple<Position, Collision, Velocity, Groundable, PhysicsStats, CollisionDisplay, Camerable>;
 };
 template <>
 struct __EntityInputs<TestEntity> {
@@ -216,10 +221,12 @@ class SystemBase;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
+class CamerableSystem;
 using SystemList = std::tuple<
     PhysicsSystem,
     WorldCollisionSystem,
-    HitBoxDisplaySystem>;
+    HitBoxDisplaySystem,
+    CamerableSystem>;
 
 using SystemId = std::uint8_t;
 constexpr std::size_t NB_SYSTEMS = std::tuple_size_v<SystemList>;

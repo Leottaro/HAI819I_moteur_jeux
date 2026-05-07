@@ -65,7 +65,7 @@ public:
 
     constexpr void entityDestroyed(ECS::EntityId entity) {
         ECS::for_each_components([&]<ECS::Component C>() {
-            auto arr = getComponentArray<C>();
+            ComponentArray<C>& arr = getComponentArray<C>();
             if (arr.hasData(entity))
                 arr.removeData(entity);
         });

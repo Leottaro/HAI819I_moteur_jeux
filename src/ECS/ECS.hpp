@@ -3,7 +3,6 @@
 #include "Component.hpp"
 #include "Entity.hpp"
 #include "Systems.hpp"
-#include "src/Camera.hpp"
 
 // Outside the class — one specialisation per entity type
 template <ECS::Entity E>
@@ -111,12 +110,25 @@ public:
     // Update
     // -------------------------------------------------------------------------
 
+    void fixCamera(Camera* _camera, ECS::EntityId entity) {
+        ECS::Position& position = cm.getComponent<ECS::Position>(entity);
+        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
+
+        camerable.current_camera = _camera;
+        camerable.current_camera->m_center = &position.pos;
+        camerable.current_camera->updatePosConstraint();
+        camerable.current_camera->updateData();
+    }
+
     void update(float _deltaTime) {
         // PhysicsSystem: integrate forces and update velocities.
         sm.getSystem<ECS::PhysicsSystem>().update(cm, _deltaTime);
 
         // WorldCollisionSystem: sweep-and-slide.
         sm.getSystem<ECS::WorldCollisionSystem>().update(cm, _deltaTime);
+
+        // CamerableSystem: update camera
+        sm.getSystem<ECS::CamerableSystem>().update(cm, _deltaTime);
     }
 
     void render(const Camera& _camera, ShaderProgram& _line_shader) {

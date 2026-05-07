@@ -226,6 +226,5 @@ void Camera::update(GLFWwindow* _window, float _deltaTime, const glm::vec2& _cur
         updateMouseInput(_window, _deltaTime, _cursor_vel, _scroll);
     }
     updatePosConstraint();
-
     updateData();
 }

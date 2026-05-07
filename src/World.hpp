@@ -51,7 +51,7 @@ private:
     Chunk::GenType m_gentype = Chunk::GenType::DEBUG_;
 
     inline ECS::Position ECSPosition(const glm::vec3& _pos) {
-        return ECS::Position{findChunk(Block::posToBlockPos(_pos)), _pos};
+        return ECS::Position{findChunk(Chunk::posToChunkPos(_pos)), _pos};
     }
 
 public:
@@ -70,12 +70,15 @@ public:
     // ECS manager
     template <ECS::Component C>
     inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
+    inline void fixCamera(Camera* _camera, ECS::EntityId entity) { m_ecs_manager.fixCamera(_camera, entity); }
 
     inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
     inline void updateEntities(float _deltaTime) { m_ecs_manager.update(_deltaTime); }
     inline void renderEntities(const Camera& _camera, ShaderProgram& _line_shader) { m_ecs_manager.render(_camera, _line_shader); }
     ECS::EntityId addTestEntity(const glm::vec3& _pos);
+
+    // World time
 
     inline uint64_t* getWorldTime() { return &m_world_time; }
     inline void play() { m_play = m_time_ff = true; }

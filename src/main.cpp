@@ -25,7 +25,6 @@ GLFWwindow* window;
 #include <string>
 
 #include "ECS/ECS.hpp"
-#include "Camera.hpp"
 #include "Chunk.hpp"
 #include "ShaderProgram.hpp"
 #include "Texture.hpp"
@@ -72,19 +71,15 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
+    for (uint i = 0; i < 100; i++)
+        world.generate(glm::vec3(16.f));
+
     camera.m_type = Camera::Type::ThirdPerson;
-    camera.m_orientation = glm::vec2(0.f, 0.f);
     camera.m_distance_to_center = 0.75f;
-    camera.updateData();
 
     ECS::EntityId truc = world.addTestEntity(glm::vec3(23.5f, 16.f, 25.5f));
     world.getEntityComponent<ECS::Velocity>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
-    camera.m_center = &world.getEntityComponent<ECS::Position>(truc).pos;
-    camera.updatePosConstraint();
-    camera.updateData();
-
-    // truc->m_vel = glm::vec3(1.f, -0.5f, 0.f);
-    // truc->fixCamera(&camera);
+    world.fixCamera(&camera, truc);
 
     glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
@@ -106,7 +101,7 @@ int main(void) {
         ImGui::NewFrame();
 
         /**********==========OBJECTS UPDATE==========**********/
-        world.generate(camera.m_position);
+        // world.generate(camera.m_position);
         if (run_simulation) {
             world.updateEntities(0.01);
             // run_simulation = false;

@@ -230,6 +230,22 @@ public:
     }
 };
 
+class ECS::CamerableSystem : public ECS::SystemBase<ECS::Position, ECS::Camerable> {
+public:
+    void init(ComponentManager& cm, ECS::EntityId entity) {}
+    void clear(ComponentManager& cm, ECS::EntityId entity) {}
+
+    void update(ComponentManager& cm, float _deltaTime) {
+        for (ECS::EntityId entity : m_entities) {
+            ECS::Camerable& camera = cm.getComponent<ECS::Camerable>(entity);
+            if (camera.current_camera != nullptr) {
+                camera.current_camera->updatePosConstraint();
+                camera.current_camera->updateData();
+            }
+        }
+    }
+};
+
 // -------------------------------------------------------------------------
 // MANAGER
 // -------------------------------------------------------------------------
