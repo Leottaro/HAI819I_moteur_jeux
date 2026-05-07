@@ -108,7 +108,7 @@ struct Collision {
 struct Velocity {
     glm::vec3 vel{0.f, 0.f, 0.f};
 };
-struct Groundable {
+struct Ground {
     bool on_ground{true};
 };
 struct PhysicsStats {
@@ -118,7 +118,8 @@ struct PhysicsStats {
 };
 struct CollisionDisplay {};
 struct Camerable {
-    Camera* current_camera{nullptr};
+    Camera* camera{nullptr};
+    glm::vec3 eye_pos{0.f};
 };
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
@@ -126,7 +127,7 @@ using ComponentList = std::tuple<
     Position,
     Collision,
     Velocity,
-    Groundable,
+    Ground,
     PhysicsStats,
     CollisionDisplay,
     Camerable>;
@@ -135,25 +136,25 @@ using ComponentList = std::tuple<
 constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;
 
 // Un enseble de bits: le i-ème bit décrit si l'entité "possède" le composant i
-// Permets de savoir quels composants a une entitée
+// Permet de savoir quels composants a une entitée
 using ComponentSignature = std::bitset<NB_COMPONENTS>;
 
-// Permets de templater un Component en vérifiant si il est dans ComponentList
+// Permet de templater un Component en vérifiant si il est dans ComponentList
 // S'uttilise dans un template a la place d'un typename
 template <typename T>
 concept Component = ECS_HELPERS::is_type_in_tuple<ComponentList, T>();
 
-// Permets de templater un Tuple de component en vérifiant si ComponentList est son superset
+// Permet de templater un Tuple de component en vérifiant si ComponentList est son superset
 // S'uttilise dans un template a la place d'un typename
 template <typename Tuple>
 concept ComponentTuple = ECS_HELPERS::is_superset<ComponentList, Tuple>();
 
-// Permets de récuper l'indice d'un composant dans ComponentList
+// Permet de récuper l'indice d'un composant dans ComponentList
 // S'uttilise comme ça: ECS::component_id<T>
 template <Component C>
 constexpr ComponentId component_id = static_cast<ComponentId>(ECS_HELPERS::type_index<ComponentList, C>());
 
-// Permets d'éxécuter une fonction pour tout types de composants
+// Permet d'éxécuter une fonction pour tout types de composants
 // S'uttilise comme ça: ECS::for_each_component([&]<ECS::Component C>() { ... });
 template <ComponentTuple Tuple, typename F>
 constexpr void for_each_component_tuple(F&& f) {
@@ -173,41 +174,41 @@ constexpr void for_each_components(F&& f) {
 // -------------------------------------------------------------------------
 
 struct TestEntity {};
-using EntityList = std::tuple<TestEntity>;
-constexpr std::size_t NB_ENTITY_TYPES = std::tuple_size_v<EntityList>;
+using EntityTypeList = std::tuple<TestEntity>;
+constexpr std::size_t NB_ENTITY_TYPES = std::tuple_size_v<EntityTypeList>;
 template <typename T>
-concept Entity = ECS_HELPERS::is_type_in_tuple<EntityList, T>();
+concept EntityType = ECS_HELPERS::is_type_in_tuple<EntityTypeList, T>();
 template <typename Tuple>
-concept EntityTuple = ECS_HELPERS::is_superset<EntityList, Tuple>();
+concept EntityTypeTuple = ECS_HELPERS::is_superset<EntityTypeList, Tuple>();
 
 // The components list enabled for this entity
-template <Entity E>
-struct __EntityComponents;
+template <EntityType E>
+struct __EntityTypeComponents;
 
 // The input passed to create an entity
-template <Entity E>
-struct __EntityInputs;
+template <EntityType E>
+struct __EntityTypeInputs;
 
 // Specialize the structs above with every entitiy types
 
 template <>
-struct __EntityComponents<TestEntity> {
-    using type = std::tuple<Position, Collision, Velocity, Groundable, PhysicsStats, CollisionDisplay, Camerable>;
+struct __EntityTypeComponents<TestEntity> {
+    using type = std::tuple<Position, Collision, Velocity, Ground, PhysicsStats, CollisionDisplay, Camerable>;
 };
 template <>
-struct __EntityInputs<TestEntity> {
-    using type = Position;
+struct __EntityTypeInputs<TestEntity> {
+    using type = struct Input : Position {};
 };
 
 // Convenience aliases so call sites stay clean:
-// EntityComponents<TestEntity> instead of __EntityComponents<TestEntity>::type
-template <Entity E>
-using EntityComponents = typename __EntityComponents<E>::type;
-template <Entity E>
-using EntityInputs = typename __EntityInputs<E>::type;
+// EntityTypeComponents<TestEntity> instead of __EntityTypeComponents<TestEntity>::type
+template <EntityType E>
+using EntityTypeComponents = typename __EntityTypeComponents<E>::type;
+template <EntityType E>
+using EntityTypeInputs = typename __EntityTypeInputs<E>::type;
 
-template <Entity E>
-constexpr ComponentSignature entity_signature = ECS_HELPERS::make_signature<ComponentList, EntityComponents<E>>();
+template <EntityType E>
+constexpr ComponentSignature entity_signature = ECS_HELPERS::make_signature<ComponentList, EntityTypeComponents<E>>();
 template <ComponentTuple Tuple>
 constexpr ComponentSignature tuple_signature = ECS_HELPERS::make_signature<ComponentList, Tuple>();
 

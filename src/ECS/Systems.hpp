@@ -19,7 +19,7 @@ struct ECS::SystemBase {
     std::vector<ECS::EntityId> m_entities{};
 };
 
-class ECS::PhysicsSystem : public ECS::SystemBase<ECS::Position, ECS::Velocity, ECS::Groundable, ECS::PhysicsStats> {
+class ECS::PhysicsSystem : public ECS::SystemBase<ECS::Position, ECS::Velocity, ECS::Ground, ECS::PhysicsStats> {
 public:
     void init(ComponentManager& cm, ECS::EntityId entity) {}
     void clear(ComponentManager& cm, ECS::EntityId entity) {}
@@ -28,16 +28,16 @@ public:
         for (ECS::EntityId entity : m_entities) {
             ECS::Position& position = cm.getComponent<ECS::Position>(entity);
             ECS::Velocity& velocity = cm.getComponent<ECS::Velocity>(entity);
-            ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
+            ECS::Ground& Ground = cm.getComponent<ECS::Ground>(entity);
             ECS::PhysicsStats& stats = cm.getComponent<ECS::PhysicsStats>(entity);
 
             std::vector<glm::vec3> forces;
             forces.reserve(3);
-            if (groundable.on_ground) {
+            if (Ground.on_ground) {
                 Block* in_block = position.current_chunk->getBlock(position.pos);
                 Block* under_block = in_block->m_neighbours[2]; // 2 -> -y
                 if (under_block == nullptr || !under_block->hasHitbox()) {
-                    groundable.on_ground = false;
+                    Ground.on_ground = false;
                 } else {
                     float ground_friction = under_block->getCollisionStats()[0];
                     velocity.vel *= ground_friction - 1.f;
@@ -63,7 +63,7 @@ public:
     }
 };
 
-class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Collision, ECS::Velocity, ECS::Groundable> {
+class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Collision, ECS::Velocity, ECS::Ground> {
     void bounce(float _static_friction, float _friction, float _restitution, const glm::vec3& _normal, glm::vec3& _vel) {
         float v_dot_n = glm::dot(_vel, _normal);
         glm::vec3 v_normal = v_dot_n * _normal;
@@ -148,7 +148,7 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Col
         ECS::Position& position = cm.getComponent<ECS::Position>(_entity);
         ECS::Collision& bounding_box = cm.getComponent<ECS::Collision>(_entity);
         ECS::Velocity& velocity = cm.getComponent<ECS::Velocity>(_entity);
-        ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(_entity);
+        ECS::Ground& Ground = cm.getComponent<ECS::Ground>(_entity);
 
         // Chunk collision detection
         CollisionsInfos collision;
@@ -168,7 +168,7 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Col
             float restitution = collision.block->getCollisionStats()[1];
             bounce(0.f, friction, restitution, collision.normal, velocity.vel);
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && velocity.vel.y == 0.f) {
-                groundable.on_ground = true;
+                Ground.on_ground = true;
             }
             position.pos = collision.pos;
             position.current_chunk = position.current_chunk->getChunk(position.pos);
@@ -238,9 +238,9 @@ public:
     void update(ComponentManager& cm, float _deltaTime) {
         for (ECS::EntityId entity : m_entities) {
             ECS::Camerable& camera = cm.getComponent<ECS::Camerable>(entity);
-            if (camera.current_camera != nullptr) {
-                camera.current_camera->updatePosConstraint();
-                camera.current_camera->updateData();
+            if (camera.camera != nullptr) {
+                camera.camera->updatePosConstraint();
+                camera.camera->updateData();
             }
         }
     }

@@ -5,21 +5,22 @@
 #include "Systems.hpp"
 
 // Outside the class — one specialisation per entity type
-template <ECS::Entity E>
+template <ECS::EntityType E>
 struct EntityFactory; // primary left undefined
 
 template <>
 struct EntityFactory<ECS::TestEntity> {
     static ECS::EntityId create(ComponentManager& cm, EntityManager& em, SystemManager& sm,
-                                ECS::EntityInputs<ECS::TestEntity> inputs) {
+                                ECS::EntityTypeInputs<ECS::TestEntity> inputs) {
         ECS::EntityId id = em.createEntity(ECS::entity_signature<ECS::TestEntity>);
-        ECS::for_each_component_tuple<ECS::EntityComponents<ECS::TestEntity>>([&]<ECS::Component C>() {
+        ECS::for_each_component_tuple<ECS::EntityTypeComponents<ECS::TestEntity>>([&]<ECS::Component C>() {
             cm.addComponent<C>(id, C{});
         });
 
         // Entity-specific initialisation
         cm.getComponent<ECS::Position>(id) = inputs;
-        cm.getComponent<ECS::Collision>(id).hitboxes = {AABB<float>(glm::vec3(-0.1f), glm::vec3(0.1f))};
+        cm.getComponent<ECS::Collision>(id).hitboxes = {AABB<float>(glm::vec3(-1.f / 3.f, 0.f, -1.f / 3.f), glm::vec3(1.f / 3.f, 1.74f, 1.f / 3.f))};
+        cm.getComponent<ECS::Camerable>(id).eye_pos = glm::vec3(0.f, 1.5f, 0.f);
 
         // Let this
         sm.onEntitySignatureChanged(cm, id, ECS::entity_signature<ECS::TestEntity>);
@@ -44,8 +45,8 @@ public:
     // -------------------------------------------------------------------------
 
     // Single clean entry point — dispatches to the right EntityFactory specialisation
-    template <ECS::Entity E>
-    inline ECS::EntityId createEntity(ECS::EntityInputs<E> inputs) {
+    template <ECS::EntityType E>
+    inline ECS::EntityId createEntity(ECS::EntityTypeInputs<E> inputs) {
         return EntityFactory<E>::create(cm, em, sm, inputs);
     }
 
@@ -114,10 +115,11 @@ public:
         ECS::Position& position = cm.getComponent<ECS::Position>(entity);
         ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
 
-        camerable.current_camera = _camera;
-        camerable.current_camera->m_center = &position.pos;
-        camerable.current_camera->updatePosConstraint();
-        camerable.current_camera->updateData();
+        camerable.camera = _camera;
+        camerable.camera->m_center = &position.pos;
+        camerable.camera->m_relative_eye_pos = &camerable.eye_pos;
+        camerable.camera->updatePosConstraint();
+        camerable.camera->updateData();
     }
 
     void update(float _deltaTime) {
