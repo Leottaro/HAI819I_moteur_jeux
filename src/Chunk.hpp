@@ -1,28 +1,44 @@
 #pragma once
 
 // USUAL INCLUDES
-#include "Block.hpp"
-#include "ShaderProgram.hpp"
-#include "AABB.hpp"
 #include <array>
-#include <vector>
 #include <cstdint>
+#include <optional>
+#include <vector>
+
+#include "AABB.hpp"
+#include "Block.hpp"
+#include "GreyMap.hpp"
+#include "ShaderProgram.hpp"
+#include "Texture.hpp"
 
 class World;
 
+enum class GenType {
+    DEBUG_,
+    SUPERFLAT,
+    OVERWORLD,
+    COUNT
+};
+
+static constexpr const char* GenTypeNames[] = {
+    "Debug",
+    "Superflat",
+    "Overworld"};
+
 class Chunk {
-public:
-    static constexpr uint8_t CHUNK_SIZE = 32; // A chunk is 32x32x32 blocks
+   public:
+    static constexpr uint8_t CHUNK_SIZE = 32;  // A chunk is 32x32x32 blocks
     static constexpr uint MAX_VERTICES = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * 6 * 4;
     static constexpr uint MAX_TRIANGLES = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * 6 * 2;
 
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
-        glm::ivec3(0, 0, -CHUNK_SIZE), // Front (-Z)
-        glm::ivec3(-CHUNK_SIZE, 0, 0), // Left  (-X)
-        glm::ivec3(0, -CHUNK_SIZE, 0), // Bottom(-Y)
-        glm::ivec3(0, 0, CHUNK_SIZE),  // Back  (+Z)
-        glm::ivec3(CHUNK_SIZE, 0, 0),  // Right (+X)
-        glm::ivec3(0, CHUNK_SIZE, 0),  // Top   (+Y)
+        glm::ivec3(0, 0, -CHUNK_SIZE),  // Front (-Z)
+        glm::ivec3(-CHUNK_SIZE, 0, 0),  // Left  (-X)
+        glm::ivec3(0, -CHUNK_SIZE, 0),  // Bottom(-Y)
+        glm::ivec3(0, 0, CHUNK_SIZE),   // Back  (+Z)
+        glm::ivec3(CHUNK_SIZE, 0, 0),   // Right (+X)
+        glm::ivec3(0, CHUNK_SIZE, 0),   // Top   (+Y)
     };
 
     static constexpr glm::ivec3 posToChunkPos(const glm::vec3& _pos) {
@@ -39,12 +55,7 @@ public:
         return dist / CHUNK_SIZE;
     }
 
-    enum class GenType {
-        DEBUG_,
-        SUPERFLAT
-    };
-
-private:
+   private:
     GLuint m_VAO = 0;
     GLuint m_VBO = 0;
     GLuint m_EBO = 0;
@@ -55,21 +66,23 @@ private:
     std::array<Block, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE> m_blocks;
     AABB<float> m_aabb;
 
+    std::optional<GreyMap> m_heightmap;
+
     static inline size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
     static inline size_t posToBlockI(const glm::uvec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
     static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
-        -CHUNK_SIZE,             // Front (-Z)
-        -1,                      // Left  (-X)
-        -CHUNK_SIZE* CHUNK_SIZE, // Bottom(-Y)
-        CHUNK_SIZE,              // Back  (+Z)
-        1,                       // Right (+X)
-        CHUNK_SIZE* CHUNK_SIZE,  // Top   (+Y)
+        -CHUNK_SIZE,              // Front (-Z)
+        -1,                       // Left  (-X)
+        -CHUNK_SIZE* CHUNK_SIZE,  // Bottom(-Y)
+        CHUNK_SIZE,               // Back  (+Z)
+        1,                        // Right (+X)
+        CHUNK_SIZE* CHUNK_SIZE,   // Top   (+Y)
     };
 
     void initNeighbours();
     void generate(GenType _type);
 
-public:
+   public:
     std::array<Chunk*, 6> m_neighbours{nullptr};
 
     Chunk(Chunk&&) = delete;

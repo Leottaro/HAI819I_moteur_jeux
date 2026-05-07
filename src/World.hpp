@@ -1,24 +1,23 @@
 #pragma once
 
 // USUAL INCLUDES
-#include <map>
-#include <set>
-#include <list>
 #include <imgui.h>
 
-#include "Entity.hpp"
-
+#include <list>
+#include <map>
 #include <random>
+#include <set>
 #include <sstream>
 #include <vector>
 
 #include "Camera.hpp"
 #include "Chunk.hpp"
+#include "Entity.hpp"
 #include "RigidBody.hpp"
 
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
-constexpr uint16_t TICK_SPEED = 20;    // ticks par seconde
-constexpr uint64_t DAY_LENGTH = 28800; // journée en ticks
+constexpr uint16_t TICK_SPEED = 20;     // ticks par seconde
+constexpr uint64_t DAY_LENGTH = 28800;  // journée en ticks
 constexpr uint64_t TIME_SUNRISE = 0;
 constexpr uint64_t TIME_NOON = DAY_LENGTH / 4;
 constexpr uint64_t TIME_SUNSET = DAY_LENGTH / 2;
@@ -26,10 +25,10 @@ constexpr uint64_t TIME_MIDNIGHT = 3 * DAY_LENGTH / 4;
 constexpr double TIME_ANGLE_FACTOR = 2 * M_PIf32 / DAY_LENGTH;
 
 class World {
-public:
+   public:
     static constexpr int RENDER_DISTANCE = 5;
 
-private:
+   private:
     template <typename T, size_t n>
     struct glmVecLexicoGraphic {
         bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
@@ -49,11 +48,11 @@ private:
 
     uint64_t m_world_time = TIME_NOON;
     float m_sun_season = 0.f;
-    glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR); // position du soleil (nord<->sud, est<->ouest)
+    glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR);  // position du soleil (nord<->sud, est<->ouest)
 
-    Chunk::GenType m_gentype = Chunk::GenType::DEBUG_;
+    GenType m_gentype = GenType::DEBUG_;
 
-public:
+   public:
     World() {}
     ~World() { clear(); }
 
@@ -85,14 +84,14 @@ public:
                 m_last_update = glfwGetTime();
                 m_time_ff = false;
             } else {
-                double current_time = glfwGetTime();                               // in seconds, capture
-                double delta_time = current_time - m_last_update;                  // in seconds, computing delta time
-                m_last_update = current_time;                                      // update for next step
-                double delta_ticks = delta_time * TICK_SPEED;                      // seconds * ticks / seconds = ticks
-                m_tick_accumulator += delta_ticks;                                 // save to avoir drifting
-                uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator); // seconds -> ticks
-                m_tick_accumulator -= ticks_passed;                                // reset for next delta
-                m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;         // in ticks % ticks per day (time changed)
+                double current_time = glfwGetTime();                                // in seconds, capture
+                double delta_time = current_time - m_last_update;                   // in seconds, computing delta time
+                m_last_update = current_time;                                       // update for next step
+                double delta_ticks = delta_time * TICK_SPEED;                       // seconds * ticks / seconds = ticks
+                m_tick_accumulator += delta_ticks;                                  // save to avoir drifting
+                uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator);  // seconds -> ticks
+                m_tick_accumulator -= ticks_passed;                                 // reset for next delta
+                m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;          // in ticks % ticks per day (time changed)
 
                 m_sun_pos.x = m_sun_season;
                 m_sun_pos.y = m_world_time * TIME_ANGLE_FACTOR;
@@ -146,8 +145,10 @@ public:
     void updateWindow(Camera _camera) {
         if (ImGui::Begin("World Info")) {
             int current_type = static_cast<int>(m_gentype);
-            if (ImGui::Combo("Generation Type", &current_type, "Debug\0Superflat\0")) {
-                m_gentype = Chunk::GenType(current_type);
+            if (ImGui::Combo("Generation Type", &current_type,
+                             GenTypeNames,
+                             IM_ARRAYSIZE(GenTypeNames))) {
+                m_gentype = static_cast<GenType>(current_type);
                 clear();
                 generate(_camera.getFront());
             }

@@ -14,6 +14,7 @@
 #include <stb_image_write.h>
 
 // USUAL INCLUDES
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -22,19 +23,18 @@
 #include "old/ImageBase.h"
 
 class Texture {
-private:
+   private:
     GLuint m_texture_id;
 
     std::vector<glm::u8vec4> m_data;
     int m_width, m_height, m_channels;
     bool m_synchronized;
 
-public:
+   public:
     Texture(const std::string& _path) {
         unsigned char* data = stbi_load(_path.c_str(), &m_width, &m_height, &m_channels, 4);
         if (!data) {
-            std::cerr << "[Texture] Can't charge date from \"" << _path << "\"" << std::endl;
-            return;
+            throw std::runtime_error("[Texture] Can't charge date from \"" + _path + "\"");
         }
 
         m_data = std::vector<glm::u8vec4>(reinterpret_cast<glm::u8vec4*>(data), reinterpret_cast<glm::u8vec4*>(data) + m_width * m_height);
