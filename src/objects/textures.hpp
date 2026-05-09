@@ -13,6 +13,7 @@ enum class Textures : size_t {
     iron_block,
     redstone_lamp,
     diamond_ore,
+    slime_block,
     NUMBER_OF_TEXTURES
 };
 
@@ -27,6 +28,7 @@ constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{
     "iron_block",
     "redstone_lamp",
     "diamond_ore",
+    "slime_block"
 }};
 
 constexpr size_t texture_size = 16;

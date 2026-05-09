@@ -1,32 +1,41 @@
 #pragma once
 
 // USUAL INCLUDES
-#include "Camera.hpp"
-#include "Chunk.hpp"
-#include "ECS/ECS.hpp"
-#include <map>
-#include <set>
-#include <list>
 #include <imgui.h>
+
+#include <list>
+#include <map>
 #include <random>
 #include <set>
 #include <sstream>
 #include <vector>
 
+#include "Camera.hpp"
+#include "Chunk.hpp"
+#include "ECS/ECS.hpp"
+
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
-constexpr uint16_t TICK_SPEED = 20;    // ticks par seconde
-constexpr uint64_t DAY_LENGTH = 28800; // journée en ticks
+constexpr uint16_t TICK_SPEED = 20;     // ticks par seconde
+constexpr uint64_t DAY_LENGTH = 28800;  // journée en ticks
 constexpr uint64_t TIME_SUNRISE = 0;
 constexpr uint64_t TIME_NOON = DAY_LENGTH / 4;
 constexpr uint64_t TIME_SUNSET = DAY_LENGTH / 2;
 constexpr uint64_t TIME_MIDNIGHT = 3 * DAY_LENGTH / 4;
 constexpr double TIME_ANGLE_FACTOR = 2 * M_PIf32 / DAY_LENGTH;
 
+enum class Gamerules : size_t {
+    doDaylightCycle = 0,
+    NB_GAMERULES
+};
+
+constexpr glm::vec4 SKY_DAY(187.f / 255.f, 255.f / 255.f, 250.f / 255.f, 255.f / 255.f);
+constexpr glm::vec4 SKY_NIGHT(14.f / 255.f, 5.f / 255.f, 61.f / 255.f, 255.f / 255.f);
+
 class World {
-public:
+   public:
     static constexpr int RENDER_DISTANCE = 5;
 
-private:
+   private:
     template <typename T, size_t n>
     struct glmVecLexicoGraphic {
         bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
@@ -47,7 +56,7 @@ private:
 
     uint64_t m_world_time = TIME_NOON;
     float m_sun_season = 0.f;
-    glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR); // position du soleil (nord<->sud, est<->ouest)
+    glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR);  // position du soleil (nord<->sud, est<->ouest)
 
     GenType m_gentype = GenType::DEBUG_;
 
@@ -55,7 +64,7 @@ private:
         return ECS::Position{findChunk(Chunk::posToChunkPos(_pos)), _pos};
     }
 
-public:
+   public:
     World() {}
     ~World() { clear(); }
 
@@ -94,14 +103,14 @@ public:
                 m_last_update = glfwGetTime();
                 m_time_ff = false;
             } else {
-                double current_time = glfwGetTime();                               // in seconds, capture
-                double delta_time = current_time - m_last_update;                  // in seconds, computing delta time
-                m_last_update = current_time;                                      // update for next step
-                double delta_ticks = delta_time * TICK_SPEED;                      // seconds * ticks / seconds = ticks
-                m_tick_accumulator += delta_ticks;                                 // save to avoir drifting
-                uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator); // seconds -> ticks
-                m_tick_accumulator -= ticks_passed;                                // reset for next delta
-                m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;         // in ticks % ticks per day (time changed)
+                double current_time = glfwGetTime();                                // in seconds, capture
+                double delta_time = current_time - m_last_update;                   // in seconds, computing delta time
+                m_last_update = current_time;                                       // update for next step
+                double delta_ticks = delta_time * TICK_SPEED;                       // seconds * ticks / seconds = ticks
+                m_tick_accumulator += delta_ticks;                                  // save to avoir drifting
+                uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator);  // seconds -> ticks
+                m_tick_accumulator -= ticks_passed;                                 // reset for next delta
+                m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;          // in ticks % ticks per day (time changed)
 
                 m_sun_pos.x = m_sun_season;
                 m_sun_pos.y = m_world_time * TIME_ANGLE_FACTOR;
@@ -117,12 +126,28 @@ public:
         _block_shader.set("normal_atlas", 1);
         _block_shader.set("specular_atlas", 2);
 
+        std::vector<float> drawed_chunk_dists;
+        std::vector<glm::ivec3> drawed_chunk_positions;
+        drawed_chunk_dists.reserve(m_chunks.size());
+        drawed_chunk_positions.reserve(m_chunks.size());
+
         for (auto& [chunk_pos, chunk] : m_chunks) {
             if (_camera.isVisible(chunk->getAABB())) {
-                _block_shader.set("chunk_pos", chunk_pos);
-                chunk->render();
+                float dist = Chunk::chunkDistance(_camera.m_position, chunk_pos + glm::ivec3(Chunk::CHUNK_SIZE/2));
+                auto it = std::lower_bound(drawed_chunk_dists.begin(), drawed_chunk_dists.end(), dist);
             }
         }
+        glDepthMask(GL_TRUE);
+        for (auto& [_, chunk_pos]: drawed_chunks) {
+            _block_shader.set("chunk_pos", chunk_pos);
+            findChunk(chunk_pos)->renderOpaque();
+        }
+        glDepthMask(GL_FALSE);
+        for (auto& [_, chunk_pos]: drawed_chunks) {
+            _block_shader.set("chunk_pos", chunk_pos);
+            findChunk(chunk_pos)->renderTransparent();
+        }
+        glDepthMask(GL_TRUE);
     }
     inline void renderDebugBoxes(ShaderProgram& _line_shader, const Camera& _camera) {
         _line_shader.use();
@@ -144,12 +169,9 @@ public:
     }
 
     inline glm::vec4 skyColor() const {
-        glm::vec4 SKY_DAY(187.f, 255.f, 250.f, 255.f);
-        SKY_DAY /= 255.f;
-        glm::vec4 SKY_NIGHT(14.f, 5.f, 61.f, 255.f);
-        SKY_NIGHT /= 255.f;
-        float daylight_factor = sin(m_world_time * M_PI * 2 / DAY_LENGTH);
-        return daylight_factor * SKY_DAY + (1 - daylight_factor) * SKY_NIGHT;
+        double angle = m_world_time * M_PI * 2.0 / DAY_LENGTH;
+        float t = (sin(angle) + 1.0f) * 0.5f;
+        return glm::mix(SKY_NIGHT, SKY_DAY, t);
     }
 
     void updateWindow(Camera _camera) {

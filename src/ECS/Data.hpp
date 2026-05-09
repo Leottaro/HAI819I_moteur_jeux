@@ -121,6 +121,11 @@ struct Camerable {
     Camera* camera{nullptr};
     glm::vec3 eye_pos{0.f};
 };
+struct PlayerControllable {
+    bool controlled{true};
+    bool creative{false};
+    uint8_t health{10};
+};
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
 using ComponentList = std::tuple<
@@ -130,7 +135,8 @@ using ComponentList = std::tuple<
     Ground,
     PhysicsStats,
     CollisionDisplay,
-    Camerable>;
+    Camerable,
+    PlayerControllable>;
 
 // Le nombre total de composants
 constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;

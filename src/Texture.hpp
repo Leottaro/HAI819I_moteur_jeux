@@ -128,9 +128,9 @@ class Texture {
     }
 
     static std::tuple<Texture, Texture, Texture> generateAtlasses() {
-        Texture atlas_albedo("ressources/textures/empty_atlas.png");
-        Texture atlas_normal("ressources/textures/empty_atlas.png");
-        Texture atlas_specular("ressources/textures/empty_atlas.png");
+        Texture atlas_albedo("ressources/textures/atlas_empty.png");
+        Texture atlas_normal("ressources/textures/atlas_empty.png");
+        Texture atlas_specular("ressources/textures/atlas_empty.png");
 
         size_t x = 0;
         size_t y = 0;

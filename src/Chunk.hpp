@@ -56,10 +56,17 @@ class Chunk {
     }
 
    private:
-    GLuint m_VAO = 0;
-    GLuint m_VBO = 0;
-    GLuint m_EBO = 0;
-    size_t m_vertices_count = 0, m_triangles_count = 0;
+    GLuint m_opaque_VAO = 0;
+    GLuint m_opaque_VBO = 0;
+    GLuint m_opaque_EBO = 0;
+    size_t m_opaque_vertices = 0;
+    size_t m_opaque_triangles = 0;
+
+    GLuint m_transparent_VAO = 0;
+    GLuint m_transparent_VBO = 0;
+    GLuint m_transparent_EBO = 0;
+    size_t m_transparent_vertices = 0;
+    size_t m_transparent_triangles = 0;
 
     World* m_world;
     glm::ivec3 m_pos;
@@ -106,7 +113,8 @@ class Chunk {
 
     void initShaderData();
     void updateShaderData();
-    void render();
+    void renderOpaque();
+    void renderTransparent();
     void renderDebugBox();
     void clearShaderData();
 
