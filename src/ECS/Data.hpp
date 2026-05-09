@@ -124,7 +124,7 @@ struct Groundable {
     float jump_force{9.81f};
 };
 struct PhysicsStats {
-    float weight{500.f};
+    float weight{1500.f};
     float volume{1.f};
     float drag{1.05f};
 };

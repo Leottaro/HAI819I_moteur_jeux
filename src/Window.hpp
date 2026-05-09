@@ -22,7 +22,6 @@ struct KeyState {
 };
 struct KeyCallbacks {
     std::function<void()> on_press{nullptr};
-    std::function<void()> on_repeat{nullptr};
     std::function<void()> on_release{nullptr};
 };
 
@@ -33,8 +32,8 @@ private:
 
 public:
     // Register callbacks for a key (any can be null)
-    void bind(int key, std::function<void()> on_press = nullptr, std::function<void()> on_repeat = nullptr, std::function<void()> on_release = nullptr) {
-        m_callbacks[key] = {std::move(on_press), std::move(on_repeat), std::move(on_release)};
+    void bind(int key, std::function<void()> on_press = nullptr, std::function<void()> on_release = nullptr) {
+        m_callbacks[key] = {std::move(on_press), std::move(on_release)};
     }
     void unbind(int key) {
         m_callbacks.erase(key);
@@ -44,30 +43,31 @@ public:
     void handle(int key, int scancode, int action, int mods) {
         auto& state = m_keys[key];
 
-        state.released = state.held && (action == GLFW_RELEASE);
-        state.pressed = !state.pressed && !state.held && (action == GLFW_PRESS);
-        state.held = (action == GLFW_REPEAT) || (!state.pressed && (action == GLFW_PRESS));
+        bool new_pressed = !state.pressed && !state.held && (action == GLFW_PRESS);
+        bool new_held = (action == GLFW_REPEAT) || ((state.pressed || state.held) && (action == GLFW_PRESS));
+        bool new_released = (state.held || state.pressed) && (action == GLFW_RELEASE);
+        state.pressed = new_pressed;
+        state.held = new_held;
+        state.released = new_released;
 
         auto it = m_callbacks.find(key);
         if (it != m_callbacks.end()) {
             KeyCallbacks& callbacks = it->second;
             if (action == GLFW_PRESS && callbacks.on_press)
                 callbacks.on_press();
-            if (action == GLFW_REPEAT && callbacks.on_repeat)
-                callbacks.on_repeat();
             if (action == GLFW_RELEASE && callbacks.on_release)
                 callbacks.on_release();
         }
     }
 
     // Poll state manually (useful for per-frame movement logic)
-    const KeyState& operator[](int key) const {
+    inline const KeyState& getState(int key) const {
         static const KeyState empty{};
         auto it = m_keys.find(key);
         return it != m_keys.end() ? it->second : empty;
     }
 
-    bool isHeld(int key) const { return (*this)[key].held; }
+    bool isHeld(int key) const { return getState(key).pressed || getState(key).held; }
 };
 
 struct Window {

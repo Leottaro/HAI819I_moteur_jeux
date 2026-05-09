@@ -65,16 +65,16 @@ public:
         {{{{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}}}, // RedstoneLamp
         {{{{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}}}  // DiamondOre
     }};
-    static constexpr std::array<std::array<float, 2>, BLOCK_TYPES_N> PHYSICS_TABLE = {{
-        // friction, bounciness
-        {0.f, 0.f},  // Air
-        {0.5f, 0.f}, // Stone
-        {0.5f, 0.f}, // Dirt
-        {0.5f, 0.f}, // Grass
-        {0.5f, 0.f}, // Glass
-        {0.5f, 0.f}, // IronBlock
-        {0.5f, 0.f}, // RedstoneLamp
-        {0.5f, 0.f}  // DiamondOre
+    static constexpr std::array<std::array<float, 3>, BLOCK_TYPES_N> PHYSICS_TABLE = {{
+        // friction, bounciness, static_friction
+        {0.f, 0.f, 0.f},   // Air
+        {0.5f, 0.f, 0.1f}, // Stone
+        {0.5f, 0.f, 0.1f}, // Dirt
+        {0.5f, 0.f, 0.1f}, // Grass
+        {0.5f, 0.f, 0.1f}, // Glass
+        {0.5f, 0.f, 0.1f}, // IronBlock
+        {0.5f, 0.f, 0.1f}, // RedstoneLamp
+        {0.5f, 0.f, 0.1f}  // DiamondOre
     }};
 
     // TEXTURES
@@ -123,5 +123,5 @@ public:
         }
     }
     inline bool hasHitbox() const { return !(m_type == Type::Air); }
-    inline const std::array<float, 2>& getCollisionStats() const { return PHYSICS_TABLE[size_t(m_type)]; }
+    inline const std::array<float, 3>& getCollisionStats() const { return PHYSICS_TABLE[size_t(m_type)]; }
 };

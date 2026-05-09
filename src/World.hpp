@@ -125,7 +125,7 @@ public:
         _block_shader.set("specular_atlas", 2);
 
         for (auto& [chunk_pos, chunk] : m_chunks) {
-            // if (_camera.isVisible(chunk->getAABB())) {
+            // if (_camera.isVisible(chunk->getAABB())) { // TODO:
             _block_shader.set("chunk_pos", chunk_pos);
             chunk->render();
             // }

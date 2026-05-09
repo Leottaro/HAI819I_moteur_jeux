@@ -39,8 +39,9 @@ public:
                 if (under_block == nullptr || !under_block->hasHitbox()) {
                     ground.on_ground = false;
                 } else {
-                    float ground_friction = under_block->getCollisionStats()[0];
-                    velocity.vel *= ground_friction - 1.f;
+                    float static_friction = under_block->getCollisionStats()[2];
+                    velocity.vel.x *= 1.f - static_friction;
+                    velocity.vel.z *= 1.f - static_friction;
                 }
             } else {
                 forces.push_back(glm::vec3(0.f, -9.81f, 0.f) * stats.weight); // g
@@ -246,17 +247,17 @@ class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::M
     glm::mat4 m_projection;
     // Camera::Frustum m_frustum;
 
-    void updateData(ECS::Orientable& orientable, float _aspect_ratio) {
+    void updateAngles(ECS::Orientable& orientable) {
         orientable.orientation.x = glm::clamp(orientable.orientation.x, -M_PI_2_SAFE, M_PI_2_SAFE);
         orientable.orientation.y = Transformation::clipAnglePI(orientable.orientation.y);
-
         m_front = glm::normalize(Transformation::EulerToEuclidian(orientable.orientation));
         m_right = glm::normalize(glm::cross(m_front, VEC_UP));
         m_real_up = glm::normalize(glm::cross(m_right, m_front));
+    }
 
+    void updateRenderingData(float _aspect_ratio) {
         m_projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
         m_view = glm::lookAt(m_cam_pos, m_cam_pos + m_front, m_real_up);
-
         // m_frustum.updatePlanes(this);
     }
 
@@ -291,6 +292,7 @@ class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::M
             // re update angle
             m_front = positionnable.pos + camerable.eye_pos - m_cam_pos;
             orientable.orientation = Transformation::EuclidianToEuler(m_front);
+            updateAngles(orientable);
             break;
         case ControlType::__COUNT:
             break;
@@ -303,15 +305,19 @@ class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::M
             _window.keyboard.isHeld(GLFW_KEY_D) - _window.keyboard.isHeld(GLFW_KEY_A),
             _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
         glm::vec3 flat_front = glm::cross(VEC_UP, m_right);
-        glm::vec3 vel = motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front;
 
         switch (m_type) {
         case ControlType::FreeCam:
-            m_cam_pos += _deltaTime * m_free_cam_speed * vel;
+            m_cam_pos += _deltaTime * m_free_cam_speed * (motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front);
             break;
         case ControlType::FirstPerson:
         case ControlType::ThirdPerson:
-            movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * vel;
+            movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.y * m_right + motion.z * flat_front);
+            if (_window.keyboard.getState(GLFW_KEY_SPACE).pressed && groundable.on_ground) {
+                movable.vel += VEC_UP * groundable.jump_force;
+                groundable.on_ground = false;
+            }
+
             break;
         case ControlType::__COUNT:
             break;
@@ -326,6 +332,7 @@ class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::M
             if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                 orientable.orientation.x -= rotation_speed * _window.getCursorVel().y;
                 orientable.orientation.y -= rotation_speed * _window.getCursorVel().x;
+                updateAngles(orientable);
             }
             break;
         case ControlType::ThirdPerson:
@@ -333,7 +340,7 @@ class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::M
             if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                 orientable.orientation.x -= rotation_speed * _window.getCursorVel().y;
                 orientable.orientation.y -= rotation_speed * _window.getCursorVel().x;
-                updateData(orientable, _window.getAspectRatio());
+                updateAngles(orientable);
                 m_cam_pos = positionnable.pos + camerable.eye_pos - camerable.distance_to_center * m_front;
             }
             break;
@@ -344,8 +351,8 @@ class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::M
 
 public:
     inline const glm::vec3& getCamPos() const { return m_cam_pos; }
-    inline const glm::mat4& getView() const { return m_projection; }
-    inline const glm::mat4& getProjection() const { return m_view; }
+    inline const glm::mat4& getView() const { return m_view; }
+    inline const glm::mat4& getProjection() const { return m_projection; }
 
     void init(ComponentManager& cm, ECS::EntityId entity) {}
     void clear(ComponentManager& cm, ECS::EntityId entity) {
@@ -363,17 +370,17 @@ public:
         ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
         ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
 
-        updateData(orientable, _window.getAspectRatio());
+        updateAngles(orientable);
         applyPosConstraint(positionnable, orientable, camerable);
-        updateData(orientable, _window.getAspectRatio());
+        updateRenderingData(_window.getAspectRatio());
 
-        _window.keyboard.bind(GLFW_KEY_C, [&]() { changeType(positionnable, camerable, ControlType((int(m_type) + 1) % ECS::NB_CONTROL_TYPES)); }, nullptr, nullptr);
-        _window.keyboard.bind(GLFW_KEY_W, nullptr, nullptr, nullptr);
-        _window.keyboard.bind(GLFW_KEY_A, nullptr, nullptr, nullptr);
-        _window.keyboard.bind(GLFW_KEY_S, nullptr, nullptr, nullptr);
-        _window.keyboard.bind(GLFW_KEY_D, nullptr, nullptr, nullptr);
-        _window.keyboard.bind(GLFW_KEY_SPACE, nullptr, nullptr, nullptr);
-        _window.keyboard.bind(GLFW_KEY_LEFT_CONTROL, nullptr, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_C, [&]() { changeType(positionnable, camerable, ControlType((int(m_type) + 1) % ECS::NB_CONTROL_TYPES)); }, nullptr);
+        _window.keyboard.bind(GLFW_KEY_W, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_A, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_S, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_D, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_SPACE, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_LEFT_CONTROL, nullptr, nullptr);
     }
     inline void stopControl() {
         m_currently_controlled.reset();
@@ -392,7 +399,9 @@ public:
         updateKeyboardInput(positionnable, movable, groundable, camerable, _window, _deltaTime);
         updateMouseInput(positionnable, orientable, camerable, _window, _deltaTime);
         applyPosConstraint(positionnable, orientable, camerable);
-        updateData(orientable, _window.getAspectRatio());
+        updateRenderingData(_window.getAspectRatio());
+        std::cout << "POS:\t" << glm::to_string(positionnable.pos) << std::endl
+                  << "VEL:\t" << glm::to_string(movable.vel) << std::endl;
     }
 };
 

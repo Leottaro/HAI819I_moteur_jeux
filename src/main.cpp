@@ -78,12 +78,11 @@ int main(void) {
     World world;
 
     GLenum polygon_mode = GL_FILL;
-    bool run_simulation = false;
     bool display_debug = false;
 
     // Setup key bindings
-    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr, nullptr);
-    window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr, nullptr);
+    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr);
     window.keyboard.bind(GLFW_KEY_Z, [&]() {
         if (polygon_mode == GL_FILL) {
                 polygon_mode = GL_LINE;
@@ -92,10 +91,9 @@ int main(void) {
             } else if (polygon_mode == GL_POINT) {
                 polygon_mode = GL_FILL;
             }
-            glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr, nullptr);
-    window.keyboard.bind(GLFW_KEY_P, [&]() { run_simulation = !run_simulation; }, nullptr, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { world.clear();    world.generate(); }, nullptr, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { display_debug = !display_debug; }, nullptr, nullptr);
+            glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { world.clear();    world.generate(); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { display_debug = !display_debug; }, nullptr);
 
     // Create and compile our GLSL program from the shaders
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
@@ -129,11 +127,9 @@ int main(void) {
         ImGui::NewFrame();
 
         /**********==========OBJECTS UPDATE==========**********/
+        // different world thread
         world.generate();
-        if (run_simulation) {
-            world.updateEntities(window, 0.01);
-            // run_simulation = false;
-        }
+        world.updateEntities(window, 0.01);
 
         /**********==========RENDERING==========**********/
         block_shader.use();
