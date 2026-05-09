@@ -9,6 +9,7 @@
 #include <set>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 #include "Camera.hpp"
 #include "Chunk.hpp"
@@ -126,26 +127,26 @@ class World {
         _block_shader.set("normal_atlas", 1);
         _block_shader.set("specular_atlas", 2);
 
-        std::vector<float> drawed_chunk_dists;
-        std::vector<glm::ivec3> drawed_chunk_positions;
-        drawed_chunk_dists.reserve(m_chunks.size());
-        drawed_chunk_positions.reserve(m_chunks.size());
+        std::vector<std::pair<float, Chunk*>> drawed_chunks;
+        drawed_chunks.reserve(m_chunks.size());
 
         for (auto& [chunk_pos, chunk] : m_chunks) {
             if (_camera.isVisible(chunk->getAABB())) {
-                float dist = Chunk::chunkDistance(_camera.m_position, chunk_pos + glm::ivec3(Chunk::CHUNK_SIZE/2));
-                auto it = std::lower_bound(drawed_chunk_dists.begin(), drawed_chunk_dists.end(), dist);
+                float dist = glm::distance(_camera.m_position, glm::vec3(chunk_pos) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
+                drawed_chunks.push_back({dist, chunk});
             }
         }
-        glDepthMask(GL_TRUE);
-        for (auto& [_, chunk_pos]: drawed_chunks) {
-            _block_shader.set("chunk_pos", chunk_pos);
-            findChunk(chunk_pos)->renderOpaque();
+        std::sort(drawed_chunks.begin(), drawed_chunks.end(), [](auto& a, auto& b){ return a.first > b.first; }); // On sort par distance décroissante
+
+        // https://claude.ai/share/8b8db085-496a-4a82-a253-38586a504c3c
+        for (auto& [_, chunk]: drawed_chunks) {
+            _block_shader.set("chunk_pos", chunk->getPos());
+            chunk->renderOpaque();
         }
         glDepthMask(GL_FALSE);
-        for (auto& [_, chunk_pos]: drawed_chunks) {
-            _block_shader.set("chunk_pos", chunk_pos);
-            findChunk(chunk_pos)->renderTransparent();
+        for (auto& [_, chunk]: drawed_chunks) {
+            _block_shader.set("chunk_pos", chunk->getPos());
+            chunk->renderTransparent();
         }
         glDepthMask(GL_TRUE);
     }
