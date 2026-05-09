@@ -18,26 +18,8 @@ include_directories(${PROJECT_SOURCE_DIR} .)
 set(APP_SOURCES
     src/main.cpp
 
-    # src/image_ppm.h
-    # src/ImageBase.h
-    # src/ImageBase.cpp
-
-    # src/Scene.hpp
-
     src/World.hpp
     src/World.cpp
-
-    src/Chunk.hpp
-    src/Chunk.cpp
-
-    src/Block.hpp
-    src/objects/blocks.hpp
-
-    src/Texture.hpp
-    src/objects/textures.hpp
-
-    src/Camera.hpp
-    src/Camera.cpp
 
     src/ECS/ECS.hpp
     src/ECS/Entity.hpp
@@ -45,12 +27,19 @@ set(APP_SOURCES
     src/ECS/Systems.hpp
     src/ECS/Data.hpp
 
-    # src/Mesh.hpp
-    # src/Mesh.cpp
-    # src/Octree.hpp
-    src/AABB.hpp
+    src/Chunk.hpp
+    src/Chunk.cpp
+
+    src/Block.hpp
+    src/objects/blocks.hpp
 
     src/Transformation.hpp
+    src/AABB.hpp
+
+    src/Texture.hpp
+    src/objects/textures.hpp
+
+    src/Window.hpp
 
     src/ShaderProgram.hpp
     src/ShaderProgram.cpp

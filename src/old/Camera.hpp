@@ -46,9 +46,8 @@ public:
     float m_fovy{M_PI_2f};
     glm::vec2 m_near_far{1.e-1f, 1.e8f};
 
-    const glm::vec3* m_center{&VEC_ZERO}; // Only in first and third person
-
-    const glm::vec3* m_relative_eye_pos{&VEC_ZERO}; // Only in first person
+    const glm::vec3* m_center{&VEC_ZERO};           // Only in first and third person
+    const glm::vec3* m_relative_eye_pos{&VEC_ZERO}; // Only in first and third person
 
     float m_distance_to_center{5.f}; // Only in third person
     float m_zoom_rate{0.05f};        // Only in third person

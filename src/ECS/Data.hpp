@@ -10,9 +10,10 @@
 // #include <glm/gtx/string_cast.hpp>
 
 // USUAL INCLUDES
+#include "src/Window.hpp"
+#include "src/Transformation.hpp"
 #include "src/AABB.hpp"
 #include "src/Chunk.hpp"
-#include "src/Camera.hpp"
 #include <concepts>
 #include <array>
 #include <bitset>
@@ -98,18 +99,29 @@ constexpr EntityId MAX_ENTITIES = 65535;
 // COMPONENTS
 // -------------------------------------------------------------------------
 
-struct Position {
+enum class ControlType {
+    FirstPerson = 0,
+    ThirdPerson,
+    FreeCam,
+    __COUNT
+};
+static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
+
+struct Positionnable {
     Chunk* current_chunk{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
-struct Collision {
+struct Collisionnable {
     std::vector<AABB<float>> hitboxes{};
 };
-struct Velocity {
+struct Movable {
     glm::vec3 vel{0.f, 0.f, 0.f};
 };
-struct Ground {
+struct Groundable {
     bool on_ground{true};
+    float air_control_speed{0.1f};
+    float walk_speed{1.f};
+    float jump_force{9.81f};
 };
 struct PhysicsStats {
     float weight{500.f};
@@ -117,20 +129,28 @@ struct PhysicsStats {
     float drag{1.05f};
 };
 struct CollisionDisplay {};
+struct Orientable {
+    glm::vec2 orientation{0.f, 0.f};
+};
 struct Camerable {
-    Camera* camera{nullptr};
-    glm::vec3 eye_pos{0.f};
+    glm::vec3 eye_pos{0.f};        // Only in first and third person
+    float distance_to_center{5.f}; // Only in third person
+};
+struct Controllable {
+    ControlType type;
 };
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
 using ComponentList = std::tuple<
-    Position,
-    Collision,
-    Velocity,
-    Ground,
+    Positionnable,
+    Collisionnable,
+    Movable,
+    Groundable,
     PhysicsStats,
     CollisionDisplay,
-    Camerable>;
+    Orientable,
+    Camerable,
+    Controllable>;
 
 // Le nombre total de composants
 constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;
@@ -193,11 +213,11 @@ struct __EntityTypeInputs;
 
 template <>
 struct __EntityTypeComponents<TestEntity> {
-    using type = std::tuple<Position, Collision, Velocity, Ground, PhysicsStats, CollisionDisplay, Camerable>;
+    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, Camerable, Controllable>;
 };
 template <>
 struct __EntityTypeInputs<TestEntity> {
-    using type = struct Input : Position {};
+    using type = struct Input : Positionnable {};
 };
 
 // Convenience aliases so call sites stay clean:
@@ -222,12 +242,12 @@ class SystemBase;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
-class CamerableSystem;
+class ControllingSystem;
 using SystemList = std::tuple<
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,
-    CamerableSystem>;
+    ControllingSystem>;
 
 using SystemId = std::uint8_t;
 constexpr std::size_t NB_SYSTEMS = std::tuple_size_v<SystemList>;

@@ -1,7 +1,6 @@
 #pragma once
 
 // USUAL INCLUDES
-#include "Camera.hpp"
 #include "Chunk.hpp"
 #include "ECS/ECS.hpp"
 #include <map>
@@ -51,8 +50,8 @@ private:
 
     GenType m_gentype = GenType::DEBUG_;
 
-    inline ECS::Position ECSPosition(const glm::vec3& _pos) {
-        return ECS::Position{findChunk(Chunk::posToChunkPos(_pos)), _pos};
+    inline ECS::Positionnable ECSPosition(const glm::vec3& _pos) {
+        return ECS::Positionnable{findChunk(Chunk::posToChunkPos(_pos)), _pos};
     }
 
 public:
@@ -67,16 +66,18 @@ public:
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
+    inline bool generate() { return generate(m_ecs_manager.getSystem<ECS::ControllingSystem>().getCamPos()); }
 
     // ECS manager
     template <ECS::Component C>
     inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
-    inline void fixCamera(Camera* _camera, ECS::EntityId entity) { m_ecs_manager.fixCamera(_camera, entity); }
+    inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
+    inline void stopControl() { m_ecs_manager.stopControl(); }
 
     inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
-    inline void updateEntities(float _deltaTime) { m_ecs_manager.update(_deltaTime); }
-    inline void renderEntities(const Camera& _camera, ShaderProgram& _line_shader) { m_ecs_manager.render(_camera, _line_shader); }
+    inline void updateEntities(Window& _window, float _deltaTime) { m_ecs_manager.update(_window, _deltaTime); }
+    inline void renderEntities(ShaderProgram& _line_shader) { m_ecs_manager.render(_line_shader); }
     ECS::EntityId addTestEntity(const glm::vec3& _pos);
 
     // World time
@@ -88,7 +89,11 @@ public:
 
     // RENDERING
 
-    inline void renderChunks(const Camera& _camera, ShaderProgram& _block_shader) {
+    void renderChunks(ShaderProgram& _block_shader) {
+        glm::vec4 sky_color = skyColor();
+        glClearColor(sky_color.r, sky_color.g, sky_color.b, sky_color.a);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         if (m_play) {
             if (m_time_ff) {
                 m_last_update = glfwGetTime();
@@ -108,26 +113,29 @@ public:
             }
         }
 
+        ECS::ControllingSystem& controlling_system = m_ecs_manager.getSystem<ECS::ControllingSystem>();
+
         _block_shader.use();
-        _block_shader.set("view", _camera.getViewMatrix());
-        _block_shader.set("projection", _camera.getProjectionMatrix());
-        _block_shader.set("camera_pos", _camera.m_position);
+        _block_shader.set("view", controlling_system.getView());
+        _block_shader.set("projection", controlling_system.getProjection());
+        _block_shader.set("camera_pos", controlling_system.getCamPos());
         _block_shader.set("sun_pos", m_sun_pos);
         _block_shader.set("albedo_atlas", 0);
         _block_shader.set("normal_atlas", 1);
         _block_shader.set("specular_atlas", 2);
 
         for (auto& [chunk_pos, chunk] : m_chunks) {
-            if (_camera.isVisible(chunk->getAABB())) {
-                _block_shader.set("chunk_pos", chunk_pos);
-                chunk->render();
-            }
+            // if (_camera.isVisible(chunk->getAABB())) {
+            _block_shader.set("chunk_pos", chunk_pos);
+            chunk->render();
+            // }
         }
     }
-    inline void renderDebugBoxes(ShaderProgram& _line_shader, const Camera& _camera) {
+    void renderDebugBoxes(ShaderProgram& _line_shader) {
+        ECS::ControllingSystem& controlling_system = m_ecs_manager.getSystem<ECS::ControllingSystem>();
         _line_shader.use();
-        _line_shader.set("view", _camera.getViewMatrix());
-        _line_shader.set("projection", _camera.getProjectionMatrix());
+        _line_shader.set("view", controlling_system.getView());
+        _line_shader.set("projection", controlling_system.getProjection());
         _line_shader.set("color", glm::vec3(1.f));
         _line_shader.set("position", glm::vec3(0.f));
 
@@ -152,7 +160,7 @@ public:
         return daylight_factor * SKY_DAY + (1 - daylight_factor) * SKY_NIGHT;
     }
 
-    void updateWindow(Camera _camera) {
+    void updateWindow() {
         if (ImGui::Begin("World Info")) {
             int current_type = static_cast<int>(m_gentype);
             if (ImGui::Combo("Generation Type", &current_type,
@@ -160,7 +168,7 @@ public:
                              IM_ARRAYSIZE(GenTypeNames))) {
                 m_gentype = static_cast<GenType>(current_type);
                 clear();
-                generate(_camera.getFront());
+                generate();
             }
             if (ImGui::DragScalar(
                     "World Time",

@@ -14,9 +14,9 @@
 #include <math.h>
 
 // helpers
-#define M_PI_SAFE float(M_PI - 0.001)
-#define M_PI_2_SAFE float(M_PI_2 - 0.001)
-#define M_PI_4_SAFE float(M_PI_4 - 0.001)
+constexpr float M_PI_SAFE = M_PI - 0.001;
+constexpr float M_PI_2_SAFE = M_PI_2 - 0.001;
+constexpr float M_PI_4_SAFE = M_PI_4 - 0.001;
 
 constexpr glm::vec3 VEC_ZERO(0.f, 0.f, 0.f);
 constexpr glm::vec3 VEC_RIGHT(1.f, 0.f, 0.f);

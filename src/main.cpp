@@ -7,10 +7,6 @@
 // #define GLM_ENABLE_EXPERIMENTAL
 // #include <glm/gtx/string_cast.hpp>
 
-// GLFW
-#include <GLFW/glfw3.h>
-GLFWwindow* window;
-
 // IMGUI
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -24,35 +20,82 @@ GLFWwindow* window;
 #include <iostream>
 #include <string>
 
+#include "World.hpp"
 #include "ECS/ECS.hpp"
 #include "Chunk.hpp"
-#include "ShaderProgram.hpp"
 #include "Texture.hpp"
-#include "World.hpp"
+#include "Window.hpp"
+#include "ShaderProgram.hpp"
 
 using namespace std;
 
-// window state
-glm::uvec2 window_pos, window_size(1600, 900);
-bool window_fullscreen = false;
-double window_aspect_ratio = double(window_size.x) / window_size.y;
-GLenum polygon_mode = GL_FILL;
-glm::vec2 cursor_pos{0, 0};
-glm::vec2 cursor_vel{0, 0};
-glm::vec2 scroll{0, 0};
+void initOpenGL() {
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
+}
 
-bool run_simulation = false;
-float deltaTime = 0.f;
-float lastFrame = 0.f;
+void globalInit(Window& window) {
+#if defined(__linux__)
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
+    // INITIALIZE GLFW
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    window.init();
 
-Camera camera;
-World world;
-bool display_debug = false;
+    // INITIALIZE GLEW
+    GLenum err = glewInit();
+    if (err != GLEW_OK && err != 4) {
+        /* Problem: glewInit failed, something is seriously wrong. */
+        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
 
-void globalInit();
+    // INITIALIZE IMGUI
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    // ImGuiIO &io = ImGui::GetIO();
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplOpenGL3_Init();
+
+    initOpenGL();
+}
 
 int main(void) {
-    globalInit();
+    Window window;
+    globalInit(window);
+
+    World world;
+
+    GLenum polygon_mode = GL_FILL;
+    bool run_simulation = false;
+    bool display_debug = false;
+
+    // Setup key bindings
+    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr, nullptr);
+    window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr, nullptr);
+    window.keyboard.bind(GLFW_KEY_Z, [&]() {
+        if (polygon_mode == GL_FILL) {
+                polygon_mode = GL_LINE;
+            } else if (polygon_mode == GL_LINE) {
+                polygon_mode = GL_POINT;
+            } else if (polygon_mode == GL_POINT) {
+                polygon_mode = GL_FILL;
+            }
+            glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr, nullptr);
+    window.keyboard.bind(GLFW_KEY_P, [&]() { run_simulation = !run_simulation; }, nullptr, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { world.clear();    world.generate(); }, nullptr, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { display_debug = !display_debug; }, nullptr, nullptr);
 
     // Create and compile our GLSL program from the shaders
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
@@ -72,28 +115,13 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
-    camera.m_type = Camera::Type::ThirdPerson;
-    camera.m_distance_to_center = 0.75f;
-
     ECS::EntityId truc = world.addTestEntity(glm::vec3(23.5f, 16.f, 25.5f));
-    world.getEntityComponent<ECS::Velocity>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
-    world.fixCamera(&camera, truc);
+    world.getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
+    world.startControl(window, truc);
 
-    glfwSwapInterval(1); // VSync - avoid having 3000 fps
     do {
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        auto sky_color = world.skyColor();
-        glClearColor(sky_color.r, sky_color.g, sky_color.b, sky_color.a);
-
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-
-        uint16_t fps = 0.9f * fps + 0.1f * (1.0f / deltaTime);
-        std::string title = "Moteur - " + std::to_string(fps) + " FPS";
-        glfwSetWindowTitle(window, title.c_str());
 
         // Imgui
         ImGui_ImplOpenGL3_NewFrame();
@@ -101,14 +129,11 @@ int main(void) {
         ImGui::NewFrame();
 
         /**********==========OBJECTS UPDATE==========**********/
-        world.generate(camera.m_position);
+        world.generate();
         if (run_simulation) {
-            world.updateEntities(0.01);
+            world.updateEntities(window, 0.01);
             // run_simulation = false;
         }
-
-        /**********==========CAMERA UPDATE==========**********/
-        camera.update(window, deltaTime, cursor_vel, scroll);
 
         /**********==========RENDERING==========**********/
         block_shader.use();
@@ -116,205 +141,19 @@ int main(void) {
         normal_atlas.bind(1);
         specular_atlas.bind(2);
 
-        world.renderChunks(camera, block_shader);
-        world.renderEntities(camera, line_shader);
-        world.updateWindow(camera);
+        world.renderChunks(block_shader);
+        world.renderEntities(line_shader);
+        world.updateWindow();
         if (display_debug) {
-            world.renderDebugBoxes(line_shader, camera);
+            world.renderDebugBoxes(line_shader);
         }
 
         // ImGui Render
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        // Reset some controls
-        scroll = glm::vec2(0.);
-        cursor_vel = glm::vec2(0.);
-    } while (glfwWindowShouldClose(window) == GLFW_FALSE);
-
-    // Close OpenGL window and terminate GLFW
-    glfwTerminate();
+        window.clearMovements();
+    } while (glfwWindowShouldClose(window.getWindow()) == GLFW_FALSE);
 
     return 0;
-}
-
-void window_size_callback(GLFWwindow* window, int width, int height) {
-    // cout << "window size: " << width << ", " << height << endl;
-    glViewport(0, 0, width, height);
-    if (window_fullscreen)
-        return;
-    window_size.x = width;
-    window_size.y = height;
-    window_aspect_ratio = double(window_size.x) / window_size.y;
-}
-
-void window_pos_callback(GLFWwindow* window, int width, int height) {
-    // cout << "window pos: " << width << ", " << height << endl;
-    if (window_fullscreen)
-        return;
-    window_pos.x = width;
-    window_pos.y = height;
-}
-
-// TODO: mieux
-bool w_key_pressed = false;
-bool p_key_pressed = false;
-bool r_key_pressed = false;
-bool g_key_pressed = false;
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    // cout << "key:" << key << " scancode:" << scancode << " action:" << action << " mods:" << mods << endl;
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-
-    if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
-        if (!window_fullscreen) {
-            window_fullscreen = true;
-            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, 0);
-        } else {
-            window_fullscreen = false;
-            glfwSetWindowMonitor(window, nullptr, window_pos.x, window_pos.y, window_size.x, window_size.y, 0);
-        }
-    }
-
-    if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
-        if (!w_key_pressed) {
-            w_key_pressed = true;
-            if (polygon_mode == GL_FILL) {
-                polygon_mode = GL_LINE;
-            } else if (polygon_mode == GL_LINE) {
-                polygon_mode = GL_POINT;
-            } else if (polygon_mode == GL_POINT) {
-                polygon_mode = GL_FILL;
-            }
-            glPolygonMode(GL_FRONT_AND_BACK, polygon_mode);
-        } else {
-            if (w_key_pressed) {
-                w_key_pressed = false;
-            }
-        }
-    }
-
-    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-        if (!p_key_pressed) {
-            p_key_pressed = true;
-            run_simulation = !run_simulation;
-        }
-    } else {
-        if (p_key_pressed) {
-            p_key_pressed = false;
-        }
-    }
-
-    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-        if (!r_key_pressed) {
-            r_key_pressed = true;
-            world.clear();
-            world.generate(camera.m_position);
-        }
-    } else {
-        if (r_key_pressed) {
-            r_key_pressed = false;
-        }
-    }
-
-    if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-        if (!g_key_pressed) {
-            g_key_pressed = true;
-            display_debug = !display_debug;
-        }
-    } else {
-        if (g_key_pressed) {
-            g_key_pressed = false;
-        }
-    }
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    // cout << "mouse button:" << button << " action:" << action << " mods:" << mods << endl;
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        glfwSetInputMode(window, GLFW_CURSOR, action == GLFW_PRESS ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
-    }
-}
-
-void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    cursor_vel.x = xpos - cursor_pos.x;
-    cursor_vel.y = ypos - cursor_pos.y;
-    cursor_pos.x = xpos;
-    cursor_pos.y = ypos;
-    // cout << "cursor_pos: (" << cursor_pos.x << ", " << cursor_pos.y << ")\tcursor_vel: (" << cursor_vel.x << ", " << cursor_vel.y << ")" << endl;
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    // cout << "scroll: (" << xoffset << ", " << yoffset << ")" << endl;
-    scroll.x = xoffset;
-    scroll.y = yoffset;
-}
-
-void initWindow() {
-    glfwWindowHint(GLFW_SAMPLES, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE); // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
-    glfwWindowHint(GLFW_DEPTH_BITS, 24);
-
-    window = glfwCreateWindow(window_size.x, window_size.y, "Moteur de jeux", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetWindowSizeCallback(window, window_size_callback);
-    glfwSetWindowPosCallback(window, window_pos_callback);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCursorPosCallback(window, cursor_pos_callback);
-    glfwSetScrollCallback(window, scroll_callback);
-    glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-}
-
-void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
-    glEnable(GL_DEPTH_TEST);                           // Enable depth test
-    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
-    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
-}
-
-void globalInit() {
-#if defined(__linux__)
-    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
-#endif
-    // INITIALIZE GLFW
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    initWindow();
-
-    // INITIALIZE GLEW
-    GLenum err = glewInit();
-    if (err != GLEW_OK && err != 4) {
-        /* Problem: glewInit failed, something is seriously wrong. */
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-
-    // INITIALIZE IMGUI
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    // ImGuiIO &io = ImGui::GetIO();
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
-    ImGui_ImplOpenGL3_Init();
-
-    initOpenGL();
 }

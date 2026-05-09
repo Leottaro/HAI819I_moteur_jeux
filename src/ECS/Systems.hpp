@@ -16,28 +16,28 @@ struct ECS::SystemBase {
         return sig;
     }();
 
-    std::vector<ECS::EntityId> m_entities{};
+    std::unordered_set<ECS::EntityId> m_entities{};
 };
 
-class ECS::PhysicsSystem : public ECS::SystemBase<ECS::Position, ECS::Velocity, ECS::Ground, ECS::PhysicsStats> {
+class ECS::PhysicsSystem : public ECS::SystemBase<ECS::Positionnable, ECS::Movable, ECS::Groundable, ECS::PhysicsStats> {
 public:
     void init(ComponentManager& cm, ECS::EntityId entity) {}
     void clear(ComponentManager& cm, ECS::EntityId entity) {}
 
     void update(ComponentManager& cm, float _deltaTime) {
         for (ECS::EntityId entity : m_entities) {
-            ECS::Position& position = cm.getComponent<ECS::Position>(entity);
-            ECS::Velocity& velocity = cm.getComponent<ECS::Velocity>(entity);
-            ECS::Ground& Ground = cm.getComponent<ECS::Ground>(entity);
+            ECS::Positionnable& position = cm.getComponent<ECS::Positionnable>(entity);
+            ECS::Movable& velocity = cm.getComponent<ECS::Movable>(entity);
+            ECS::Groundable& ground = cm.getComponent<ECS::Groundable>(entity);
             ECS::PhysicsStats& stats = cm.getComponent<ECS::PhysicsStats>(entity);
 
             std::vector<glm::vec3> forces;
             forces.reserve(3);
-            if (Ground.on_ground) {
+            if (ground.on_ground) {
                 Block* in_block = position.current_chunk->getBlock(position.pos);
                 Block* under_block = in_block->m_neighbours[2]; // 2 -> -y
                 if (under_block == nullptr || !under_block->hasHitbox()) {
-                    Ground.on_ground = false;
+                    ground.on_ground = false;
                 } else {
                     float ground_friction = under_block->getCollisionStats()[0];
                     velocity.vel *= ground_friction - 1.f;
@@ -63,7 +63,7 @@ public:
     }
 };
 
-class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Collision, ECS::Velocity, ECS::Ground> {
+class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Positionnable, ECS::Collisionnable, ECS::Movable, ECS::Groundable> {
     void bounce(float _static_friction, float _friction, float _restitution, const glm::vec3& _normal, glm::vec3& _vel) {
         float v_dot_n = glm::dot(_vel, _normal);
         glm::vec3 v_normal = v_dot_n * _normal;
@@ -85,7 +85,7 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Col
         Block* block{nullptr};
     };
     // Return true if it detected a collision
-    bool detectCollision(float _deltaTime, CollisionsInfos& res, ECS::Position& _position, ECS::Collision& _bounding_box, ECS::Velocity& _velocity) {
+    bool detectCollision(float _deltaTime, CollisionsInfos& res, ECS::Positionnable& _position, ECS::Collisionnable& _bounding_box, ECS::Movable& _velocity) {
         res.t = std::numeric_limits<float>::max();
 
         std::vector<Block*> to_explore;
@@ -145,10 +145,10 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Col
     }
 
     void updateEntity(ComponentManager& cm, float _deltaTime, ECS::EntityId _entity) {
-        ECS::Position& position = cm.getComponent<ECS::Position>(_entity);
-        ECS::Collision& bounding_box = cm.getComponent<ECS::Collision>(_entity);
-        ECS::Velocity& velocity = cm.getComponent<ECS::Velocity>(_entity);
-        ECS::Ground& Ground = cm.getComponent<ECS::Ground>(_entity);
+        ECS::Positionnable& position = cm.getComponent<ECS::Positionnable>(_entity);
+        ECS::Collisionnable& bounding_box = cm.getComponent<ECS::Collisionnable>(_entity);
+        ECS::Movable& velocity = cm.getComponent<ECS::Movable>(_entity);
+        ECS::Groundable& Ground = cm.getComponent<ECS::Groundable>(_entity);
 
         // Chunk collision detection
         CollisionsInfos collision;
@@ -204,10 +204,10 @@ public:
     }
 };
 
-class ECS::HitBoxDisplaySystem : public ECS::SystemBase<ECS::Position, ECS::Collision, ECS::CollisionDisplay> {
+class ECS::HitBoxDisplaySystem : public ECS::SystemBase<ECS::Positionnable, ECS::Collisionnable, ECS::CollisionDisplay> {
 public:
     void init(ComponentManager& cm, ECS::EntityId entity) {
-        ECS::Collision& collision = cm.getComponent<ECS::Collision>(entity);
+        ECS::Collisionnable& collision = cm.getComponent<ECS::Collisionnable>(entity);
         for (AABB<float>& hitbox : collision.hitboxes)
             hitbox.initShaderData();
     }
@@ -215,8 +215,8 @@ public:
     void render(ComponentManager& cm, ShaderProgram& _shader) const {
         _shader.set("color", glm::vec3(1.f));
         for (ECS::EntityId entity : m_entities) {
-            ECS::Position& position = cm.getComponent<ECS::Position>(entity);
-            ECS::Collision& collision = cm.getComponent<ECS::Collision>(entity);
+            ECS::Positionnable& position = cm.getComponent<ECS::Positionnable>(entity);
+            ECS::Collisionnable& collision = cm.getComponent<ECS::Collisionnable>(entity);
             _shader.set("position", position.pos);
             for (AABB<float>& hitbox : collision.hitboxes)
                 hitbox.render();
@@ -224,25 +224,175 @@ public:
     }
 
     void clear(ComponentManager& cm, ECS::EntityId entity) {
-        ECS::Collision& collision = cm.getComponent<ECS::Collision>(entity);
+        ECS::Collisionnable& collision = cm.getComponent<ECS::Collisionnable>(entity);
         for (AABB<float>& hitbox : collision.hitboxes)
             hitbox.clearShaderData();
     }
 };
 
-class ECS::CamerableSystem : public ECS::SystemBase<ECS::Position, ECS::Camerable> {
-public:
-    void init(ComponentManager& cm, ECS::EntityId entity) {}
-    void clear(ComponentManager& cm, ECS::EntityId entity) {}
+class ECS::ControllingSystem : public ECS::SystemBase<ECS::Positionnable, ECS::Movable, ECS::Groundable, ECS::Orientable, ECS::Camerable, ECS::Controllable> {
+    std::optional<ECS::EntityId> m_currently_controlled{};
 
-    void update(ComponentManager& cm, float _deltaTime) {
-        for (ECS::EntityId entity : m_entities) {
-            ECS::Camerable& camera = cm.getComponent<ECS::Camerable>(entity);
-            if (camera.camera != nullptr) {
-                camera.camera->updatePosConstraint();
-                camera.camera->updateData();
-            }
+    ControlType m_type{ControlType::ThirdPerson};
+    float m_free_cam_speed = 16.f;
+    float m_fovy{M_PI_2f};
+    glm::vec2 m_near_far{1.e-1f, 1.e8f};
+
+    glm::vec3 m_cam_pos;
+    glm::vec3 m_front;
+    glm::vec3 m_right;
+    glm::vec3 m_real_up;
+    glm::mat4 m_view;
+    glm::mat4 m_projection;
+    // Camera::Frustum m_frustum;
+
+    void updateData(ECS::Orientable& orientable, float _aspect_ratio) {
+        orientable.orientation.x = glm::clamp(orientable.orientation.x, -M_PI_2_SAFE, M_PI_2_SAFE);
+        orientable.orientation.y = Transformation::clipAnglePI(orientable.orientation.y);
+
+        m_front = glm::normalize(Transformation::EulerToEuclidian(orientable.orientation));
+        m_right = glm::normalize(glm::cross(m_front, VEC_UP));
+        m_real_up = glm::normalize(glm::cross(m_right, m_front));
+
+        m_projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
+        m_view = glm::lookAt(m_cam_pos, m_cam_pos + m_front, m_real_up);
+
+        // m_frustum.updatePlanes(this);
+    }
+
+    void changeType(ECS::Positionnable& positionnable, ECS::Camerable& camerable, ControlType _new_type) {
+        m_type = _new_type;
+        switch (m_type) {
+        case ControlType::FreeCam:
+            break;
+        case ControlType::FirstPerson:
+            m_cam_pos = positionnable.pos + camerable.eye_pos;
+            break;
+        case ControlType::ThirdPerson:
+            // update target posm_zoom_rate
+            m_cam_pos = positionnable.pos + camerable.eye_pos - camerable.distance_to_center * m_front;
+            break;
+        case ControlType::__COUNT:
+            break;
         }
+    }
+
+    void applyPosConstraint(ECS::Positionnable& positionnable, ECS::Orientable& orientable, ECS::Camerable& camerable) {
+        switch (m_type) {
+        case ControlType::FreeCam:
+            break;
+        case ControlType::FirstPerson:
+            m_cam_pos = positionnable.pos + camerable.eye_pos;
+            break;
+        case ControlType::ThirdPerson:
+            // update target pos
+            m_cam_pos = positionnable.pos + camerable.eye_pos - camerable.distance_to_center * m_front;
+
+            // re update angle
+            m_front = positionnable.pos + camerable.eye_pos - m_cam_pos;
+            orientable.orientation = Transformation::EuclidianToEuler(m_front);
+            break;
+        case ControlType::__COUNT:
+            break;
+        }
+    }
+
+    void updateKeyboardInput(ECS::Positionnable& positionnable, ECS::Movable& movable, ECS::Groundable& groundable, ECS::Camerable& camerable, Window& _window, float _deltaTime) {
+        glm::vec3 motion = glm::vec3(
+            _window.keyboard.isHeld(GLFW_KEY_SPACE) - _window.keyboard.isHeld(GLFW_KEY_LEFT_CONTROL),
+            _window.keyboard.isHeld(GLFW_KEY_D) - _window.keyboard.isHeld(GLFW_KEY_A),
+            _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
+        glm::vec3 flat_front = glm::cross(VEC_UP, m_right);
+        glm::vec3 vel = motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front;
+
+        switch (m_type) {
+        case ControlType::FreeCam:
+            m_cam_pos += _deltaTime * m_free_cam_speed * vel;
+            break;
+        case ControlType::FirstPerson:
+        case ControlType::ThirdPerson:
+            movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * vel;
+            break;
+        case ControlType::__COUNT:
+            break;
+        }
+    }
+
+    void updateMouseInput(ECS::Positionnable& positionnable, ECS::Orientable& orientable, ECS::Camerable& camerable, Window& _window, float _deltaTime) {
+        float rotation_speed = _deltaTime * _window.m_rotation_speed;
+        switch (m_type) {
+        case ControlType::FreeCam:
+        case ControlType::FirstPerson:
+            if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+                orientable.orientation.x -= rotation_speed * _window.getCursorVel().y;
+                orientable.orientation.y -= rotation_speed * _window.getCursorVel().x;
+            }
+            break;
+        case ControlType::ThirdPerson:
+            camerable.distance_to_center = glm::max(camerable.distance_to_center * (1.f - _window.getScroll().y * _window.m_zoom_rate), 1.e-4f);
+            if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+                orientable.orientation.x -= rotation_speed * _window.getCursorVel().y;
+                orientable.orientation.y -= rotation_speed * _window.getCursorVel().x;
+                updateData(orientable, _window.getAspectRatio());
+                m_cam_pos = positionnable.pos + camerable.eye_pos - camerable.distance_to_center * m_front;
+            }
+            break;
+        case ControlType::__COUNT:
+            break;
+        }
+    }
+
+public:
+    inline const glm::vec3& getCamPos() const { return m_cam_pos; }
+    inline const glm::mat4& getView() const { return m_projection; }
+    inline const glm::mat4& getProjection() const { return m_view; }
+
+    void init(ComponentManager& cm, ECS::EntityId entity) {}
+    void clear(ComponentManager& cm, ECS::EntityId entity) {
+        if (m_currently_controlled == entity) {
+            stopControl();
+        }
+    }
+    inline void startControl(ComponentManager& cm, Window& _window, ECS::EntityId entity) {
+        assert(m_entities.find(entity) != m_entities.end());
+        m_currently_controlled.emplace(entity);
+
+        ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
+        // ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
+        // ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
+        ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
+        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
+
+        updateData(orientable, _window.getAspectRatio());
+        applyPosConstraint(positionnable, orientable, camerable);
+        updateData(orientable, _window.getAspectRatio());
+
+        _window.keyboard.bind(GLFW_KEY_C, [&]() { changeType(positionnable, camerable, ControlType((int(m_type) + 1) % ECS::NB_CONTROL_TYPES)); }, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_W, nullptr, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_A, nullptr, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_S, nullptr, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_D, nullptr, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_SPACE, nullptr, nullptr, nullptr);
+        _window.keyboard.bind(GLFW_KEY_LEFT_CONTROL, nullptr, nullptr, nullptr);
+    }
+    inline void stopControl() {
+        m_currently_controlled.reset();
+    }
+
+    void update(ComponentManager& cm, Window& _window, float _deltaTime) {
+        if (!m_currently_controlled.has_value())
+            return;
+        ECS::EntityId entity = m_currently_controlled.value();
+        ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
+        ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
+        ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
+        ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
+        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
+
+        updateKeyboardInput(positionnable, movable, groundable, camerable, _window, _deltaTime);
+        updateMouseInput(positionnable, orientable, camerable, _window, _deltaTime);
+        applyPosConstraint(positionnable, orientable, camerable);
+        updateData(orientable, _window.getAspectRatio());
     }
 };
 
@@ -263,13 +413,10 @@ public:
         ECS::for_each_systems([&]<ECS::System S>() {
             S& system = getSystem<S>();
             if ((_entity_sig & system.signature) == system.signature) {
-                auto it = std::lower_bound(system.m_entities.begin(), system.m_entities.end(), _entity);
-                system.m_entities.insert(it, _entity);
+                system.m_entities.insert(_entity);
                 system.init(cm, _entity);
             } else {
-                auto it = std::find(system.m_entities.begin(), system.m_entities.end(), _entity);
-                if (it != system.m_entities.end()) {
-                    system.m_entities.erase(it);
+                if (system.m_entities.erase(_entity)) {
                     system.clear(cm, _entity);
                 }
             }

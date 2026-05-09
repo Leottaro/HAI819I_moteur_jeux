@@ -18,8 +18,8 @@ struct EntityFactory<ECS::TestEntity> {
         });
 
         // Entity-specific initialisation
-        cm.getComponent<ECS::Position>(id) = inputs;
-        cm.getComponent<ECS::Collision>(id).hitboxes = {AABB<float>(glm::vec3(-1.f / 3.f, 0.f, -1.f / 3.f), glm::vec3(1.f / 3.f, 1.74f, 1.f / 3.f))};
+        cm.getComponent<ECS::Positionnable>(id) = inputs;
+        cm.getComponent<ECS::Collisionnable>(id).hitboxes = {AABB<float>(glm::vec3(-1.f / 3.f, 0.f, -1.f / 3.f), glm::vec3(1.f / 3.f, 1.74f, 1.f / 3.f))};
         cm.getComponent<ECS::Camerable>(id).eye_pos = glm::vec3(0.f, 1.5f, 0.f);
 
         // Let this
@@ -107,22 +107,18 @@ public:
         return sm.getSystem<S>();
     }
 
+    inline void startControl(Window& _window, ECS::EntityId entity) {
+        sm.getSystem<ECS::ControllingSystem>().startControl(cm, _window, entity);
+    }
+    inline void stopControl() {
+        sm.getSystem<ECS::ControllingSystem>().stopControl();
+    }
+
     // -------------------------------------------------------------------------
     // Update
     // -------------------------------------------------------------------------
 
-    void fixCamera(Camera* _camera, ECS::EntityId entity) {
-        ECS::Position& position = cm.getComponent<ECS::Position>(entity);
-        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
-
-        camerable.camera = _camera;
-        camerable.camera->m_center = &position.pos;
-        camerable.camera->m_relative_eye_pos = &camerable.eye_pos;
-        camerable.camera->updatePosConstraint();
-        camerable.camera->updateData();
-    }
-
-    void update(float _deltaTime) {
+    void update(Window& window, float _deltaTime) {
         // PhysicsSystem: integrate forces and update velocities.
         sm.getSystem<ECS::PhysicsSystem>().update(cm, _deltaTime);
 
@@ -130,13 +126,13 @@ public:
         sm.getSystem<ECS::WorldCollisionSystem>().update(cm, _deltaTime);
 
         // CamerableSystem: update camera
-        sm.getSystem<ECS::CamerableSystem>().update(cm, _deltaTime);
+        sm.getSystem<ECS::ControllingSystem>().update(cm, window, _deltaTime);
     }
 
-    void render(const Camera& _camera, ShaderProgram& _line_shader) {
+    void render(ShaderProgram& _line_shader) {
         _line_shader.use();
-        _line_shader.set("view", _camera.getViewMatrix());
-        _line_shader.set("projection", _camera.getProjectionMatrix());
+        _line_shader.set("view", sm.getSystem<ECS::ControllingSystem>().getView());
+        _line_shader.set("projection", sm.getSystem<ECS::ControllingSystem>().getProjection());
 
         // HitBoxDisplaySystem: render the hitobxes lines.
         sm.getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
