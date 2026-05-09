@@ -85,7 +85,7 @@ int main(void) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         auto sky_color = world.skyColor();
-        glClearColor(sky_color.r, sky_color.g, sky_color.b, sky_color.a);
+        glClearColor(sky_color.r, sky_color.g, sky_color.b, 255.f);
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;

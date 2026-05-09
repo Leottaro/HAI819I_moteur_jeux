@@ -8,6 +8,7 @@ uniform sampler2D specular_atlas;
 uniform vec3 camera_pos;
 
 uniform vec2 sun_pos;
+uniform vec3 sun_color;
 
 in vec3 f_worldpos;
 in vec3 f_normal;
@@ -68,7 +69,6 @@ void main() {
   float emission = 0.;
 
   vec3 tangent_normal = f_normal_map.xyz * 2.0 - 1.0;
-  // vec3 tangent_normal = vec3(0., 0., 1.);
   vec3 mapped_normal = normalize(f_TBN * tangent_normal);
 
   vec3 N = normalize(mix(f_normal, mapped_normal, f_normal_map.a));
@@ -78,29 +78,27 @@ void main() {
 
   // reflectance equation
   vec3 Lo = vec3(0.);
-  for(int i = 0; i < 1; i++) {
     // calculate per-light radiance
-    vec3 L = vec3(sin(sun_pos.x), cos(sun_pos.x) * sin(sun_pos.y), cos(sun_pos.x) * cos(sun_pos.y));
-    vec3 H = normalize(V + L);
-    vec3 radiance = vec3(1.);
+  vec3 L = vec3(sin(sun_pos.x), cos(sun_pos.x) * sin(sun_pos.y), cos(sun_pos.x) * cos(sun_pos.y));
+  vec3 H = normalize(V + L);
+  vec3 radiance = sun_color;
 
     // cook-torrance brdf
-    float NDF = DistributionGGX(N, H, roughness);
-    float G = GeometrySmith(N, V, L, roughness);
-    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+  float NDF = DistributionGGX(N, H, roughness);
+  float G = GeometrySmith(N, V, L, roughness);
+  vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - metallic;
+  vec3 kS = F;
+  vec3 kD = vec3(1.0) - kS;
+  kD *= 1.0 - metallic;
 
-    vec3 numerator = NDF * G * F;
-    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-    vec3 specular = numerator / denominator;
+  vec3 numerator = NDF * G * F;
+  float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+  vec3 specular = numerator / denominator;
 
     // add to outgoing radiance Lo
-    float NdotL = max(dot(N, L), 0.0);
-    Lo += (kD * albedo / PI + specular) * radiance * NdotL;
-  }
+  float NdotL = max(dot(N, L), 0.0);
+  Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
   vec3 ambient_light = vec3(0.01) * albedo * ao;
   vec3 emited_light = albedo * emission;

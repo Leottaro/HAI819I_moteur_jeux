@@ -3,13 +3,13 @@
 // USUAL INCLUDES
 #include <imgui.h>
 
+#include <algorithm>
 #include <list>
 #include <map>
 #include <random>
 #include <set>
 #include <sstream>
 #include <vector>
-#include <algorithm>
 
 #include "Camera.hpp"
 #include "Chunk.hpp"
@@ -31,6 +31,9 @@ enum class Gamerules : size_t {
 
 constexpr glm::vec4 SKY_DAY(187.f / 255.f, 255.f / 255.f, 250.f / 255.f, 255.f / 255.f);
 constexpr glm::vec4 SKY_NIGHT(14.f / 255.f, 5.f / 255.f, 61.f / 255.f, 255.f / 255.f);
+constexpr glm::vec3 SUN_NOON(209.f / 255.f, 209.f / 255.f, 175.f / 255.f);
+// constexpr glm::vec3 SUN_NOON(0.f / 255.f, 0.f / 255.f, 175.f / 255.f);
+constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 167.f / 255.f, 41.f / 255.f);
 
 class World {
    public:
@@ -58,6 +61,7 @@ class World {
     uint64_t m_world_time = TIME_NOON;
     float m_sun_season = 0.f;
     glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR);  // position du soleil (nord<->sud, est<->ouest)
+    glm::vec3 m_sun_color = SUN_NOON;
 
     GenType m_gentype = GenType::DEBUG_;
 
@@ -98,7 +102,7 @@ class World {
 
     // RENDERING
 
-    inline void renderChunks(const Camera& _camera, ShaderProgram& _block_shader) {
+    void updateTime() {
         if (m_play) {
             if (m_time_ff) {
                 m_last_update = glfwGetTime();
@@ -115,14 +119,20 @@ class World {
 
                 m_sun_pos.x = m_sun_season;
                 m_sun_pos.y = m_world_time * TIME_ANGLE_FACTOR;
+                m_sun_color = sunColor();
             }
         }
+    }
+
+    inline void renderChunks(const Camera& _camera, ShaderProgram& _block_shader) {
+        updateTime();
 
         _block_shader.use();
         _block_shader.set("view", _camera.getViewMatrix());
         _block_shader.set("projection", _camera.getProjectionMatrix());
         _block_shader.set("camera_pos", _camera.m_position);
         _block_shader.set("sun_pos", m_sun_pos);
+        _block_shader.set("sun_color", m_sun_color);
         _block_shader.set("albedo_atlas", 0);
         _block_shader.set("normal_atlas", 1);
         _block_shader.set("specular_atlas", 2);
@@ -136,15 +146,15 @@ class World {
                 drawed_chunks.push_back({dist, chunk});
             }
         }
-        std::sort(drawed_chunks.begin(), drawed_chunks.end(), [](auto& a, auto& b){ return a.first > b.first; }); // On sort par distance décroissante
+        std::sort(drawed_chunks.begin(), drawed_chunks.end(), [](auto& a, auto& b) { return a.first > b.first; });  // On sort par distance décroissante
 
         // https://claude.ai/share/8b8db085-496a-4a82-a253-38586a504c3c
-        for (auto& [_, chunk]: drawed_chunks) {
+        for (auto& [_, chunk] : drawed_chunks) {
             _block_shader.set("chunk_pos", chunk->getPos());
             chunk->renderOpaque();
         }
         glDepthMask(GL_FALSE);
-        for (auto& [_, chunk]: drawed_chunks) {
+        for (auto& [_, chunk] : drawed_chunks) {
             _block_shader.set("chunk_pos", chunk->getPos());
             chunk->renderTransparent();
         }
@@ -169,16 +179,23 @@ class World {
         m_chunks_frontier.clear();
     }
 
-    inline glm::vec4 skyColor() const {
+    inline glm::vec3 skyColor() const {
         double angle = m_world_time * M_PI * 2.0 / DAY_LENGTH;
         float t = (sin(angle) + 1.0f) * 0.5f;
         return glm::mix(SKY_NIGHT, SKY_DAY, t);
     }
 
+    inline glm::vec3 sunColor() const {
+        double angle = (m_world_time * M_PI * 4.0 / DAY_LENGTH) + M_PI_2;
+        float t = (sin(angle) + 1.0f) * 0.5f;
+        return glm::mix(SUN_NOON, SUN_DUSK, t);
+    }
+
     void updateWindow(Camera _camera) {
         if (ImGui::Begin("World Info")) {
             int current_type = static_cast<int>(m_gentype);
-            if (ImGui::Combo("Generation Type", &current_type,
+            if (ImGui::Combo("Generation Type",
+                             &current_type,
                              GenTypeNames,
                              IM_ARRAYSIZE(GenTypeNames))) {
                 m_gentype = static_cast<GenType>(current_type);
@@ -192,7 +209,7 @@ class World {
                     10.0f,
                     0,
                     &DAY_LENGTH)) {
-                // render(_block_shader, _camera);
+                updateTime();
             }
             ImGui::DragFloat(
                 "World Season",
