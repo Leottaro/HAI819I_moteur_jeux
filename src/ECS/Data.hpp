@@ -242,11 +242,13 @@ class SystemBase;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
+class CamerableSystem;
 class ControllingSystem;
 using SystemList = std::tuple<
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,
+    CamerableSystem,
     ControllingSystem>;
 
 using SystemId = std::uint8_t;

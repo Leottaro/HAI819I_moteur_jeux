@@ -66,13 +66,13 @@ public:
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
-    inline bool generate() { return generate(m_ecs_manager.getSystem<ECS::ControllingSystem>().getCamPos()); }
+    inline bool generate() { return generate(m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos()); }
 
     // ECS manager
     template <ECS::Component C>
     inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
     inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
-    inline void stopControl() { m_ecs_manager.stopControl(); }
+    inline void stopControl(Window& _window) { m_ecs_manager.stopControl(_window); }
 
     inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
@@ -113,12 +113,12 @@ public:
             }
         }
 
-        ECS::ControllingSystem& controlling_system = m_ecs_manager.getSystem<ECS::ControllingSystem>();
+        ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
 
         _block_shader.use();
-        _block_shader.set("view", controlling_system.getView());
-        _block_shader.set("projection", controlling_system.getProjection());
-        _block_shader.set("camera_pos", controlling_system.getCamPos());
+        _block_shader.set("view", camerable_system.getView());
+        _block_shader.set("projection", camerable_system.getProjection());
+        _block_shader.set("camera_pos", camerable_system.getCamPos());
         _block_shader.set("sun_pos", m_sun_pos);
         _block_shader.set("albedo_atlas", 0);
         _block_shader.set("normal_atlas", 1);
@@ -132,10 +132,10 @@ public:
         }
     }
     void renderDebugBoxes(ShaderProgram& _line_shader) {
-        ECS::ControllingSystem& controlling_system = m_ecs_manager.getSystem<ECS::ControllingSystem>();
+        ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
         _line_shader.use();
-        _line_shader.set("view", controlling_system.getView());
-        _line_shader.set("projection", controlling_system.getProjection());
+        _line_shader.set("view", camerable_system.getView());
+        _line_shader.set("projection", camerable_system.getProjection());
         _line_shader.set("color", glm::vec3(1.f));
         _line_shader.set("position", glm::vec3(0.f));
 

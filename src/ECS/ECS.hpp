@@ -107,18 +107,24 @@ public:
         return sm.getSystem<S>();
     }
 
-    inline void startControl(Window& _window, ECS::EntityId entity) {
-        sm.getSystem<ECS::ControllingSystem>().startControl(cm, _window, entity);
-    }
-    inline void stopControl() {
-        sm.getSystem<ECS::ControllingSystem>().stopControl();
-    }
-
     // -------------------------------------------------------------------------
     // Update
     // -------------------------------------------------------------------------
 
+    inline void startControl(Window& _window, ECS::EntityId entity) {
+        sm.getSystem<ECS::CamerableSystem>().startControl(cm, entity);
+        _window.keyboard.bind(GLFW_KEY_C, [&]() { sm.getSystem<ECS::CamerableSystem>().toggleControlType(cm); }, nullptr);
+    }
+    inline void stopControl(Window& _window) {
+        sm.getSystem<ECS::CamerableSystem>().stopControl();
+    }
+
     void update(Window& window, float _deltaTime) {
+        // ControllingSystem: control entities
+        if (sm.getSystem<ECS::CamerableSystem>().getControlType() != ECS::ControlType::FreeCam) {
+            sm.getSystem<ECS::ControllingSystem>().update(cm, window, _deltaTime);
+        }
+
         // PhysicsSystem: integrate forces and update velocities.
         sm.getSystem<ECS::PhysicsSystem>().update(cm, _deltaTime);
 
@@ -126,13 +132,13 @@ public:
         sm.getSystem<ECS::WorldCollisionSystem>().update(cm, _deltaTime);
 
         // CamerableSystem: update camera
-        sm.getSystem<ECS::ControllingSystem>().update(cm, window, _deltaTime);
+        sm.getSystem<ECS::CamerableSystem>().update(cm, window, _deltaTime);
     }
 
     void render(ShaderProgram& _line_shader) {
         _line_shader.use();
-        _line_shader.set("view", sm.getSystem<ECS::ControllingSystem>().getView());
-        _line_shader.set("projection", sm.getSystem<ECS::ControllingSystem>().getProjection());
+        _line_shader.set("view", sm.getSystem<ECS::CamerableSystem>().getView());
+        _line_shader.set("projection", sm.getSystem<ECS::CamerableSystem>().getProjection());
 
         // HitBoxDisplaySystem: render the hitobxes lines.
         sm.getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
