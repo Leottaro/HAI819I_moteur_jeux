@@ -66,7 +66,7 @@ public:
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
-    inline bool generate() { return generate(m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos()); }
+    inline bool generate() { return generate(m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos()); } // TODO: for each controlled entities
 
     // ECS manager
     template <ECS::Component C>
@@ -76,7 +76,7 @@ public:
 
     inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
-    inline void updateEntities(Window& _window, float _deltaTime) { m_ecs_manager.update(_window, _deltaTime); }
+    inline void updateEntities(Window& _window) { m_ecs_manager.update(_window, 0.01); } // TODO: dt
     inline void renderEntities(ShaderProgram& _line_shader) { m_ecs_manager.render(_line_shader); }
     ECS::EntityId addTestEntity(const glm::vec3& _pos);
 

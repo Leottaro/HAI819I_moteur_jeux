@@ -15,11 +15,15 @@
 template <typename T>
 struct AABB {
     using vec3 = glm::vec<3, T, glm::packed_highp>;
+    static constexpr T POSITIVE_EPSILON = std::numeric_limits<T>::min();
+    static constexpr T NEGATIVE_EPSILON = -std::numeric_limits<T>::min();
+    static constexpr T POSITIVE_MAX = std::numeric_limits<T>::max();
+    static constexpr T NEGATIVE_MAX = -std::numeric_limits<T>::max();
 
     vec3 min;
     vec3 max;
 
-    AABB() : min(std::numeric_limits<T>::max()), max(-std::numeric_limits<T>::max()) {}
+    AABB() : min(POSITIVE_MAX), max(NEGATIVE_MAX) {}
     AABB(vec3 const& _min, vec3 const& _max) : min(_min), max(_max) {}
 
     friend std::ostream& operator<<(std::ostream& os, const AABB& aabb) {
@@ -134,7 +138,7 @@ struct AABB {
         const T overlapY = std::min(max.y, _other.max.y) - std::max(min.y, _other.min.y);
         const T overlapZ = std::min(max.z, _other.max.z) - std::max(min.z, _other.min.z);
 
-        if (overlapX < std::numeric_limits<T>::min() || overlapY < std::numeric_limits<T>::min() || overlapZ < std::numeric_limits<T>::min()) {
+        if (overlapX <= T(0) || overlapY <= T(0) || overlapZ <= T(0)) {
             dist = vec3(T(0));
             return false;
         }

@@ -94,10 +94,7 @@ namespace ECS {
 using ComponentId = std::uint8_t;
 using EntityId = std::uint16_t;
 constexpr EntityId MAX_ENTITIES = 65535;
-
-// -------------------------------------------------------------------------
-// COMPONENTS
-// -------------------------------------------------------------------------
+constexpr glm::vec3 G{0.f, -100.f / 3.f, 0.f};
 
 enum class ControlType {
     FirstPerson = 0,
@@ -105,7 +102,11 @@ enum class ControlType {
     FreeCam,
     __COUNT
 };
-static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
+constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
+
+// -------------------------------------------------------------------------
+// COMPONENTS
+// -------------------------------------------------------------------------
 
 struct Positionnable {
     Chunk* current_chunk{nullptr};
@@ -118,10 +119,10 @@ struct Movable {
     glm::vec3 vel{0.f, 0.f, 0.f};
 };
 struct Groundable {
-    bool on_ground{true};
+    bool on_ground{false};
     float air_control_speed{0.1f};
-    float walk_speed{1.f};
-    float jump_force{9.81f};
+    float walk_speed{1.0f};
+    float jump_force{10.0f};
 };
 struct PhysicsStats {
     float weight{1500.f};
@@ -239,12 +240,14 @@ constexpr ComponentSignature tuple_signature = ECS_HELPERS::make_signature<Compo
 template <ECS::Component... Cs>
 class SystemBase;
 
+class PositionSystem;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
 class CamerableSystem;
 class ControllingSystem;
 using SystemList = std::tuple<
+    PositionSystem,
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,

@@ -67,14 +67,14 @@ public:
     }};
     static constexpr std::array<std::array<float, 3>, BLOCK_TYPES_N> PHYSICS_TABLE = {{
         // friction, bounciness, static_friction
-        {0.f, 0.f, 0.f},   // Air
-        {0.5f, 0.f, 0.1f}, // Stone
-        {0.5f, 0.f, 0.1f}, // Dirt
-        {0.5f, 0.f, 0.1f}, // Grass
-        {0.5f, 0.f, 0.1f}, // Glass
-        {0.5f, 0.f, 0.1f}, // IronBlock
-        {0.5f, 0.f, 0.1f}, // RedstoneLamp
-        {0.5f, 0.f, 0.1f}  // DiamondOre
+        {0.f, 0.f, 0.f},          // Air
+        {1.f / 3.f, 0.f, 0.125f}, // Stone
+        {1.f / 3.f, 0.f, 0.125f}, // Dirt
+        {1.f / 3.f, 0.f, 0.125f}, // Grass
+        {1.f / 3.f, 0.f, 0.125f}, // Glass
+        {1.f / 3.f, 0.f, 0.125f}, // IronBlock
+        {1.f / 3.f, 0.f, 0.125f}, // RedstoneLamp
+        {1.f / 3.f, 0.f, 0.125f}  // DiamondOre
     }};
 
     // TEXTURES

@@ -93,7 +93,7 @@ int main(void) {
             }
             glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr);
     window.keyboard.bind(GLFW_KEY_R, [&]() { world.clear();    world.generate(); }, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { display_debug = !display_debug; }, nullptr);
+    window.keyboard.bind(GLFW_KEY_G, [&]() { display_debug = !display_debug; }, nullptr);
 
     // Create and compile our GLSL program from the shaders
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
@@ -129,7 +129,7 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         // different world thread
         world.generate();
-        world.updateEntities(window, 0.01);
+        world.updateEntities(window);
 
         /**********==========RENDERING==========**********/
         block_shader.use();
