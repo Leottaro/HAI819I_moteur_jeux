@@ -14,9 +14,9 @@
 #include <math.h>
 
 // helpers
-#define M_PI_SAFE float(M_PI - 0.001)
-#define M_PI_2_SAFE float(M_PI_2 - 0.001)
-#define M_PI_4_SAFE float(M_PI_4 - 0.001)
+constexpr float M_PI_SAFE = M_PI - 0.001;
+constexpr float M_PI_2_SAFE = M_PI_2 - 0.001;
+constexpr float M_PI_4_SAFE = M_PI_4 - 0.001;
 
 constexpr glm::vec3 VEC_ZERO(0.f, 0.f, 0.f);
 constexpr glm::vec3 VEC_RIGHT(1.f, 0.f, 0.f);
@@ -38,6 +38,18 @@ public:
     Transformation(glm::vec3 _translation = glm::vec3(0.f), glm::vec3 _scale = glm::vec3(1.f), glm::vec3 _euler_angles = glm::vec3(0.f)) : m_translation(_translation), m_scale(_scale), m_euler_angles(_euler_angles) { updateRotation(); }
 
     // HELPERS
+
+    static void clampOrientation(glm::vec2& orientation) {
+        orientation.x = glm::clamp(orientation.x, -M_PI_2_SAFE, M_PI_2_SAFE);
+        orientation.y = Transformation::clipAnglePI(orientation.y);
+    }
+
+    static void getViewVectors(glm::vec2& orientation, glm::vec3& front, glm::vec3& right, glm::vec3& real_up) {
+        front = glm::normalize(Transformation::EulerToEuclidian(orientation));
+        right = glm::normalize(glm::cross(front, VEC_UP));
+        real_up = glm::normalize(glm::cross(right, front));
+    }
+
     static float clipAnglePI(float _angle) {
         while (_angle < -M_PI)
             _angle += 2. * M_PI;

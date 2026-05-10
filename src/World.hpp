@@ -1,8 +1,13 @@
 #pragma once
 
 // USUAL INCLUDES
-#include <imgui.h>
+#include "Chunk.hpp"
+#include "ECS/ECS.hpp"
 
+#include <map>
+#include <set>
+#include <list>
+#include <imgui.h>
 #include <algorithm>
 #include <list>
 #include <map>
@@ -11,13 +16,9 @@
 #include <sstream>
 #include <vector>
 
-#include "Camera.hpp"
-#include "Chunk.hpp"
-#include "ECS/ECS.hpp"
-
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
-constexpr uint16_t TICK_SPEED = 20;     // ticks par seconde
-constexpr uint64_t DAY_LENGTH = 28800;  // journée en ticks
+constexpr uint16_t TICK_SPEED = 20;    // ticks par seconde
+constexpr uint64_t DAY_LENGTH = 28800; // journée en ticks
 constexpr uint64_t TIME_SUNRISE = 0;
 constexpr uint64_t TIME_NOON = DAY_LENGTH / 4;
 constexpr uint64_t TIME_SUNSET = DAY_LENGTH / 2;
@@ -36,10 +37,10 @@ constexpr glm::vec3 SUN_NOON(209.f / 255.f, 209.f / 255.f, 175.f / 255.f);
 constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 167.f / 255.f, 41.f / 255.f);
 
 class World {
-   public:
+public:
     static constexpr int RENDER_DISTANCE = 5;
 
-   private:
+private:
     template <typename T, size_t n>
     struct glmVecLexicoGraphic {
         bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
@@ -60,16 +61,16 @@ class World {
 
     uint64_t m_world_time = TIME_NOON;
     float m_sun_season = 0.f;
-    glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR);  // position du soleil (nord<->sud, est<->ouest)
+    glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR); // position du soleil (nord<->sud, est<->ouest)
     glm::vec3 m_sun_color = SUN_NOON;
 
     GenType m_gentype = GenType::DEBUG_;
 
-    inline ECS::Position ECSPosition(const glm::vec3& _pos) {
-        return ECS::Position{findChunk(Chunk::posToChunkPos(_pos)), _pos};
+    inline ECS::Positionnable ECSPosition(const glm::vec3& _pos) {
+        return ECS::Positionnable{findChunk(Chunk::posToChunkPos(_pos)), _pos};
     }
 
-   public:
+public:
     World() {}
     ~World() { clear(); }
 
@@ -81,16 +82,18 @@ class World {
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
+    inline bool generate() { return generate(m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos()); } // TODO: for each controlled entities
 
     // ECS manager
     template <ECS::Component C>
     inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
-    inline void fixCamera(Camera* _camera, ECS::EntityId entity) { m_ecs_manager.fixCamera(_camera, entity); }
+    inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
+    inline void stopControl(Window& _window) { m_ecs_manager.stopControl(_window); }
 
     inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
-    inline void updateEntities(float _deltaTime) { m_ecs_manager.update(_deltaTime); }
-    inline void renderEntities(const Camera& _camera, ShaderProgram& _line_shader) { m_ecs_manager.render(_camera, _line_shader); }
+    inline void updateEntities(Window& _window) { m_ecs_manager.update(_window, 0.01); } // TODO: dt
+    inline void renderEntities(ShaderProgram& _line_shader) { m_ecs_manager.render(_line_shader); }
     ECS::EntityId addTestEntity(const glm::vec3& _pos);
 
     // World time
@@ -108,14 +111,14 @@ class World {
                 m_last_update = glfwGetTime();
                 m_time_ff = false;
             } else {
-                double current_time = glfwGetTime();                                // in seconds, capture
-                double delta_time = current_time - m_last_update;                   // in seconds, computing delta time
-                m_last_update = current_time;                                       // update for next step
-                double delta_ticks = delta_time * TICK_SPEED;                       // seconds * ticks / seconds = ticks
-                m_tick_accumulator += delta_ticks;                                  // save to avoir drifting
-                uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator);  // seconds -> ticks
-                m_tick_accumulator -= ticks_passed;                                 // reset for next delta
-                m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;          // in ticks % ticks per day (time changed)
+                double current_time = glfwGetTime();                               // in seconds, capture
+                double delta_time = current_time - m_last_update;                  // in seconds, computing delta time
+                m_last_update = current_time;                                      // update for next step
+                double delta_ticks = delta_time * TICK_SPEED;                      // seconds * ticks / seconds = ticks
+                m_tick_accumulator += delta_ticks;                                 // save to avoir drifting
+                uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator); // seconds -> ticks
+                m_tick_accumulator -= ticks_passed;                                // reset for next delta
+                m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;         // in ticks % ticks per day (time changed)
 
                 m_sun_pos.x = m_sun_season;
                 m_sun_pos.y = m_world_time * TIME_ANGLE_FACTOR;
@@ -124,13 +127,15 @@ class World {
         }
     }
 
-    inline void renderChunks(const Camera& _camera, ShaderProgram& _block_shader) {
+    inline void renderChunks(ShaderProgram& _block_shader) {
         updateTime();
 
+        ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
+
         _block_shader.use();
-        _block_shader.set("view", _camera.getViewMatrix());
-        _block_shader.set("projection", _camera.getProjectionMatrix());
-        _block_shader.set("camera_pos", _camera.m_position);
+        _block_shader.set("view", camerable_system.getView());
+        _block_shader.set("projection", camerable_system.getProjection());
+        _block_shader.set("camera_pos", camerable_system.getCamPos());
         _block_shader.set("sun_pos", m_sun_pos);
         _block_shader.set("sun_color", m_sun_color);
         _block_shader.set("albedo_atlas", 0);
@@ -141,12 +146,12 @@ class World {
         drawed_chunks.reserve(m_chunks.size());
 
         for (auto& [chunk_pos, chunk] : m_chunks) {
-            if (_camera.isVisible(chunk->getAABB())) {
-                float dist = glm::distance(_camera.m_position, glm::vec3(chunk_pos) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
-                drawed_chunks.push_back({dist, chunk});
-            }
+            // if (_camera.isVisible(chunk->getAABB())) {
+            float dist = glm::distance(camerable_system.getCamPos(), glm::vec3(chunk_pos) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
+            drawed_chunks.push_back({dist, chunk});
+            // }
         }
-        std::sort(drawed_chunks.begin(), drawed_chunks.end(), [](auto& a, auto& b) { return a.first > b.first; });  // On sort par distance décroissante
+        std::sort(drawed_chunks.begin(), drawed_chunks.end(), [](auto& a, auto& b) { return a.first > b.first; }); // On sort par distance décroissante
 
         // https://claude.ai/share/8b8db085-496a-4a82-a253-38586a504c3c
         for (auto& [_, chunk] : drawed_chunks) {
@@ -160,10 +165,11 @@ class World {
         }
         glDepthMask(GL_TRUE);
     }
-    inline void renderDebugBoxes(ShaderProgram& _line_shader, const Camera& _camera) {
+    void renderDebugBoxes(ShaderProgram& _line_shader) {
+        ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
         _line_shader.use();
-        _line_shader.set("view", _camera.getViewMatrix());
-        _line_shader.set("projection", _camera.getProjectionMatrix());
+        _line_shader.set("view", camerable_system.getView());
+        _line_shader.set("projection", camerable_system.getProjection());
         _line_shader.set("color", glm::vec3(1.f));
         _line_shader.set("position", glm::vec3(0.f));
 
@@ -191,7 +197,7 @@ class World {
         return glm::mix(SUN_NOON, SUN_DUSK, t);
     }
 
-    void updateWindow(Camera _camera) {
+    void updateWindow() {
         if (ImGui::Begin("World Info")) {
             int current_type = static_cast<int>(m_gentype);
             if (ImGui::Combo("Generation Type",
@@ -200,7 +206,7 @@ class World {
                              IM_ARRAYSIZE(GenTypeNames))) {
                 m_gentype = static_cast<GenType>(current_type);
                 clear();
-                generate(_camera.getFront());
+                generate();
             }
             if (ImGui::DragScalar(
                     "World Time",

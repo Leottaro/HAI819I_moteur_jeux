@@ -18,8 +18,8 @@ struct EntityFactory<ECS::TestEntity> {
         });
 
         // Entity-specific initialisation
-        cm.getComponent<ECS::Position>(id) = inputs;
-        cm.getComponent<ECS::Collision>(id).hitboxes = {AABB<float>(glm::vec3(-1.f / 3.f, 0.f, -1.f / 3.f), glm::vec3(1.f / 3.f, 1.74f, 1.f / 3.f))};
+        cm.getComponent<ECS::Positionnable>(id) = inputs;
+        cm.getComponent<ECS::Collisionnable>(id).hitboxes = {AABB<float>(glm::vec3(-1.f / 3.f, 0.f, -1.f / 3.f), glm::vec3(1.f / 3.f, 1.74f, 1.f / 3.f))};
         cm.getComponent<ECS::Camerable>(id).eye_pos = glm::vec3(0.f, 1.5f, 0.f);
 
         // Let this
@@ -89,6 +89,11 @@ public:
         onSignatureChanged(entity);
     }
 
+    template <ECS::Component C>
+    inline bool hasComponent(ECS::EntityId entity) {
+        return cm.hasComponent<C>(entity);
+    }
+
     // Returns a reference to the component owned by the entity.
     // Behaviour is undefined if the entity does not own the component.
     template <ECS::Component C>
@@ -111,34 +116,42 @@ public:
     // Update
     // -------------------------------------------------------------------------
 
-    void fixCamera(Camera* _camera, ECS::EntityId entity) {
-        ECS::Position& position = cm.getComponent<ECS::Position>(entity);
-        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
-
-        camerable.camera = _camera;
-        camerable.camera->m_center = &position.pos;
-        camerable.camera->m_relative_eye_pos = &camerable.eye_pos;
-        camerable.camera->updatePosConstraint();
-        camerable.camera->updateData();
+    inline void startControl(Window& _window, ECS::EntityId entity) {
+        getSystem<ECS::CamerableSystem>().startControl(cm, entity);
+        _window.keyboard.bind(GLFW_KEY_C, [&]() { getSystem<ECS::CamerableSystem>().toggleControlType(cm); }, nullptr);
+    }
+    inline void stopControl(Window& _window) {
+        getSystem<ECS::CamerableSystem>().stopControl();
     }
 
-    void update(float _deltaTime) {
+    void update(Window& window, float _deltaTime) {
+        // PositionSystem: delete every out of world entities
+        std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm);
+        for (ECS::EntityId entity : entities_to_destroy)
+            if (cm.getComponent<ECS::Positionnable>(entity).current_chunk == nullptr)
+                destroyEntity(entity);
+
+        // ControllingSystem: control entities
+        if (getSystem<ECS::CamerableSystem>().getControlType() != ECS::ControlType::FreeCam) {
+            getSystem<ECS::ControllingSystem>().update(cm, window, _deltaTime);
+        }
+
         // PhysicsSystem: integrate forces and update velocities.
-        sm.getSystem<ECS::PhysicsSystem>().update(cm, _deltaTime);
+        getSystem<ECS::PhysicsSystem>().update(cm, _deltaTime);
 
         // WorldCollisionSystem: sweep-and-slide.
-        sm.getSystem<ECS::WorldCollisionSystem>().update(cm, _deltaTime);
+        getSystem<ECS::WorldCollisionSystem>().update(cm, _deltaTime);
 
         // CamerableSystem: update camera
-        sm.getSystem<ECS::CamerableSystem>().update(cm, _deltaTime);
+        getSystem<ECS::CamerableSystem>().update(cm, window, _deltaTime);
     }
 
-    void render(const Camera& _camera, ShaderProgram& _line_shader) {
+    void render(ShaderProgram& _line_shader) {
         _line_shader.use();
-        _line_shader.set("view", _camera.getViewMatrix());
-        _line_shader.set("projection", _camera.getProjectionMatrix());
+        _line_shader.set("view", getSystem<ECS::CamerableSystem>().getView());
+        _line_shader.set("projection", getSystem<ECS::CamerableSystem>().getProjection());
 
         // HitBoxDisplaySystem: render the hitobxes lines.
-        sm.getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
+        getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
     }
 };
