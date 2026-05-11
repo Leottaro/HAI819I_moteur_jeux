@@ -99,7 +99,7 @@ constexpr EntityId MAX_ENTITIES = 65535;
 // -------------------------------------------------------------------------
 
 struct Position {
-    Chunk* current_chunk{nullptr};
+    const Chunk* current_chunk{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
 struct Collision {

@@ -281,7 +281,6 @@ void initOpenGL() {
     glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
     glEnable(GL_DEPTH_TEST);                           // Enable depth test
     glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
     glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }

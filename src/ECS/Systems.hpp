@@ -34,18 +34,17 @@ public:
             std::vector<glm::vec3> forces;
             forces.reserve(3);
             if (Ground.on_ground) {
-                Block* in_block = position.current_chunk->getBlock(position.pos);
-                Block* under_block = in_block->m_neighbours[2]; // 2 -> -y
+                const Block& in_block = position.current_chunk->getBlock(position.pos);
+                Block* under_block = in_block.m_neighbours[2]; // 2 -> -y
                 if (under_block == nullptr || !under_block->hasHitbox()) {
                     Ground.on_ground = false;
                 } else {
-                    float ground_friction = under_block->getCollisionStats()[0];
-                    velocity.vel *= ground_friction - 1.f;
+                    velocity.vel *= under_block->getFriction() - 1.f;
                 }
             } else {
                 forces.push_back(glm::vec3(0.f, -9.81f, 0.f) * stats.weight); // g
-                Block* block = position.current_chunk->getBlock(position.pos);
-                float densite_fluide = block->getDensity();
+                const Block& block = position.current_chunk->getBlock(position.pos);
+                float densite_fluide = block.getDensity();
                 if (densite_fluide > 0.f) {
                     forces.push_back(densite_fluide * -forces[0] * stats.volume / (stats.weight / stats.volume)); // flottaison
                     forces.push_back(densite_fluide * velocity.vel * -stats.drag);                                // drag
@@ -164,8 +163,8 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Position, ECS::Col
             //           << "\t\told pos: " << glm::to_string(position.pos) << std::endl
             //           << "\t\told vel: " << glm::to_string(velocity.vel) << std::endl;
 
-            float friction = collision.block->getCollisionStats()[0];
-            float restitution = collision.block->getCollisionStats()[1];
+            float friction = collision.block->getFriction();
+            float restitution = collision.block->getRestitution();
             bounce(0.f, friction, restitution, collision.normal, velocity.vel);
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && velocity.vel.y == 0.f) {
                 Ground.on_ground = true;

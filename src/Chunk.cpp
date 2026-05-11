@@ -8,16 +8,16 @@
 #include "objects/blocks.hpp"
 #include "objects/textures.hpp"
 
-Chunk* Chunk::getChunk(const glm::vec3& _pos) {
+Chunk* Chunk::getChunk(const glm::vec3& _pos) const {
     return m_world->findChunk(Chunk::posToChunkPos(_pos));
 }
 
-Block* Chunk::findBlock(const glm::ivec3& _block_pos) {
+Block* Chunk::findBlock(const glm::ivec3& _block_pos) const {
     return m_world->findBlock(_block_pos);
 }
 
 // https://stackoverflow.com/questions/55263298/draw-all-voxels-that-pass-through-a-3d-line-in-3d-voxel-space
-void Chunk::findSolidBlocks(const glm::vec3& _start, const glm::vec3& _end, std::vector<Block*>& blocks) {
+void Chunk::findSolidBlocks(const glm::vec3& _start, const glm::vec3& _end, std::vector<const Block*>& blocks) const {
     glm::vec3 delta = glm::abs(_end - _start);
     float d_length = glm::length(delta);
     glm::vec3 tdelta = d_length / delta;
@@ -47,9 +47,9 @@ void Chunk::findSolidBlocks(const glm::vec3& _start, const glm::vec3& _end, std:
                 return;
             }
         }
-        Block* block = getBlock(current_block);
-        if (block->hasHitbox())
-            blocks.push_back(block);
+        const Block& block = getBlock(current_block);
+        if (block.hasHitbox())
+            blocks.push_back(&block);
 
         if (tmax.x <= tmax.y && tmax.x <= tmax.z) {
             current_block.x += step.x;
@@ -127,83 +127,86 @@ void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     size_t block_i = 0;
     switch (_type) {
-        case GenType::DEBUG_:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= 0) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= 4) {
-                            uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
-                            block.getType() = BlockType(truc % BLOCK_TYPES_N);
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
-                        // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? BlockType::Stone : BlockType::Air;
+    case GenType::DEBUG_:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block& block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= 0) {
+                        block.getType() = BlockType::Stone;
+                    } else if (world_pos.y <= 3) {
+                        block.getType() = BlockType::Dirt;
+                    } else if (world_pos.y <= 4) {
+                        uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
+                        block.getType() = BlockType(truc % BLOCK_TYPES_N);
+                    } else {
+                        block.getType() = BlockType::Air;
+                    }
+                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? BlockType::Stone : BlockType::Air;
+                }
+            }
+        }
+        break;
+    case GenType::SUPERFLAT:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block& block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= 0) {
+                        block.getType() = BlockType::Stone;
+                    } else if (world_pos.y <= 3) {
+                        block.getType() = BlockType::Dirt;
+                    } else if (world_pos.y <= 4) {
+                        block.getType() = BlockType::Grass;
+
+                    } else {
+                        block.getType() = BlockType::Air;
                     }
                 }
             }
-            break;
-        case GenType::SUPERFLAT:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= 0) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= 4) {
+        }
+        break;
+    case GenType::OVERWORLD:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    // const uint8_t ground_height = m_heightmap.value().getPixel(0, 0);
+                    const uint8_t ground_height = m_heightmap.value().getPixelSafe(world_pos.x, world_pos.z);
+                    // std::cout << ground_height << "\n";
+                    Block& block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= ground_height) {
+                        block.getType() = BlockType::Stone;
+                    } else if (world_pos.y <= ground_height + 3) {
+                        block.getType() = BlockType::Dirt;
+                    } else if (world_pos.y <= ground_height + 4) {
+                        int test = rand();
+                        if (test < RAND_MAX / 4)
+                            block.getType() = BlockType::IronBlock;
+                        else
                             block.getType() = BlockType::Grass;
 
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
+                    } else {
+                        block.getType() = BlockType::Air;
                     }
                 }
             }
-            break;
-        case GenType::OVERWORLD:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        // const uint8_t ground_height = m_heightmap.value().getPixel(0, 0);
-                        const uint8_t ground_height = m_heightmap.value().getPixelSafe(world_pos.x, world_pos.z);
-                        // std::cout << ground_height << "\n";
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= ground_height) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= ground_height + 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= ground_height + 4) {
-                            int test = rand();
-                            if (test < RAND_MAX / 4)
-                                block.getType() = BlockType::IronBlock;
-                            else
-                                block.getType() = BlockType::Grass;
-
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
-                    }
-                }
-            }
-            break;
-        default:
-            throw std::runtime_error("ChunkGenType not supported in Chunk generation");
+        }
+        break;
+    default:
+        throw std::runtime_error("ChunkGenType not supported in Chunk generation");
     }
+
+    for (size_t i = 0; i < Chunk::NB_BLOCKS; i++)
+        nb_translucent_block += (m_blocks[i].getTransparence() == BlockTransparence::TRANSLUCENT);
 }
 
 Chunk::Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
@@ -211,7 +214,6 @@ Chunk::Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type) : m_wor
     initNeighbours();
     generate(_type);
     initShaderData();
-    updateShaderData();
 }
 
 struct ChunkVertex {
@@ -227,9 +229,10 @@ namespace ChunkMeshScratch {
 std::array<ChunkVertex, Chunk::MAX_VERTICES> opaque_vertices;
 std::array<glm::uvec3, Chunk::MAX_TRIANGLES> opaque_triangles;
 
-std::array<ChunkVertex, Chunk::MAX_VERTICES> transparent_vertices;
-std::array<glm::uvec3, Chunk::MAX_TRIANGLES> transparent_triangles;
-};  // namespace ChunkMeshScratch
+std::array<ChunkVertex, Chunk::MAX_VERTICES> translucent_vertices;
+std::array<glm::uvec3, Chunk::MAX_TRIANGLES> translucent_triangles;
+std::array<float, Chunk::MAX_TRIANGLES / 2> translucent_quad_distances;
+}; // namespace ChunkMeshScratch
 void Chunk::initShaderData() {
     // OPAQUE DATA
 
@@ -252,23 +255,23 @@ void Chunk::initShaderData() {
     // Attribute 4: uv
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, uv));
-    // ELEMENT BUFFERS
+    // ELEMENT BUFFER
     glGenBuffers(1, &m_opaque_EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_opaque_EBO);
 
-    // TRANSPARENT THING
+    // TRANSLUCENT DATA
 
-    glGenVertexArrays(1, &m_transparent_VAO);
-    glBindVertexArray(m_transparent_VAO);
-    glGenBuffers(1, &m_transparent_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_transparent_VBO);
+    glGenVertexArrays(1, &m_translucent_VAO);
+    glBindVertexArray(m_translucent_VAO);
+    glGenBuffers(1, &m_translucent_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_translucent_VBO);
     // Attribute 0: position
     glEnableVertexAttribArray(0);
     glVertexAttribIPointer(0, 3, GL_UNSIGNED_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, position));
     // Attribute 1: normal
     glEnableVertexAttribArray(1);
     glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, normal));
-    // Attribute 2: tangent
+    // Attribute 2: tangenttranslucent_triangle_distances
     glEnableVertexAttribArray(2);
     glVertexAttribIPointer(2, 3, GL_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, tangent));
     // Attribute 3: bitangent
@@ -277,15 +280,14 @@ void Chunk::initShaderData() {
     // Attribute 4: uv
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, uv));
-    // ELEMENT BUFFERS
-    glGenBuffers(1, &m_transparent_EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_transparent_EBO);
-
-    m_aabb.initShaderData();
+    // ELEMENT BUFFER
+    glGenBuffers(1, &m_translucent_EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_translucent_EBO);
 }
 
-void Chunk::updateShaderData() {
-    m_opaque_vertices = m_opaque_triangles= m_transparent_vertices = m_transparent_triangles = 0;
+void Chunk::updateShaderData(const glm::vec3& _cam_pos) {
+    m_opaque_vertices = m_opaque_triangles = m_translucent_vertices = m_translucent_triangles = 0;
+    should_rebuild_mesh = false;
 
     glm::u8vec3 local_pos;
     int block_i = -1;
@@ -298,14 +300,15 @@ void Chunk::updateShaderData() {
                     continue;
                 }
 
-                std::array<ChunkVertex, Chunk::MAX_VERTICES>& vertices = block.isTransparent() ? ChunkMeshScratch::transparent_vertices : ChunkMeshScratch::opaque_vertices;
-                std::array<glm::uvec3, Chunk::MAX_TRIANGLES>& triangles = block.isTransparent() ? ChunkMeshScratch::transparent_triangles : ChunkMeshScratch::opaque_triangles;
-                size_t& vertices_count = block.isTransparent() ? m_transparent_vertices : m_opaque_vertices;
-                size_t& triangles_count = block.isTransparent() ? m_transparent_triangles : m_opaque_triangles;
+                std::array<ChunkVertex, Chunk::MAX_VERTICES>& vertices = block.getTransparence() == BlockTransparence::TRANSLUCENT ? ChunkMeshScratch::translucent_vertices : ChunkMeshScratch::opaque_vertices;
+                std::array<glm::uvec3, Chunk::MAX_TRIANGLES>& triangles = block.getTransparence() == BlockTransparence::TRANSLUCENT ? ChunkMeshScratch::translucent_triangles : ChunkMeshScratch::opaque_triangles;
+                size_t& vertices_count = block.getTransparence() == BlockTransparence::TRANSLUCENT ? m_translucent_vertices : m_opaque_vertices;
+                size_t& triangles_count = block.getTransparence() == BlockTransparence::TRANSLUCENT ? m_translucent_triangles : m_opaque_triangles;
 
+                glm::vec3 block_center = glm::vec3(m_pos + glm::ivec3(local_pos)) + glm::vec3(0.5f);
                 for (int face_i = 0; face_i < 6; face_i++) {
                     const Block* neighbour = block.m_neighbours[face_i];
-                    if (neighbour != nullptr && (!neighbour->isTransparent() || block.getType() == neighbour->getType()))
+                    if (neighbour != nullptr && (neighbour->getTransparence() == BlockTransparence::SOLID || block.getType() == neighbour->getType()))
                         continue;
                     const Block::FaceData& face = Block::FACE_DATA[face_i];
 
@@ -320,8 +323,25 @@ void Chunk::updateShaderData() {
                     }
 
                     glm::uvec3 offset(vertices_count - 4);
-                    triangles[triangles_count++] = face.triangles[0] + offset;
-                    triangles[triangles_count++] = face.triangles[1] + offset;
+                    if (block.getTransparence() == BlockTransparence::TRANSLUCENT) {
+                        glm::vec3 face_centroid = block_center + 0.5f * glm::vec3(face.normal);
+                        float distance_to_cam = glm::distance(_cam_pos, face_centroid);
+
+                        size_t i = triangles_count / 2;
+                        while (i > 0 && ChunkMeshScratch::translucent_quad_distances[i - 1] < distance_to_cam) {
+                            triangles[i * 2] = triangles[i * 2 - 2];
+                            triangles[i * 2 + 1] = triangles[i * 2 - 1];
+                            ChunkMeshScratch::translucent_quad_distances[i] = ChunkMeshScratch::translucent_quad_distances[i - 1];
+                            i--;
+                        }
+                        triangles[i * 2] = face.triangles[0] + offset;
+                        triangles[i * 2 + 1] = face.triangles[1] + offset;
+                        ChunkMeshScratch::translucent_quad_distances[i] = distance_to_cam;
+                        triangles_count += 2;
+                    } else {
+                        triangles[triangles_count++] = face.triangles[0] + offset;
+                        triangles[triangles_count++] = face.triangles[1] + offset;
+                    }
                 }
             }
         }
@@ -333,11 +353,11 @@ void Chunk::updateShaderData() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_opaque_EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_opaque_triangles * sizeof(glm::uvec3)), ChunkMeshScratch::opaque_triangles.data(), GL_STATIC_DRAW);
 
-    glBindVertexArray(m_transparent_VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_transparent_VBO);
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_transparent_vertices * sizeof(ChunkVertex)), ChunkMeshScratch::transparent_vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_transparent_EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_transparent_triangles * sizeof(glm::uvec3)), ChunkMeshScratch::transparent_triangles.data(), GL_STATIC_DRAW);
+    glBindVertexArray(m_translucent_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_translucent_VBO);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_vertices * sizeof(ChunkVertex)), ChunkMeshScratch::translucent_vertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_translucent_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_triangles * sizeof(glm::uvec3)), ChunkMeshScratch::translucent_triangles.data(), GL_STATIC_DRAW);
 }
 
 void Chunk::renderOpaque() {
@@ -345,14 +365,11 @@ void Chunk::renderOpaque() {
     glDrawElements(GL_TRIANGLES, m_opaque_triangles * 3, GL_UNSIGNED_INT, 0);
 }
 
-void Chunk::renderTransparent() {
-    glBindVertexArray(m_transparent_VAO);
-    glDrawElements(GL_TRIANGLES, m_transparent_triangles * 3, GL_UNSIGNED_INT, 0);
+void Chunk::renderTranslucent() {
+    glBindVertexArray(m_translucent_VAO);
+    glDrawElements(GL_TRIANGLES, m_translucent_triangles * 3, GL_UNSIGNED_INT, 0);
 }
 
-void Chunk::renderDebugBox() {
-    m_aabb.render();
-}
 void Chunk::clearShaderData() {
     if (m_opaque_VAO) {
         glDeleteVertexArrays(1, &m_opaque_VAO);
@@ -367,18 +384,16 @@ void Chunk::clearShaderData() {
         m_opaque_EBO = 0;
     }
 
-    if (m_transparent_VAO) {
-        glDeleteVertexArrays(1, &m_transparent_VAO);
-        m_transparent_VAO = 0;
+    if (m_translucent_VAO) {
+        glDeleteVertexArrays(1, &m_translucent_VAO);
+        m_translucent_VAO = 0;
     }
-    if (m_transparent_VBO) {
-        glDeleteBuffers(1, &m_transparent_VBO);
-        m_transparent_VBO = 0;
+    if (m_translucent_VBO) {
+        glDeleteBuffers(1, &m_translucent_VBO);
+        m_translucent_VBO = 0;
     }
-    if (m_transparent_EBO) {
-        glDeleteBuffers(1, &m_transparent_EBO);
-        m_transparent_EBO = 0;
+    if (m_translucent_EBO) {
+        glDeleteBuffers(1, &m_translucent_EBO);
+        m_translucent_EBO = 0;
     }
-    
-    m_aabb.clearShaderData();
 }

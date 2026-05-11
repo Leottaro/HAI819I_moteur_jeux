@@ -44,13 +44,13 @@ Chunk* World::findChunk(const glm::ivec3& _chunk_pos) {
 
 Block* World::findBlock(const glm::ivec3& _block_pos) {
     glm::ivec3 chunk_pos = Chunk::blockPosToChunkPos(_block_pos);
-    return isChunkLoaded(chunk_pos) ? m_chunks.at(chunk_pos)->getBlock(_block_pos)
+    return isChunkLoaded(chunk_pos) ? &m_chunks.at(chunk_pos)->getBlock(_block_pos)
                                     : nullptr;
 }
 
-std::vector<Block*> World::findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end) {
+std::vector<const Block*> World::findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end) {
     Chunk* start_chunk = findChunk(Chunk::blockPosToChunkPos(start));
-    std::vector<Block*> res;
+    std::vector<const Block*> res;
     if (start_chunk != nullptr)
         start_chunk->findSolidBlocks(start, end, res);
     return res;
@@ -75,11 +75,9 @@ Chunk* World::addChunk(const glm::ivec3& _chunk_pos) {
             neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = inserted_chunk;
 
             inserted_chunk->updateBlockNeighbours(face_i);
-            neighbour->updateShaderData();
+            neighbour->should_rebuild_mesh = true;
         }
     }
-
-    inserted_chunk->updateShaderData();
 
     return inserted_chunk;
 }
@@ -99,7 +97,7 @@ bool World::removeChunk(const glm::ivec3& _chunk_pos) {
             m_chunks_frontier.insert(_chunk_pos);
             neighbour->m_neighbours[OPPOSITE_FACE[face_i]] = nullptr;
             neighbour->updateBlockNeighbours(OPPOSITE_FACE[face_i]);
-            neighbour->updateShaderData();
+            neighbour->should_rebuild_mesh = true;
         } else if (isChunkFrontier(neighbour_pos)) {
             // neighbour chunk is in frontier, remove it if it has no loaded neighbour.
             bool neighbour_has_neighbour = false;
@@ -128,7 +126,7 @@ bool World::generate(const glm::vec3& _pos) {
 
     std::list<glm::ivec3> chunk_to_remove;
     for (auto& [chunk_pos, chunk] : m_chunks) {
-        if (Chunk::chunkDistance(_pos, chunk_pos) > RENDER_DISTANCE) {
+        if (Chunk::chunkDistance(_pos, chunk_pos) > m_render_distance) {
             chunk_to_remove.push_back(chunk_pos);
         }
     }
@@ -142,7 +140,7 @@ bool World::generate(const glm::vec3& _pos) {
     std::map<float, glm::ivec3> chunk_to_add;
     for (const glm::ivec3& chunk_pos : m_chunks_frontier) {
         float chunk_dist = Chunk::chunkDistance(_pos, chunk_pos);
-        if (chunk_dist <= RENDER_DISTANCE) {
+        if (chunk_dist <= m_render_distance) {
             chunk_to_add.insert({chunk_dist, chunk_pos});
         }
     }
