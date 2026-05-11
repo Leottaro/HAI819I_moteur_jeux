@@ -5,11 +5,26 @@
 #include <glm/glm.hpp>
 
 // USUAL INCLUDES
-#include <functional>
-
 #include "objects/blocks.hpp"
+#include <functional>
+#include <set>
+#include <map>
 
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
+
+template <typename T, size_t n>
+struct glmVecLexicoGraphic {
+    bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
+        return a.x != b.x   ? a.x < b.x
+               : a.y != b.y ? a.y < b.y
+                            : a.z < b.z;
+    }
+};
+
+template <typename T, size_t n>
+using VecSet = std::set<glm::vec<n, T, glm::packed_highp>, glmVecLexicoGraphic<T, n>>;
+template <typename T, size_t n, typename V>
+using VecMap = std::map<glm::vec<n, T, glm::packed_highp>, V, glmVecLexicoGraphic<T, n>>;
 
 class Block {
 public:
@@ -72,19 +87,10 @@ public:
     inline const glm::ivec3& getPos() const { return m_pos; }
     inline glm::ivec3& getPos() { return m_pos; }
 
-    inline bool isTransparent() const { return IS_TRANSPARENT[static_cast<size_t>(m_type)] || m_type == BlockType::SlimeBlock; }
-    inline float getDensity() const {
-        switch (m_type) {
-        case BlockType::Air:
-            return 1.f;
-        // case Type::Water:
-        //     return 1000.f;
-        // case Type::Lava:
-        //     return 2000.f;
-        default:
-            return 0.f;
-        }
-    }
-    inline bool hasHitbox() const { return !(m_type == BlockType::Air); }
-    inline const std::array<float, 3>& getCollisionStats() const { return PHYSICS_TABLE[size_t(m_type)]; }
+    constexpr float getFriction() const { return getBlockTypeData(m_type).friction; }
+    constexpr float getRestitution() const { return getBlockTypeData(m_type).restitution; }
+    constexpr float getStaticFriction() const { return getBlockTypeData(m_type).static_friction; }
+    constexpr float getDensity() const { return getBlockTypeData(m_type).fluid_density; }
+    constexpr bool hasHitbox() const { return getBlockTypeData(m_type).has_hitbox; }
+    constexpr BlockTransparence getTransparence() const { return getBlockTypeData(m_type).transparence; }
 };

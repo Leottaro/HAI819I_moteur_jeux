@@ -37,21 +37,9 @@ constexpr glm::vec3 SUN_NOON(209.f / 255.f, 209.f / 255.f, 175.f / 255.f);
 constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 167.f / 255.f, 41.f / 255.f);
 
 class World {
-public:
-    static constexpr int RENDER_DISTANCE = 5;
-
 private:
-    template <typename T, size_t n>
-    struct glmVecLexicoGraphic {
-        bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
-            return a.x != b.x   ? a.x < b.x
-                   : a.y != b.y ? a.y < b.y
-                                : a.z < b.z;
-        }
-    };
-
-    std::map<glm::ivec3, Chunk*, glmVecLexicoGraphic<int, 3>> m_chunks;
-    std::set<glm::ivec3, glmVecLexicoGraphic<int, 3>> m_chunks_frontier;
+    VecMap<int, 3, Chunk*> m_chunks;
+    VecSet<int, 3> m_chunks_frontier;
     ECSManager m_ecs_manager;
 
     double m_last_update = glfwGetTime();
@@ -64,6 +52,7 @@ private:
     glm::fvec2 m_sun_pos = glm::fvec2(m_sun_season, TIME_NOON* TIME_ANGLE_FACTOR); // position du soleil (nord<->sud, est<->ouest)
     glm::vec3 m_sun_color = SUN_NOON;
 
+    int m_render_distance = 8;
     GenType m_gentype = GenType::DEBUG_;
 
     inline ECS::Positionnable ECSPosition(const glm::vec3& _pos) {
@@ -78,7 +67,7 @@ public:
     inline bool isChunkFrontier(const glm::ivec3& _chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
     Chunk* findChunk(const glm::ivec3& _chunk_pos);
     Block* findBlock(const glm::ivec3& _block_pos);
-    std::vector<Block*> findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end);
+    std::vector<const Block*> findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end);
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
     bool generate(const glm::vec3& _pos);
@@ -127,6 +116,7 @@ public:
         }
     }
 
+    glm::ivec3 last_cam_chunk{Chunk::CHUNK_SIZE - 1}; // Initialisé a un chunk impossible
     inline void renderChunks(ShaderProgram& _block_shader) {
         updateTime();
 
@@ -142,15 +132,23 @@ public:
         _block_shader.set("normal_atlas", 1);
         _block_shader.set("specular_atlas", 2);
 
+        glm::ivec3 cam_chunk = Chunk::posToChunkPos(camerable_system.getCamPos());
+        bool rebuild_all_meshes = cam_chunk != last_cam_chunk;
         std::vector<std::pair<float, Chunk*>> drawed_chunks;
         drawed_chunks.reserve(m_chunks.size());
-
         for (auto& [chunk_pos, chunk] : m_chunks) {
+            if (rebuild_all_meshes) {
+                chunk->should_rebuild_mesh = true;
+            }
             // if (_camera.isVisible(chunk->getAABB())) {
             float dist = glm::distance(camerable_system.getCamPos(), glm::vec3(chunk_pos) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
+            if (rebuild_all_meshes || cam_chunk.x == chunk_pos.x || cam_chunk.y == chunk_pos.y || cam_chunk.z == chunk_pos.z || chunk->should_rebuild_mesh) {
+                chunk->updateShaderData(camerable_system.getCamPos());
+            }
             drawed_chunks.push_back({dist, chunk});
             // }
         }
+        last_cam_chunk = cam_chunk;
         std::sort(drawed_chunks.begin(), drawed_chunks.end(), [](auto& a, auto& b) { return a.first > b.first; }); // On sort par distance décroissante
 
         // https://claude.ai/share/8b8db085-496a-4a82-a253-38586a504c3c
@@ -159,11 +157,13 @@ public:
             chunk->renderOpaque();
         }
         glDepthMask(GL_FALSE);
+        glEnable(GL_BLEND);
         for (auto& [_, chunk] : drawed_chunks) {
             _block_shader.set("chunk_pos", chunk->getPos());
-            chunk->renderTransparent();
+            chunk->renderTranslucent();
         }
         glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
     }
     void renderDebugBoxes(ShaderProgram& _line_shader) {
         ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
@@ -173,9 +173,22 @@ public:
         _line_shader.set("color", glm::vec3(1.f));
         _line_shader.set("position", glm::vec3(0.f));
 
+        AABB<float> box(glm::vec3(0), glm::vec3(Chunk::CHUNK_SIZE));
+        box.initShaderData();
         for (auto& [chunk_pos, chunk] : m_chunks) {
-            chunk->renderDebugBox();
+            _line_shader.set("position", glm::vec3(chunk_pos));
+            box.render();
         }
+        box.clearShaderData();
+
+        box.min = glm::vec3(Chunk::CHUNK_SIZE / 4);
+        box.max = glm::vec3(3 * Chunk::CHUNK_SIZE / 4);
+        box.initShaderData();
+        for (const glm::ivec3& chunk_pos : m_chunks_frontier) {
+            _line_shader.set("position", glm::vec3(chunk_pos));
+            box.render();
+        }
+        box.clearShaderData();
     }
     inline void clear() {
         for (auto& [chunk_pos, chunk] : m_chunks) {
@@ -200,31 +213,29 @@ public:
     void updateWindow() {
         if (ImGui::Begin("World Info")) {
             int current_type = static_cast<int>(m_gentype);
-            if (ImGui::Combo("Generation Type",
-                             &current_type,
-                             GenTypeNames,
-                             IM_ARRAYSIZE(GenTypeNames))) {
+            if (ImGui::Combo("Generation Type", &current_type, GenTypeNames, IM_ARRAYSIZE(GenTypeNames))) {
                 m_gentype = static_cast<GenType>(current_type);
                 clear();
                 generate();
             }
-            if (ImGui::DragScalar(
-                    "World Time",
-                    ImGuiDataType_U64,
-                    &m_world_time,
-                    10.0f,
-                    0,
-                    &DAY_LENGTH)) {
+
+            if (ImGui::InputInt("Render distance", &m_render_distance, 1, 2)) {
+                m_render_distance = std::max(m_render_distance, 1);
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (ImGui::DragScalar("World Time", ImGuiDataType_U64, &m_world_time, 10.0f, 0, &DAY_LENGTH)) {
                 updateTime();
             }
-            ImGui::DragFloat(
-                "World Season",
-                &m_sun_season,
-                0.01f,
-                -M_2_PI,
-                M_2_PI);
-            if (ImGui::Button(m_play ? "Pause" : "Play"))
+            if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_2_PIf, M_2_PIf)) {
+                m_sun_season = std::clamp(m_sun_season, -M_2_PIf, M_2_PIf);
+            }
+            if (ImGui::Button(m_play ? "Pause" : "Play")) {
                 toggleTime();
+            }
         }
         ImGui::End();
     }

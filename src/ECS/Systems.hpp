@@ -59,7 +59,7 @@ public:
                         for (under_block_pos.x = min_block.x; under_block_pos.x <= max_block.x; under_block_pos.x++) {
                             Block* block = positionnable.current_chunk->findBlock(under_block_pos);
                             groundable.on_ground = groundable.on_ground || (block != nullptr && block->getType() != BlockType::Air);
-                            max_static_friction = block != nullptr ? std::max(max_static_friction, block->getCollisionStats()[2]) : max_static_friction;
+                            max_static_friction = block != nullptr ? std::max(max_static_friction, block->getStaticFriction()) : max_static_friction;
                         }
                     }
                 }
@@ -71,7 +71,7 @@ public:
             } else {
                 glm::vec3 gravity = G * stats.weight; // g
                 acceleration += gravity;
-                float densite_fluide = positionnable.current_chunk->getBlock(positionnable.pos)->getDensity();
+                float densite_fluide = positionnable.current_chunk->getBlock(positionnable.pos).getDensity();
                 if (densite_fluide > 0.f) {
                     acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume); // flottaison
                     acceleration += densite_fluide * movable.vel * -stats.drag;                               // drag
@@ -187,8 +187,8 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Positionnable, ECS
             //           << "\t\told pos: " << glm::to_string(positionnable.pos) << std::endl
             //           << "\t\told vel: " << glm::to_string(movable.vel) << std::endl;
 
-            float friction = collision.block->getCollisionStats()[0];
-            float restitution = collision.block->getCollisionStats()[1];
+            float friction = collision.block->getFriction();
+            float restitution = collision.block->getRestitution();
             bounce(0.f, friction, restitution, collision.normal, movable.vel);
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && movable.vel.y == 0.f) {
                 groundable.on_ground = true;

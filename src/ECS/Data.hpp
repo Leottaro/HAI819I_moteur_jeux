@@ -109,7 +109,7 @@ constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 // -------------------------------------------------------------------------
 
 struct Positionnable {
-    Chunk* current_chunk{nullptr};
+    const Chunk* current_chunk{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
 struct Collisionnable {
