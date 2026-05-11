@@ -1,6 +1,9 @@
 #pragma once
 #include "Component.hpp"
-#include "Entity.hpp"
+#include "src/Transformation.hpp"
+#include "src/Window.hpp"
+#include "src/ShaderProgram.hpp"
+
 #include <unordered_set>
 
 // -------------------------------------------------------------------------
@@ -102,7 +105,8 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Positionnable, ECS
         float t{std::numeric_limits<float>::max()};
         glm::vec3 normal{0.f};
         glm::vec3 pos{0.f};
-        Block* block{nullptr};
+        float friction{0.f};
+        float restitution{1.f};
     };
     // Return true if it detected a collision
     bool detectCollision(float _deltaTime, CollisionsInfos& res, ECS::Positionnable& _positionnable, ECS::Collisionnable& _collisionnable, ECS::Movable& _movable) {
@@ -146,10 +150,28 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Positionnable, ECS
                     if (t < res.t) {
                         res.t = t;
                         res.normal = normal;
-                        res.block = block;
                         res.pos = _positionnable.pos + t * _deltaTime * _movable.vel;
                         while (block_aabb.intersectAABB(res.pos + hitbox, dist)) {
                             res.pos += dist;
+                        }
+
+                        glm::vec3 block_center = glm::vec3(block->getPos()) + glm::vec3(0.5f);
+                        glm::ivec3 min_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.min, block_center, normal));
+                        glm::ivec3 max_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.max, block_center, normal));
+
+                        glm::ivec3 collision_block;
+                        res.friction = 0.f;
+                        res.restitution = 1.f;
+                        for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
+                            for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
+                                for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
+                                    Block* block = _positionnable.current_chunk->findBlock(collision_block);
+                                    if (block == nullptr || block->getType() == BlockType::Air)
+                                        continue;
+                                    res.friction = std::max(res.friction, block->getFriction());
+                                    res.restitution = std::min(res.restitution, block->getRestitution());
+                                }
+                            }
                         }
                     }
                     // std::cout << "\t\t\tintersection: " << "t=" << res.t << "\tnormal=" << glm::to_string(res.normal) << "\tpos=" << glm::to_string(res.pos) << std::endl;
@@ -187,9 +209,7 @@ class ECS::WorldCollisionSystem : public ECS::SystemBase<ECS::Positionnable, ECS
             //           << "\t\told pos: " << glm::to_string(positionnable.pos) << std::endl
             //           << "\t\told vel: " << glm::to_string(movable.vel) << std::endl;
 
-            float friction = collision.block->getFriction();
-            float restitution = collision.block->getRestitution();
-            bounce(0.f, friction, restitution, collision.normal, movable.vel);
+            bounce(0.f, collision.friction, collision.restitution, collision.normal, movable.vel);
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && movable.vel.y == 0.f) {
                 groundable.on_ground = true;
                 collision.pos.y += 1.e-2f;
@@ -300,8 +320,8 @@ class ECS::CamerableSystem : public ECS::SystemBase<ECS::Positionnable, ECS::Ori
             _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
         if (motion.x != 0.f || motion.y != 0.f || motion.z != 0.f)
             motion = glm::normalize(motion);
-        glm::vec3 flat_front = glm::cross(VEC_UP, m_right);
-        m_cam_pos += _deltaTime * m_free_cam_speed * (motion.x * VEC_UP + motion.y * m_right + motion.z * flat_front);
+        glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, m_right);
+        m_cam_pos += _deltaTime * m_free_cam_speed * (motion.x * MathHelpers::VEC_UP + motion.y * m_right + motion.z * flat_front);
     }
 
     void updateMouseInput(Window& _window, float _deltaTime) {
@@ -412,12 +432,12 @@ public:
         if (motion.x != 0.f || motion.y != 0.f)
             motion = glm::normalize(motion);
         glm::vec3 front = Transformation::EulerToEuclidian(orientable.orientation);
-        glm::vec3 right = glm::normalize(glm::cross(front, VEC_UP));
-        glm::vec3 flat_front = glm::cross(VEC_UP, right);
+        glm::vec3 right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
+        glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, right);
 
         movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.x * right + motion.y * flat_front);
         if (_window.keyboard.isHeld(GLFW_KEY_SPACE) && groundable.on_ground) {
-            movable.vel += VEC_UP * groundable.jump_force;
+            movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
             groundable.on_ground = false;
         }
     }

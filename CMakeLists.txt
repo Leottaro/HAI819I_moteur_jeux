@@ -22,9 +22,9 @@ set(APP_SOURCES
     src/World.cpp
 
     src/ECS/ECS.hpp
+    src/ECS/Systems.hpp
     src/ECS/Entity.hpp
     src/ECS/Component.hpp
-    src/ECS/Systems.hpp
     src/ECS/Data.hpp
 
     src/Chunk.hpp
@@ -43,6 +43,8 @@ set(APP_SOURCES
 
     src/ShaderProgram.hpp
     src/ShaderProgram.cpp
+
+    src/Helpers.hpp
 )
 
 # resources

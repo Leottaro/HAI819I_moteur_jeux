@@ -11,22 +11,7 @@
 #include <GLFW/glfw3.h>
 
 // USUAL INCLUDES
-#include <math.h>
-
-// helpers
-constexpr float M_PI_SAFE = M_PI - 0.001;
-constexpr float M_PI_2_SAFE = M_PI_2 - 0.001;
-constexpr float M_PI_4_SAFE = M_PI_4 - 0.001;
-
-constexpr glm::vec3 VEC_ZERO(0.f, 0.f, 0.f);
-constexpr glm::vec3 VEC_RIGHT(1.f, 0.f, 0.f);
-constexpr glm::vec3 VEC_UP(0.f, 1.f, 0.f);
-constexpr glm::vec3 VEC_FRONT(0.f, 0.f, 1.f);
-
-inline glm::vec3 applyTransformation(const glm::vec3& vec, float w, const glm::mat4& transfo) {
-    glm::vec4 temp = transfo * glm::vec4(vec.x, vec.y, vec.z, w);
-    return temp.w == 0. ? glm::vec3(temp.x, temp.y, temp.z) : glm::vec3(temp.x, temp.y, temp.z) / temp.w;
-}
+#include "Helpers.hpp"
 
 class Transformation {
     glm::vec3 m_translation;
@@ -40,13 +25,13 @@ public:
     // HELPERS
 
     static void clampOrientation(glm::vec2& orientation) {
-        orientation.x = glm::clamp(orientation.x, -M_PI_2_SAFE, M_PI_2_SAFE);
+        orientation.x = glm::clamp(orientation.x, -MathHelpers::M_PI_2_SAFE, MathHelpers::M_PI_2_SAFE);
         orientation.y = Transformation::clipAnglePI(orientation.y);
     }
 
     static void getViewVectors(glm::vec2& orientation, glm::vec3& front, glm::vec3& right, glm::vec3& real_up) {
         front = glm::normalize(Transformation::EulerToEuclidian(orientation));
-        right = glm::normalize(glm::cross(front, VEC_UP));
+        right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
         real_up = glm::normalize(glm::cross(right, front));
     }
 
@@ -110,16 +95,16 @@ public:
     // UPDATES
     inline void updateRotation() {
         m_euler_angles = glm::vec3(
-            glm::clamp(m_euler_angles.x, -M_PI_2_SAFE, M_PI_2_SAFE), // Pitch clamp
-            Transformation::clipAnglePI(m_euler_angles.y),           // Yaw clip
+            glm::clamp(m_euler_angles.x, -MathHelpers::M_PI_2_SAFE, MathHelpers::M_PI_2_SAFE), // Pitch clamp
+            Transformation::clipAnglePI(m_euler_angles.y),                                     // Yaw clip
             m_euler_angles.z);
     }
 
     inline glm::mat4 computeTransformationMatrix() const {
         glm::mat4 translation_matrix = glm::translate(glm::mat4(1.), m_translation);
-        glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.), m_euler_angles.x, VEC_RIGHT);
-        rotation_matrix = glm::rotate(rotation_matrix, m_euler_angles.y, VEC_UP);
-        rotation_matrix = glm::rotate(rotation_matrix, m_euler_angles.z, VEC_FRONT);
+        glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.), m_euler_angles.x, MathHelpers::VEC_RIGHT);
+        rotation_matrix = glm::rotate(rotation_matrix, m_euler_angles.y, MathHelpers::VEC_UP);
+        rotation_matrix = glm::rotate(rotation_matrix, m_euler_angles.z, MathHelpers::VEC_FRONT);
         glm::mat4 scale_matrix = glm::scale(glm::mat4(1.), m_scale);
         return translation_matrix * rotation_matrix * scale_matrix;
     }

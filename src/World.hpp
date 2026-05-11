@@ -1,19 +1,13 @@
 #pragma once
 
-// USUAL INCLUDES
-#include "Chunk.hpp"
-#include "ECS/ECS.hpp"
-
-#include <map>
-#include <set>
-#include <list>
+// IMGUI
 #include <imgui.h>
+
+// USUAL INCLUDES
+#include "ECS/ECS.hpp"
+#include "Chunk.hpp"
+
 #include <algorithm>
-#include <list>
-#include <map>
-#include <random>
-#include <set>
-#include <sstream>
 #include <vector>
 
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
@@ -38,8 +32,8 @@ constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 167.f / 255.f, 41.f / 255.f);
 
 class World {
 private:
-    VecMap<int, 3, Chunk*> m_chunks;
-    VecSet<int, 3> m_chunks_frontier;
+    MathHelpers::VecMap<int, 3, Chunk*> m_chunks;
+    MathHelpers::VecSet<int, 3> m_chunks_frontier;
     ECSManager m_ecs_manager;
 
     double m_last_update = glfwGetTime();
@@ -81,7 +75,7 @@ public:
 
     inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
-    inline void updateEntities(Window& _window) { m_ecs_manager.update(_window, 0.01); } // TODO: dt
+    inline void updateEntities(Window& _window, float _dt) { m_ecs_manager.update(_window, _dt); }
     inline void renderEntities(ShaderProgram& _line_shader) { m_ecs_manager.render(_line_shader); }
     ECS::EntityId addTestEntity(const glm::vec3& _pos);
 

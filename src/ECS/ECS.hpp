@@ -124,7 +124,7 @@ public:
         getSystem<ECS::CamerableSystem>().stopControl();
     }
 
-    void update(Window& window, float _deltaTime) {
+    void update(Window& window, float _dt) {
         // PositionSystem: delete every out of world entities
         std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm);
         for (ECS::EntityId entity : entities_to_destroy)
@@ -133,17 +133,17 @@ public:
 
         // ControllingSystem: control entities
         if (getSystem<ECS::CamerableSystem>().getControlType() != ECS::ControlType::FreeCam) {
-            getSystem<ECS::ControllingSystem>().update(cm, window, _deltaTime);
+            getSystem<ECS::ControllingSystem>().update(cm, window, _dt);
         }
 
         // PhysicsSystem: integrate forces and update velocities.
-        getSystem<ECS::PhysicsSystem>().update(cm, _deltaTime);
+        getSystem<ECS::PhysicsSystem>().update(cm, _dt);
 
         // WorldCollisionSystem: sweep-and-slide.
-        getSystem<ECS::WorldCollisionSystem>().update(cm, _deltaTime);
+        getSystem<ECS::WorldCollisionSystem>().update(cm, _dt);
 
         // CamerableSystem: update camera
-        getSystem<ECS::CamerableSystem>().update(cm, window, _deltaTime);
+        getSystem<ECS::CamerableSystem>().update(cm, window, _dt);
     }
 
     void render(ShaderProgram& _line_shader) {

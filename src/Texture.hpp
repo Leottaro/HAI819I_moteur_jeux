@@ -27,7 +27,6 @@ private:
 
     std::vector<glm::u8vec4> m_data;
     int m_width, m_height, m_channels;
-    bool m_synchronized;
 
 public:
     Texture(const std::string& _path) {
@@ -114,7 +113,7 @@ public:
         const size_t in_w = tex_in.getWidth();
         const size_t in_h = tex_in.getHeight();
 
-        assert(pos_x + in_w <= m_width && pos_y + in_h <= m_height);
+        assert(pos_x + in_w <= size_t(m_width) && pos_y + in_h <= size_t(m_height));
 
         for (size_t y = 0; y < in_h; ++y) {
             const size_t dst_row = (y + pos_y) * m_width;

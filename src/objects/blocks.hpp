@@ -1,9 +1,10 @@
 #pragma once
 
 #define GLM_FORCE_CONSTEXPR
+#include <glm/glm.hpp>
+
 #include <array>
 #include <cstddef>
-#include <glm/glm.hpp>
 
 enum class BlockType : size_t {
     Air = 0,
@@ -19,16 +20,16 @@ enum class BlockType : size_t {
 };
 constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::__NUMBER_OF_TYPES);
 
-constexpr std::array<std::array<std::array<float, 2>, 6>, BLOCK_TYPES_N - 1> UB_TABLE_DATA = {{
+constexpr std::array<std::array<glm::vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DATA = {{
     // Front (-Z)    Left  (-X)    Bottom(-Y)    Back  (+Z)    Right (+X)    Top   (+Y)
-    {{{{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}, {{0.f, 0.f}}}}, // Stone
-    {{{{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}, {{1.f, 0.f}}}}, // Dirt
-    {{{{2.f, 0.f}}, {{2.f, 0.f}}, {{1.f, 0.f}}, {{2.f, 0.f}}, {{2.f, 0.f}}, {{3.f, 0.f}}}}, // Grass
-    {{{{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}, {{0.f, 1.f}}}}, // Glass
-    {{{{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}, {{1.f, 1.f}}}}, // IronBlock
-    {{{{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}, {{2.f, 1.f}}}}, // RedstoneLamp
-    {{{{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}, {{3.f, 1.f}}}}, // DiamondOre
-    {{{{0.f, 2.f}}, {{0.f, 2.f}}, {{0.f, 2.f}}, {{0.f, 2.f}}, {{0.f, 2.f}}, {{0.f, 2.f}}}}, // SlimeBlock
+    {{{0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}}}, // Stone
+    {{{1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}}}, // Dirt
+    {{{2.f, 0.f}, {2.f, 0.f}, {1.f, 0.f}, {2.f, 0.f}, {2.f, 0.f}, {3.f, 0.f}}}, // Grass
+    {{{0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}}}, // Glass
+    {{{1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}}}, // IronBlock
+    {{{2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}}}, // RedstoneLamp
+    {{{3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}}}, // DiamondOre
+    {{{0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}}}, // SlimeBlock
 }};
 
 enum class BlockTransparence : size_t {

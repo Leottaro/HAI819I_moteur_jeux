@@ -1,94 +1,14 @@
 #pragma once
 
-// GLEW
-#include <GL/glew.h>
-
-// GLM
-#include <glm/ext.hpp>
-#include <glm/glm.hpp>
-// #define GLM_ENABLE_EXPERIMENTAL
-// #include <glm/gtx/string_cast.hpp>
-
 // USUAL INCLUDES
-#include "src/Window.hpp"
-#include "src/Transformation.hpp"
-#include "src/AABB.hpp"
 #include "src/Chunk.hpp"
-#include <concepts>
-#include <array>
+#include "src/AABB.hpp"
+#include "src/Helpers.hpp"
+
 #include <bitset>
-#include <set>
-#include <queue>
-#include <map>
 #include <vector>
 
 // Inspired by https://austinmorlan.com/posts/entity_component_system/
-
-// -------------------------------------------------------------------------
-// ECS HELPERS
-// -------------------------------------------------------------------------
-
-namespace ECS_HELPERS {
-// Helper that checks if the type T is in the Tuple
-template <typename Tuple, typename T, std::size_t I = 0>
-constexpr bool is_type_in_tuple() {
-    if constexpr (I >= std::tuple_size_v<Tuple>)
-        return false;
-    else if constexpr (std::is_same_v<T, std::tuple_element_t<I, Tuple>>)
-        return true;
-    else
-        return is_type_in_tuple<Tuple, T, I + 1>();
-}
-
-// Helper that finds the index of the type T in the Tuple
-template <typename Tuple, typename T, std::size_t I = 0>
-constexpr std::size_t type_index() {
-    static_assert(I < std::tuple_size_v<Tuple>, "Component not in list");
-    if constexpr (std::is_same_v<T, std::tuple_element_t<I, Tuple>>)
-        return I;
-    else
-        return type_index<Tuple, T, I + 1>();
-}
-
-// Helper that executes the function F for each type in the Tuple
-template <typename Tuple, typename F, std::size_t... Is>
-constexpr void for_each_type_impl(F&& f, std::index_sequence<Is...>) {
-    (f.template operator()<std::tuple_element_t<Is, Tuple>>(), ...);
-}
-
-// Helper that checks if the Tuple1 is a superset of the Tuple2
-template <typename Tuple1, typename Tuple2>
-constexpr bool is_superset() {
-    bool res = true;
-    for_each_type_impl<Tuple2>([&]<typename T>() {
-        if (!is_type_in_tuple<Tuple1, T>())
-            res = false;
-    },
-                               std::make_index_sequence<std::tuple_size_v<Tuple2>>{});
-    return res;
-}
-
-template <typename Tuple, typename SubTuple, std::size_t... Is>
-constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature_impl(std::index_sequence<Is...>) {
-    constexpr std::size_t N = std::tuple_size_v<Tuple>;
-    char str[N + 1];
-    for (std::size_t i = 0; i < N; ++i)
-        str[i] = '0';
-    str[N] = '\0';
-    ((str[N - 1 - type_index<Tuple, std::tuple_element_t<Is, SubTuple>>()] = '1'), ...);
-    return std::bitset<N>(str);
-}
-
-template <typename Tuple, typename SubTuple>
-constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
-    return make_signature_impl<Tuple, SubTuple>(
-        std::make_index_sequence<std::tuple_size_v<SubTuple>>{});
-}
-} // namespace ECS_HELPERS
-
-// -------------------------------------------------------------------------
-// ECS DATA
-// -------------------------------------------------------------------------
 
 namespace ECS {
 using ComponentId = std::uint8_t;
@@ -238,7 +158,7 @@ constexpr ComponentSignature tuple_signature = ECS_HELPERS::make_signature<Compo
 // -------------------------------------------------------------------------
 
 template <ECS::Component... Cs>
-class SystemBase;
+struct SystemBase;
 
 class PositionSystem;
 class PhysicsSystem;

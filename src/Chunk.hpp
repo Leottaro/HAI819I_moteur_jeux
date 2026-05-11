@@ -9,8 +9,6 @@
 #include "AABB.hpp"
 #include "Block.hpp"
 #include "GreyMap.hpp"
-#include "ShaderProgram.hpp"
-#include "Texture.hpp"
 
 class World;
 

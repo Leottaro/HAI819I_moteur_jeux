@@ -1,6 +1,8 @@
 #pragma once
 #include "Data.hpp"
 
+#include <queue>
+
 class EntityManager {
     std::bitset<ECS::MAX_ENTITIES> m_entities{0};
     std::queue<ECS::EntityId> m_available_entities{};

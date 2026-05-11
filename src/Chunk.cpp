@@ -1,12 +1,10 @@
 // USUAL INCLUDES
 #include "Chunk.hpp"
-
-#include <iostream>
-#include <stdexcept>
-
 #include "World.hpp"
 #include "objects/blocks.hpp"
 #include "objects/textures.hpp"
+
+#include <stdexcept>
 
 Chunk* Chunk::getChunk(const glm::vec3& _pos) const {
     return m_world->findChunk(Chunk::posToChunkPos(_pos));

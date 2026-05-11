@@ -1,12 +1,6 @@
 // GLEW
 #include <GL/glew.h>
 
-// GLM
-#include <glm/ext.hpp>
-#include <glm/glm.hpp>
-// #define GLM_ENABLE_EXPERIMENTAL
-// #include <glm/gtx/string_cast.hpp>
-
 // IMGUI
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -15,13 +9,10 @@
 // USUAL INCLUDES
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <fstream>
 #include <iostream>
 #include <string>
 
 #include "World.hpp"
-#include "ECS/ECS.hpp"
 #include "Chunk.hpp"
 #include "Texture.hpp"
 #include "Window.hpp"
@@ -117,6 +108,9 @@ int main(void) {
     world.getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
     world.startControl(window, truc);
 
+    float delta_time = 0.0f;
+    float last_frame = 0.0f;
+    size_t frame_count = 0;
     do {
         glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
@@ -124,15 +118,20 @@ int main(void) {
         auto sky_color = world.skyColor();
         glClearColor(sky_color.r, sky_color.g, sky_color.b, 255.f);
 
+        float current_time = glfwGetTime();
+        delta_time = current_time - last_frame;
+        last_frame = current_time;
+        frame_count++;
+
         // Imgui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         /**********==========OBJECTS UPDATE==========**********/
-        // different world thread
+        // TODO: different world thread
         world.generate();
-        world.updateEntities(window);
+        world.updateEntities(window, delta_time);
 
         /**********==========RENDERING==========**********/
         block_shader.use();

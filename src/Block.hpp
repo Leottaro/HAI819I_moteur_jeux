@@ -1,30 +1,9 @@
 #pragma once
 
-// GLM
-#define GLM_FORCE_CONSTEXPR
-#include <glm/glm.hpp>
-
 // USUAL INCLUDES
 #include "objects/blocks.hpp"
-#include <functional>
-#include <set>
-#include <map>
 
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
-
-template <typename T, size_t n>
-struct glmVecLexicoGraphic {
-    bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
-        return a.x != b.x   ? a.x < b.x
-               : a.y != b.y ? a.y < b.y
-                            : a.z < b.z;
-    }
-};
-
-template <typename T, size_t n>
-using VecSet = std::set<glm::vec<n, T, glm::packed_highp>, glmVecLexicoGraphic<T, n>>;
-template <typename T, size_t n, typename V>
-using VecMap = std::map<glm::vec<n, T, glm::packed_highp>, V, glmVecLexicoGraphic<T, n>>;
 
 class Block {
 public:
@@ -59,7 +38,7 @@ public:
 
     static constexpr std::array<glm::vec2, 4> getUV(float atlas_size, BlockType block_type, int face_i) {
         size_t type_idx = static_cast<size_t>(block_type) - 1;
-        const auto& uv = UB_TABLE_DATA[type_idx][face_i];
+        const auto& uv = UV_TABLE_DATA[type_idx][face_i];
         return {
             glm::vec2(uv[0], uv[1] + 1.f) / atlas_size,
             glm::vec2(uv[0] + 1.f, uv[1] + 1.f) / atlas_size,

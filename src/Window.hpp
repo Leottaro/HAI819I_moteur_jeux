@@ -128,11 +128,6 @@ private:
         m_scroll.y = yoffset;
     }
 
-    template <typename OnPressFunc, typename OnRepeatFunc, typename OnReleaseFunc>
-    void _keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods, OnPressFunc&& _on_press_func, OnRepeatFunc&& _on_repeat_func, OnReleaseFunc&& _on_release_func) {
-        static bool key_pressed = false;
-    }
-
     void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         keyboard.handle(key, scancode, action, mods);
     }
