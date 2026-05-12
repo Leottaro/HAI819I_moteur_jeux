@@ -45,11 +45,10 @@ void ShaderProgram::loadShader(GLenum type, const string& shaderFilename) {
     if (!compiled) {
         GLsizei len;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-        GLchar* log = new GLchar[len + 1];
+        GLchar log[len + 1];
         glGetShaderInfoLog(shader, len, &len, log);
         cerr << "Compilation error in shader " << shaderFilename << " : " << endl
              << log << endl;
-        delete[] log;
         glDeleteShader(shader);
         return;
     }

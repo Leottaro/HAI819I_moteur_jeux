@@ -26,7 +26,7 @@ Chunk* World::addChunk(const glm::ivec3& _chunk_pos) {
     if (isChunkLoaded(_chunk_pos))
         return nullptr;
 
-    m_chunks.insert({_chunk_pos, new Chunk(this, _chunk_pos, m_gentype)});
+    m_chunks.add(Chunk(this, _chunk_pos, m_gentype));
     m_chunks_frontier.erase(_chunk_pos);
     Chunk* inserted_chunk = m_chunks.at(_chunk_pos);
 
@@ -51,8 +51,7 @@ bool World::removeChunk(const glm::ivec3& _chunk_pos) {
     Chunk* removed_chunk = findChunk(_chunk_pos);
     if (removed_chunk == nullptr)
         return false;
-    delete removed_chunk;
-    m_chunks.erase(_chunk_pos);
+    m_chunks.remove(_chunk_pos);
     m_chunks_frontier.erase(_chunk_pos);
 
     for (int face_i = 0; face_i < 6; face_i++) {
@@ -87,19 +86,21 @@ bool World::generate(const glm::vec3& _pos) {
     glm::ivec3 _chunk_pos = Chunk::posToChunkPos(_pos);
     if (!isChunkLoaded(_chunk_pos)) {
         addChunk(_chunk_pos);
+        std::cout << m_chunks.size() << " CHUNKS" << std::endl;
         return true;
     }
 
     std::list<glm::ivec3> chunk_to_remove;
-    for (auto& [chunk_pos, chunk] : m_chunks) {
-        if (Chunk::chunkDistance(_pos, chunk_pos) > m_render_distance) {
-            chunk_to_remove.push_back(chunk_pos);
+    m_chunks.forEach([&](Chunk& chunk) {
+        if (Chunk::chunkDistance(_pos, chunk.getPos()) > m_render_distance) {
+            chunk_to_remove.push_back(chunk.getPos());
         }
-    }
+    });
     for (const glm::ivec3& chunk_pos : chunk_to_remove) {
         removeChunk(chunk_pos);
     }
     if (!chunk_to_remove.empty()) {
+        std::cout << m_chunks.size() << " CHUNKS" << std::endl;
         return true;
     }
 
@@ -112,46 +113,14 @@ bool World::generate(const glm::vec3& _pos) {
     }
     if (!chunk_to_add.empty()) {
         addChunk(chunk_to_add.begin()->second);
+        std::cout << m_chunks.size() << " CHUNKS" << std::endl;
         return true;
     }
 
+    std::cout << m_chunks.size() << " CHUNKS" << std::endl;
     return false;
 }
 
 ECS::EntityId World::addTestEntity(const glm::vec3& _pos) {
-    ECS::Positionnable pos = ECSPosition(_pos);
-    if (pos.current_chunk == nullptr) {
-        pos.current_chunk = addChunk(Chunk::posToChunkPos(_pos));
-    }
-    return m_ecs_manager.createEntity<ECS::TestEntity>({pos});
+    return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}});
 }
-
-// Entity* World::findEntity(const std::string& _uuid) {
-//     if (isEntityLoaded(_uuid)) {
-//         return m_entities.at(_uuid);
-//     }
-//     return nullptr;
-// }
-
-// bool World::removeEntity(const std::string& _uuid) {
-//     Entity* removed_entity = findEntity(_uuid);
-//     if (removed_entity == nullptr)
-//         return false;
-//     delete removed_entity;
-//     m_entities.erase(_uuid);
-//     return true;
-// }
-
-// void World::update(float _deltaTime) {
-//     std::vector<std::string> entities_to_destroy;
-//     entities_to_destroy.reserve(m_entities.size());
-//     for (auto& [uuid, entity] : m_entities) {
-//         if (!entity->update(_deltaTime)) {
-//             entities_to_destroy.push_back(uuid);
-//         }
-//     }
-
-//     for (const std::string& uuid : entities_to_destroy) {
-//         removeEntity(uuid);
-//     }
-// }

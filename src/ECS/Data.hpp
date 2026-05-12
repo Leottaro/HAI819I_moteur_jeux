@@ -1,12 +1,17 @@
 #pragma once
 
 // USUAL INCLUDES
-#include "src/Chunk.hpp"
+class World;
+#include "src/Window.hpp"
+#include "src/Frustum.hpp"
+#include "src/Transformation.hpp"
 #include "src/AABB.hpp"
+#include "src/ShaderProgram.hpp"
 #include "src/Helpers.hpp"
 
 #include <bitset>
 #include <vector>
+#include <unordered_set>
 
 // Inspired by https://austinmorlan.com/posts/entity_component_system/
 
@@ -27,9 +32,8 @@ constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 // -------------------------------------------------------------------------
 // COMPONENTS
 // -------------------------------------------------------------------------
-
 struct Positionnable {
-    const Chunk* current_chunk{nullptr};
+    World* current_world{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
 struct Collisionnable {
@@ -41,7 +45,7 @@ struct Movable {
 struct Groundable {
     bool on_ground{false};
     float air_control_speed{0.1f};
-    float walk_speed{1.0f};
+    float walk_speed{3.0f};
     float jump_force{10.0f};
 };
 struct PhysicsStats {
@@ -49,7 +53,9 @@ struct PhysicsStats {
     float volume{1.f};
     float drag{1.05f};
 };
-struct CollisionDisplay {};
+struct CollisionDisplay {
+    std::vector<AABBRenderer> boxes{};
+};
 struct Orientable {
     glm::vec2 orientation{0.f, 0.f};
 };
@@ -110,11 +116,16 @@ constexpr void for_each_components(F&& f) {
         std::make_index_sequence<NB_COMPONENTS>{});
 }
 
+template <ECS::Component C>
+class ComponentArray;
+class ComponentManager;
+
 // -------------------------------------------------------------------------
 // ENTITIES
 // -------------------------------------------------------------------------
 
 struct TestEntity {};
+
 using EntityTypeList = std::tuple<TestEntity>;
 constexpr std::size_t NB_ENTITY_TYPES = std::tuple_size_v<EntityTypeList>;
 template <typename T>
@@ -153,12 +164,11 @@ constexpr ComponentSignature entity_signature = ECS_HELPERS::make_signature<Comp
 template <ComponentTuple Tuple>
 constexpr ComponentSignature tuple_signature = ECS_HELPERS::make_signature<ComponentList, Tuple>();
 
+class EntityManager;
+
 // -------------------------------------------------------------------------
 // SYSTEMS
 // -------------------------------------------------------------------------
-
-template <ECS::Component... Cs>
-struct SystemBase;
 
 class PositionSystem;
 class PhysicsSystem;
@@ -188,4 +198,7 @@ constexpr void for_each_systems(F&& f) {
         std::forward<F>(f),
         std::make_index_sequence<NB_SYSTEMS>{});
 }
+
+class SystemManager;
+
 }; // namespace ECS

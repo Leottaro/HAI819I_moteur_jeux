@@ -66,7 +66,7 @@ int main(void) {
     Window window;
     globalInit(window);
 
-    World world;
+    auto world = std::make_unique<World>(); // heap allocated
 
     GLenum polygon_mode = GL_FILL;
     bool display_debug = false;
@@ -83,7 +83,7 @@ int main(void) {
                 polygon_mode = GL_FILL;
             }
             glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { world.clear();    world.generate(); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { world->clear();    world->generate(); }, nullptr);
     window.keyboard.bind(GLFW_KEY_G, [&]() { display_debug = !display_debug; }, nullptr);
 
     // Create and compile our GLSL program from the shaders
@@ -104,9 +104,9 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
-    ECS::EntityId truc = world.addTestEntity(glm::vec3(23.5f, 16.f, 25.5f));
-    world.getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
-    world.startControl(window, truc);
+    // ECS::EntityId truc = world->addTestEntity(glm::vec3(23.5f, 48.f, 25.5f));
+    // world->getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
+    // world->startControl(window, truc);
 
     float delta_time = 0.0f;
     float last_frame = 0.0f;
@@ -115,7 +115,7 @@ int main(void) {
         glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        auto sky_color = world.skyColor();
+        auto sky_color = world->skyColor();
         glClearColor(sky_color.r, sky_color.g, sky_color.b, 255.f);
 
         float current_time = glfwGetTime();
@@ -130,8 +130,8 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         // TODO: different world thread
-        world.generate();
-        world.updateEntities(window, delta_time);
+        world->generate();
+        world->updateEntities(window, delta_time);
 
         /**********==========RENDERING==========**********/
         block_shader.use();
@@ -139,11 +139,11 @@ int main(void) {
         normal_atlas.bind(1);
         specular_atlas.bind(2);
 
-        world.renderChunks(block_shader);
-        world.renderEntities(line_shader);
-        world.updateWindow();
+        world->renderChunks(block_shader);
+        world->renderEntities(line_shader);
+        world->updateWindow();
         if (display_debug) {
-            world.renderDebugBoxes(line_shader);
+            world->renderDebugBoxes(line_shader);
         }
 
         // ImGui Render

@@ -17,13 +17,42 @@
 // MATH HELPERS
 // -------------------------------------------------------------------------
 
+
+
 namespace MathHelpers {
 template <typename T>
-using vec3 = glm::vec<3, T, glm::packed_highp>;
+using vec2 = glm::vec<2, T, glm::highp>;
 template <typename T>
-using vec4 = glm::vec<4, T, glm::packed_highp>;
+using vec3 = glm::vec<3, T, glm::highp>;
 template <typename T>
-using mat4 = glm::mat<4, 4, T, glm::packed_highp>;
+using vec4 = glm::vec<4, T, glm::highp>;
+template <typename T>
+using mat4 = glm::mat<4, 4, T, glm::highp>;
+
+template <typename T>
+using pvec2 = glm::vec<2, T, glm::packed_highp>;
+using fpvec2 = glm::vec<2, float, glm::packed_highp>;
+using upvec2 = glm::vec<2, uint32_t, glm::packed_highp>;
+using u8pvec2 = glm::vec<2, uint8_t, glm::packed_highp>;
+using i8pvec2 = glm::vec<2, int8_t, glm::packed_highp>;
+template <typename T>
+using pvec3 = glm::vec<3, T, glm::packed_highp>;
+using fpvec3 = glm::vec<3, float, glm::packed_highp>;
+using upvec3 = glm::vec<3, uint32_t, glm::packed_highp>;
+using u8pvec3 = glm::vec<3, uint8_t, glm::packed_highp>;
+using i8pvec3 = glm::vec<3, int8_t, glm::packed_highp>;
+template <typename T>
+using pvec4 = glm::vec<4, T, glm::packed_highp>;
+using fpvec4 = glm::vec<4, float, glm::packed_highp>;
+using upvec4 = glm::vec<4, uint32_t, glm::packed_highp>;
+using u8pvec4 = glm::vec<4, uint8_t, glm::packed_highp>;
+using i8pvec4 = glm::vec<4, int8_t, glm::packed_highp>;
+template <typename T>
+using pmat4 = glm::mat<4, 4, T, glm::packed_highp>;
+using fpmat4 = glm::mat<4, 4, float, glm::packed_highp>;
+using upmat4 = glm::mat<4, 4, uint32_t, glm::packed_highp>;
+using u8pmat4 = glm::mat<4, 4, uint8_t, glm::packed_highp>;
+using i8pmat4 = glm::mat<4, 4, int8_t, glm::packed_highp>;
 
 template <typename T>
 constexpr T EPSILON();
@@ -36,9 +65,9 @@ constexpr double EPSILON<double>() {
     return 1.e-8;
 }
 
-constexpr float M_PI_SAFE{M_PIf - EPSILON<float>()};
-constexpr float M_PI_2_SAFE{M_PI_2f - EPSILON<float>()};
-constexpr float M_PI_4_SAFE{M_PI_4f - EPSILON<float>()};
+constexpr float M_PI_SAFE{M_PIf - 1.e-3f};
+constexpr float M_PI_2_SAFE{M_PI_2f - 1.e-3f};
+constexpr float M_PI_4_SAFE{M_PI_4f - 1.e-3f};
 constexpr glm::vec3 VEC_ZERO{0.f, 0.f, 0.f};
 constexpr glm::vec3 VEC_RIGHT{1.f, 0.f, 0.f};
 constexpr glm::vec3 VEC_UP{0.f, 1.f, 0.f};
@@ -50,24 +79,24 @@ constexpr vec3<T> applyTransformation(const vec3<T>& vec, float w, const mat4<T>
     return temp.w == 0. ? vec3<T>(temp.x, temp.y, temp.z) : vec3<T>(temp.x, temp.y, temp.z) / temp.w;
 }
 template <typename T>
-inline vec3<T> projectVectorOnPlane(const vec3<T>& _vec, const vec3<T>& _normal) {
+constexpr vec3<T> projectVectorOnPlane(const vec3<T>& _vec, const vec3<T>& _normal) {
     return glm::cross(glm::normalize(_normal), glm::cross(_vec, glm::normalize(_normal)));
 }
 template <typename T>
-inline vec3<T> projectPointOnPlane(const vec3<T>& _point, const vec3<T>& _origin, const vec3<T>& _normal) {
+constexpr vec3<T> projectPointOnPlane(const vec3<T>& _point, const vec3<T>& _origin, const vec3<T>& _normal) {
     return _origin + projectVectorOnPlane(_point - _origin, _normal);
 }
 template <typename T>
-inline vec3<T> projectVectorOnLine(const vec3<T>& _vec, const vec3<T>& _direction) {
+constexpr vec3<T> projectVectorOnLine(const vec3<T>& _vec, const vec3<T>& _direction) {
     return glm::dot(_vec, _direction) * _direction;
 }
 template <typename T>
-inline vec3<T> projectPointOnLine(const vec3<T>& _point, const vec3<T>& _origin, const vec3<T>& _direction) {
+constexpr vec3<T> projectPointOnLine(const vec3<T>& _point, const vec3<T>& _origin, const vec3<T>& _direction) {
     return _origin + projectVectorOnLine(_point - _origin, _direction);
 }
 
 template <typename T>
-bool computeBarycentrics(const vec3<T>& v0, const vec3<T>& v1, const vec3<T>& v2, const vec3<T>& normal, const vec3<T>& p, vec3<T>& barycentrics) {
+constexpr bool computeBarycentrics(const vec3<T>& v0, const vec3<T>& v1, const vec3<T>& v2, const vec3<T>& normal, const vec3<T>& p, vec3<T>& barycentrics) {
     double total_area_sq = glm::length2(normal);
     if (total_area_sq < EPSILON<T>())
         return false;
@@ -87,9 +116,9 @@ bool computeBarycentrics(const vec3<T>& v0, const vec3<T>& v1, const vec3<T>& v2
 }
 
 template <typename T>
-bool rayTriangleIntersection(const vec3<T>& origin, const vec3<T>& direction,
-                             const vec3<T>& v0, const vec3<T>& v1, const vec3<T>& v2, const vec3<T>& normal,
-                             T& t, vec3<T>& intersection, vec3<T>& barycentrics) {
+constexpr bool rayTriangleIntersection(const vec3<T>& origin, const vec3<T>& direction,
+                                       const vec3<T>& v0, const vec3<T>& v1, const vec3<T>& v2, const vec3<T>& normal,
+                                       T& t, vec3<T>& intersection, vec3<T>& barycentrics) {
     // Check if ray is parallel
     double dot = glm::dot(direction, normal);
     if (std::abs(dot) <= EPSILON<T>()) {
@@ -106,17 +135,19 @@ bool rayTriangleIntersection(const vec3<T>& origin, const vec3<T>& direction,
 
 template <typename T, size_t n>
 struct glmVecLexicoGraphic {
-    bool operator()(const glm::vec<n, T, glm::packed_highp>& a, const glm::vec<n, T, glm::packed_highp>& b) const {
-        return a.x != b.x   ? a.x < b.x
-               : a.y != b.y ? a.y < b.y
-                            : a.z < b.z;
+    bool operator()(const glm::vec<n, T, glm::highp>& a, const glm::vec<n, T, glm::highp>& b) const {
+        if constexpr (n >= 1) if (a.x != b.x) return a.x < b.x;
+        if constexpr (n >= 2) if (a.y != b.y) return a.y < b.y;
+        if constexpr (n >= 3) if (a.z != b.z) return a.z < b.z;
+        if constexpr (n >= 4) if (a.w != b.w) return a.w < b.w;
+        return false;
     }
 };
 
 template <typename T, size_t n>
-using VecSet = std::set<glm::vec<n, T, glm::packed_highp>, glmVecLexicoGraphic<T, n>>;
+using VecSet = std::set<glm::vec<n, T, glm::highp>, glmVecLexicoGraphic<T, n>>;
 template <typename T, size_t n, typename V>
-using VecMap = std::map<glm::vec<n, T, glm::packed_highp>, V, glmVecLexicoGraphic<T, n>>;
+using VecMap = std::map<glm::vec<n, T, glm::highp>, V, glmVecLexicoGraphic<T, n>>;
 } // namespace MathHelpers
 
 // -------------------------------------------------------------------------

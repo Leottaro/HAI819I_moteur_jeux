@@ -47,15 +47,15 @@ struct BlockTypeData {
 };
 
 constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
-    {0.f, 0.f, 0.f, 1.f, false, BlockTransparence::TRANSPARENT},           // Air
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::SOLID},         // Stone
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::SOLID},         // Dirt
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::SOLID},         // Grass
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::TRANSPARENT},   // Glass
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::SOLID},         // IronBlock
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::SOLID},         // RedstoneLamp
-    {1.f / 3.f, 0.f, 0.125f, 0.f, true, BlockTransparence::SOLID},         // DiamondOre
-    {1.f / 3.f, 0.75f, 0.125f, 0.f, true, BlockTransparence::TRANSLUCENT}, // SlimeBlock
+    {0.f, 0.f, 0.f, 1.f, false, BlockTransparence::TRANSPARENT},              // Air
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // Stone
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // Dirt
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // Grass
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::TRANSPARENT},   // Glass
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // IronBlock
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // RedstoneLamp
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // DiamondOre
+    {1.f / 2.f, 0.75f, 1.f / 3.f, 0.f, true, BlockTransparence::TRANSLUCENT}, // SlimeBlock
 }};
 
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<size_t>(type)]; }

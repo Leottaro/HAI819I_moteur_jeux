@@ -2,7 +2,7 @@
 #include "Data.hpp"
 
 template <ECS::Component C>
-class ComponentArray {
+class ECS::ComponentArray {
     std::bitset<ECS::MAX_ENTITIES> m_has_component{};
     std::array<C, ECS::MAX_ENTITIES> m_components{};
     size_t m_size{0};
@@ -31,17 +31,17 @@ namespace COMPONENT_MANAGER_HELPERS {
 // Helper to create the Component Arrays for every Component
 template <std::size_t... I>
 static constexpr auto make_component_arrays_impl(std::index_sequence<I...>) {
-    return std::tuple<ComponentArray<std::tuple_element_t<I, ECS::ComponentList>>...>{};
+    return std::tuple<ECS::ComponentArray<std::tuple_element_t<I, ECS::ComponentList>>...>{};
 }
 using ComponentArrays = decltype(make_component_arrays_impl(std::make_index_sequence<ECS::NB_COMPONENTS>{}));
 }; // namespace COMPONENT_MANAGER_HELPERS
 
-class ComponentManager {
+class ECS::ComponentManager {
     COMPONENT_MANAGER_HELPERS::ComponentArrays m_component_arrays;
 
     // Convenience function to get the statically casted pointer to the ComponentArray of type T.
     template <ECS::Component C>
-    constexpr ComponentArray<C>& getComponentArray() { return std::get<ECS::component_id<C>>(m_component_arrays); }
+    constexpr ECS::ComponentArray<C>& getComponentArray() { return std::get<ECS::component_id<C>>(m_component_arrays); }
 
 public:
     template <ECS::Component C>

@@ -21,11 +21,11 @@ set(APP_SOURCES
     src/World.hpp
     src/World.cpp
 
-    src/ECS/ECS.hpp
-    src/ECS/Systems.hpp
+    src/ECS/Data.hpp
     src/ECS/Entity.hpp
     src/ECS/Component.hpp
-    src/ECS/Data.hpp
+    src/ECS/Systems.hpp
+    src/ECS/ECS.cpp
 
     src/Chunk.hpp
     src/Chunk.cpp
@@ -70,7 +70,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     )
     target_link_options(${APP_TARGET_OPT} PRIVATE)
 else()
-    target_compile_options(${APP_TARGET_OPT} PRIVATE -Wall -O3 -DNDEBUG)
+    target_compile_options(${APP_TARGET_DEBUG} PRIVATE -Wall -O3 -DNDEBUG)
 endif()
 
 # opengl

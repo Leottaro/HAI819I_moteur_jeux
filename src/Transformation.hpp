@@ -24,18 +24,18 @@ public:
 
     // HELPERS
 
-    static void clampOrientation(glm::vec2& orientation) {
+    static constexpr void clampOrientation(glm::vec2& orientation) {
         orientation.x = glm::clamp(orientation.x, -MathHelpers::M_PI_2_SAFE, MathHelpers::M_PI_2_SAFE);
         orientation.y = Transformation::clipAnglePI(orientation.y);
     }
 
-    static void getViewVectors(glm::vec2& orientation, glm::vec3& front, glm::vec3& right, glm::vec3& real_up) {
+    static constexpr void getViewVectors(glm::vec2& orientation, glm::vec3& front, glm::vec3& right, glm::vec3& real_up) {
         front = glm::normalize(Transformation::EulerToEuclidian(orientation));
         right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
         real_up = glm::normalize(glm::cross(right, front));
     }
 
-    static float clipAnglePI(float _angle) {
+    static constexpr float clipAnglePI(float _angle) {
         while (_angle < -M_PI)
             _angle += 2. * M_PI;
         while (_angle > M_PI)
@@ -43,7 +43,7 @@ public:
         return _angle;
     }
 
-    static glm::vec3 EulerToEuclidian(const glm::vec2& _angles) {
+    static constexpr glm::vec3 EulerToEuclidian(const glm::vec2& _angles) {
         float sinPhi = cosf(_angles.x);
         float x = sinPhi * sinf(_angles.y);
         float y = sinf(_angles.x);
@@ -52,7 +52,7 @@ public:
         return glm::vec3(x, y, z);
     }
 
-    static glm::vec2 EuclidianToEuler(const glm::vec3& xyz) {
+    static constexpr glm::vec2 EuclidianToEuler(const glm::vec3& xyz) {
         float angles_x = asin(xyz[1] / glm::length(xyz)); // polar angle from +y axis, 0..π
 
         float angles_y = atan2(xyz[0], xyz[2]); // azimuth around y-axis, 0..2π

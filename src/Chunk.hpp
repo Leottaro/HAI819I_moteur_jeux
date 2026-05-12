@@ -5,10 +5,12 @@
 #include <cstdint>
 #include <optional>
 #include <vector>
+#include <memory>
 
 #include "AABB.hpp"
 #include "Block.hpp"
 #include "GreyMap.hpp"
+#include "Helpers.hpp"
 
 class World;
 
@@ -71,11 +73,10 @@ private:
     glm::ivec3 m_pos;
     std::array<Block, NB_BLOCKS> m_blocks;
     AABB<float> m_aabb;
-
     std::optional<GreyMap> m_heightmap;
 
-    static inline size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
-    static inline size_t posToBlockI(const glm::uvec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
+    static constexpr size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
+    static constexpr size_t posToBlockI(const glm::uvec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
     static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
         -CHUNK_SIZE,              // Front (-Z)
         -1,                       // Left  (-X)
@@ -94,12 +95,55 @@ public:
     size_t nb_translucent_block{0};
     bool should_rebuild_mesh{true};
 
-    Chunk(Chunk&&) = delete;
+    Chunk(Chunk&& other) : m_opaque_VAO(other.m_opaque_VAO), m_opaque_VBO(other.m_opaque_VBO), m_opaque_EBO(other.m_opaque_EBO), m_opaque_vertices(other.m_opaque_vertices), m_opaque_triangles(other.m_opaque_triangles),
+                           m_translucent_VAO(other.m_translucent_VAO), m_translucent_VBO(other.m_translucent_VBO), m_translucent_EBO(other.m_translucent_EBO), m_translucent_vertices(other.m_translucent_vertices), m_translucent_triangles(other.m_translucent_triangles),
+                           m_world(other.m_world), m_pos(other.m_pos), m_blocks(other.m_blocks), m_aabb(other.m_aabb), m_heightmap(other.m_heightmap), m_neighbours(other.m_neighbours), nb_translucent_block(other.nb_translucent_block), should_rebuild_mesh(other.should_rebuild_mesh) {
+        for (uint i = 0; i < 6; i++)
+            if (m_neighbours[i] != nullptr)
+                m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;
+        other.m_opaque_VAO = other.m_opaque_VBO = other.m_opaque_EBO = other.m_opaque_vertices = other.m_opaque_triangles = other.m_translucent_VAO = other.m_translucent_VBO = other.m_translucent_EBO = other.m_translucent_vertices = 0;
+        other.m_world = nullptr;
+        other.m_neighbours.fill(nullptr);
+    }
+    Chunk& operator=(Chunk&& other) {
+        if (this == &other)
+            return *this;
+        clearShaderData(); // free THIS chunk's GPU resources first
+
+        m_world = other.m_world;
+        m_pos = other.m_pos;
+        m_blocks = other.m_blocks;
+        m_aabb = other.m_aabb;
+        m_heightmap = other.m_heightmap;
+        m_neighbours = other.m_neighbours;
+        nb_translucent_block = other.nb_translucent_block;
+        should_rebuild_mesh = other.should_rebuild_mesh;
+        m_opaque_VAO = other.m_opaque_VAO;
+        m_opaque_VBO = other.m_opaque_VBO;
+        m_opaque_EBO = other.m_opaque_EBO;
+        m_opaque_vertices = other.m_opaque_vertices;
+        m_opaque_triangles = other.m_opaque_triangles;
+        m_translucent_VAO = other.m_translucent_VAO;
+        m_translucent_VBO = other.m_translucent_VBO;
+        m_translucent_EBO = other.m_translucent_EBO;
+        m_translucent_vertices = other.m_translucent_vertices;
+        m_translucent_triangles = other.m_translucent_triangles;
+
+        for (uint i = 0; i < 6; i++)
+            if (m_neighbours[i] != nullptr)
+                m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;
+
+        other.m_opaque_VAO = other.m_opaque_VBO = other.m_opaque_EBO = other.m_opaque_vertices = other.m_opaque_triangles = other.m_translucent_VAO = other.m_translucent_VBO = other.m_translucent_EBO = other.m_translucent_vertices = 0;
+        other.m_world = nullptr;
+        other.m_neighbours.fill(nullptr);
+        return *this;
+    }
     Chunk(const Chunk&) = delete;
     Chunk& operator=(const Chunk&) = delete;
-    Chunk& operator=(Chunk&&) = delete;
-    Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type);
     ~Chunk() { clearShaderData(); }
+
+    Chunk() : m_world(nullptr), m_neighbours({nullptr}) {}
+    Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type);
 
     inline const glm::ivec3& getPos() const { return m_pos; }
     inline const AABB<float>& getAABB() const { return m_aabb; }
@@ -131,4 +175,84 @@ public:
     void clearShaderData();
 
     friend World;
+};
+
+class ChunkStorage {                                                                 // TODO: memcheck
+    static constexpr size_t BATCH_SIZE = (128UL * 1024UL * 1024UL) / sizeof(Chunk); // nombre de chunks qui font 1 GiB
+    static_assert(alignof(Chunk) <= alignof(std::max_align_t)); // if this fails, we need aligned_alloc
+
+    std::vector<std::unique_ptr<std::array<Chunk, BATCH_SIZE>>> m_storage{}; // Ensemble de batch de chunk
+    std::vector<std::unique_ptr<std::array<bool, BATCH_SIZE>>> m_alive{};    // Ensemble de batch de "en vie ?"
+    MathHelpers::VecMap<int, 3, glm::uvec2> m_lookup_table{};                // chunk pos -> idx de batch et idx de chunk
+
+    std::vector<glm::uvec2> m_free_list{};
+    size_t nb_chunks{0};
+
+public:
+    ChunkStorage(ChunkStorage&&) = delete;
+    ChunkStorage& operator=(ChunkStorage&&) = delete;
+    ChunkStorage(const ChunkStorage& other) = delete;
+    ChunkStorage& operator=(const ChunkStorage&) = delete;
+    ~ChunkStorage() { clear(); }
+
+    ChunkStorage() {}
+
+    inline size_t size() const {
+        return nb_chunks;
+    }
+    inline Chunk* at(const glm::ivec3& _chunk_pos) {
+        auto it = m_lookup_table.find(_chunk_pos);
+        if (it == m_lookup_table.end())
+            return nullptr;
+        return &m_storage[it->second.x]->at(it->second.y);
+    }
+    inline bool isLoaded(const glm::ivec3& _chunk_pos) const {
+        return m_lookup_table.find(_chunk_pos) != m_lookup_table.end();
+    }
+
+    glm::uvec2 add(Chunk&& chunk) {
+        glm::ivec3 chunk_pos = chunk.getPos();
+        glm::uvec2 indices;
+        if (!m_free_list.empty()) {
+            indices = m_free_list.back();
+            m_free_list.pop_back();
+        } else {
+            indices.x = nb_chunks / BATCH_SIZE;
+            indices.y = nb_chunks - BATCH_SIZE * indices.x;
+            if (indices.y == 0) {
+                m_storage.push_back(std::make_unique<std::array<Chunk, BATCH_SIZE>>());
+                m_alive.push_back(std::make_unique<std::array<bool, BATCH_SIZE>>());
+            }
+        }
+
+        m_storage[indices.x]->at(indices.y) = std::move(chunk);
+        m_alive[indices.x]->at(indices.y) = true;
+        m_lookup_table.insert({chunk_pos, indices});
+        nb_chunks += 1;
+        return indices;
+    }
+
+    void remove(const glm::ivec3& _chunk_pos) {
+        glm::uvec2 indices = m_lookup_table[_chunk_pos];
+        assert(m_alive[indices.x]->at(indices.y));
+        nb_chunks -= 1;
+        m_alive[indices.x]->at(indices.y) = false;
+        m_free_list.emplace_back(indices);
+        m_lookup_table.erase(_chunk_pos);
+    }
+
+    template <typename Func>
+    inline void forEach(Func fn) {
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
+            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
+                if (m_alive[batch_i]->at(chunk_i))
+                    fn(m_storage[batch_i]->at(chunk_i));
+    }
+
+    inline void clear() {
+        m_storage.clear();
+        m_free_list.clear();
+        m_alive.clear();
+        nb_chunks = 0;
+    }
 };

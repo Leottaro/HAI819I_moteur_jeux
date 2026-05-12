@@ -25,17 +25,18 @@ struct KeyCallbacks {
     std::function<void()> on_release{nullptr};
 };
 
-struct KeyboardHandler {
-private:
+class KeyboardHandler {
     std::unordered_map<int, KeyState> m_keys;
     std::unordered_map<int, KeyCallbacks> m_callbacks;
 
 public:
+    KeyboardHandler() {}
+
     // Register callbacks for a key (any can be null)
-    void bind(int key, std::function<void()> on_press = nullptr, std::function<void()> on_release = nullptr) {
+    inline void bind(int key, std::function<void()> on_press = nullptr, std::function<void()> on_release = nullptr) {
         m_callbacks[key] = {std::move(on_press), std::move(on_release)};
     }
-    void unbind(int key) {
+    inline void unbind(int key) {
         m_callbacks.erase(key);
     }
 
@@ -67,7 +68,7 @@ public:
         return it != m_keys.end() ? it->second : empty;
     }
 
-    bool isHeld(int key) const { return getState(key).pressed || getState(key).held; }
+    inline bool isHeld(int key) const { return getState(key).pressed || getState(key).held; }
 };
 
 struct Window {
@@ -89,7 +90,7 @@ private:
     static void _scrollCallback(GLFWwindow* w, double xoffset, double yoffset) { static_cast<Window*>(glfwGetWindowUserPointer(w))->scrollCallback(w, xoffset, yoffset); }
     static void _keyCallback(GLFWwindow* w, int key, int scancode, int action, int mods) { static_cast<Window*>(glfwGetWindowUserPointer(w))->keyCallback(w, key, scancode, action, mods); }
 
-    void sizeCallback(GLFWwindow* window, int width, int height) {
+    inline void sizeCallback(GLFWwindow* window, int width, int height) {
         // cout << "window size: " << width << ", " << height << endl;
         glViewport(0, 0, width, height);
         if (m_fullscreen)
@@ -99,7 +100,7 @@ private:
         m_aspect_ratio = double(m_size.x) / m_size.y;
     }
 
-    void posCallback(GLFWwindow* window, int width, int height) {
+    inline void posCallback(GLFWwindow* window, int width, int height) {
         // cout << "window pos: " << width << ", " << height << endl;
         if (m_fullscreen)
             return;
@@ -107,14 +108,14 @@ private:
         m_pos.y = height;
     }
 
-    void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    inline void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         // cout << "mouse button:" << button << " action:" << action << " mods:" << mods << endl;
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             glfwSetInputMode(window, GLFW_CURSOR, action == GLFW_PRESS ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
         }
     }
 
-    void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+    inline void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
         m_cursor_vel.x = xpos - m_cursor_pos.x;
         m_cursor_vel.y = ypos - m_cursor_pos.y;
         m_cursor_pos.x = xpos;
@@ -122,18 +123,18 @@ private:
         // cout << "m_cursor_pos: (" << m_cursor_pos.x << ", " << m_cursor_pos.y << ")\tm_cursor_vel: (" << m_cursor_vel.x << ", " << m_cursor_vel.y << ")" << endl;
     }
 
-    void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    inline void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
         // cout << "scroll: (" << xoffset << ", " << yoffset << ")" << endl;
         m_scroll.x = xoffset;
         m_scroll.y = yoffset;
     }
 
-    void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    inline void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         keyboard.handle(key, scancode, action, mods);
     }
 
 public:
-    Window() = default;
+    Window() {}
     Window(Window&&) = delete;
     Window(const Window&) = delete;
     Window& operator=(Window&&) = delete;
@@ -159,15 +160,15 @@ public:
     inline const glm::vec2& getCursorVel() const { return m_cursor_vel; }
     inline const glm::vec2& getScroll() const { return m_scroll; }
 
-    void setPos(const glm::uvec2& _pos) {
+    inline void setPos(const glm::uvec2& _pos) {
         m_pos = _pos;
         glfwSetWindowPos(m_window, m_pos.x, m_pos.y);
     }
-    void setSize(const glm::uvec2& _size) {
+    inline void setSize(const glm::uvec2& _size) {
         m_size = _size;
         glfwSetWindowSize(m_window, m_size.x, m_size.y);
     }
-    void setFullscreen(bool _fullscreen) {
+    inline void setFullscreen(bool _fullscreen) {
         m_fullscreen = _fullscreen;
         if (m_fullscreen) {
             GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -182,7 +183,7 @@ public:
         m_cursor_vel.x = m_cursor_vel.y = 0;
     }
 
-    void init() {
+    inline void init() {
         glfwWindowHint(GLFW_SAMPLES, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -194,8 +195,8 @@ public:
         m_window = glfwCreateWindow(m_size.x, m_size.y, m_title.c_str(), NULL, NULL);
         if (!m_window) {
             glfwTerminate();
-            exit(EXIT_FAILURE);
             m_window = nullptr;
+            exit(EXIT_FAILURE);
         }
         glfwMakeContextCurrent(m_window);
         glfwSetWindowUserPointer(m_window, this);

@@ -54,10 +54,50 @@ private:
 public:
     std::array<Block*, 6> m_neighbours{nullptr};
 
-    Block(Block&&) = delete;
-    Block(const Block&) = delete;
-    Block& operator=(const Block&) = delete;
-    Block& operator=(Block&&) = delete;
+    Block(Block&& other) noexcept : m_type(other.m_type), m_pos(other.m_pos), m_neighbours(other.m_neighbours) {
+        other.m_neighbours.fill(nullptr);
+        for (uint i = 0; i < 6; i++)
+            if (m_neighbours[i] != nullptr)
+                m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;
+    }
+    Block& operator=(Block&& other) noexcept {
+        if (this == &other)
+            return *this;
+
+        m_type = other.m_type;
+        m_pos = other.m_pos;
+        m_neighbours = other.m_neighbours;
+        other.m_neighbours.fill(nullptr);
+
+        for (uint i = 0; i < 6; i++)
+            if (m_neighbours[i] != nullptr)
+                m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;
+
+        return *this;
+    }
+    Block(const Block& other) : m_type(other.m_type), m_pos(other.m_pos), m_neighbours(other.m_neighbours) {
+        // other.m_neighbours.fill(nullptr);
+        for (uint i = 0; i < 6; i++)
+            if (m_neighbours[i] != nullptr)
+                m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;
+    }
+    Block& operator=(const Block& other) {
+        if (this == &other)
+            return *this;
+
+        m_type = other.m_type;
+        m_pos = other.m_pos;
+        m_neighbours = other.m_neighbours;
+
+        // other.m_neighbours.fill(nullptr);
+        for (uint i = 0; i < 6; i++)
+            if (m_neighbours[i] != nullptr)
+                m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;
+
+        return *this;
+    }
+    ~Block() = default;
+
     Block() : m_type(BlockType::Air) {}
     Block(BlockType _type, const glm::ivec3& _pos) : m_type(_type), m_pos(_pos) {}
 

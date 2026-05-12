@@ -215,20 +215,20 @@ Chunk::Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type) : m_wor
 }
 
 struct ChunkVertex {
-    glm::u8vec3 position;
-    glm::i8vec3 normal;
-    glm::i8vec3 tangent;
-    glm::i8vec3 bitangent;
-    glm::vec2 uv;
+    MathHelpers::u8pvec3 position;
+    MathHelpers::i8pvec3 normal;
+    MathHelpers::i8pvec3 tangent;
+    MathHelpers::i8pvec3 bitangent;
+    MathHelpers::fpvec2 uv;
 };
 
 // Si mes comptes sont bons on a 28.5MiB pour tout les chunks (c'est OK)
 namespace ChunkMeshScratch {
 std::array<ChunkVertex, Chunk::MAX_VERTICES> opaque_vertices;
-std::array<glm::uvec3, Chunk::MAX_TRIANGLES> opaque_triangles;
+std::array<MathHelpers::upvec3, Chunk::MAX_TRIANGLES> opaque_triangles;
 
 std::array<ChunkVertex, Chunk::MAX_VERTICES> translucent_vertices;
-std::array<glm::uvec3, Chunk::MAX_TRIANGLES> translucent_triangles;
+std::array<MathHelpers::upvec3, Chunk::MAX_TRIANGLES> translucent_triangles;
 std::array<float, Chunk::MAX_TRIANGLES / 2> translucent_quad_distances;
 }; // namespace ChunkMeshScratch
 void Chunk::initShaderData() {
@@ -269,7 +269,7 @@ void Chunk::initShaderData() {
     // Attribute 1: normal
     glEnableVertexAttribArray(1);
     glVertexAttribIPointer(1, 3, GL_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, normal));
-    // Attribute 2: tangenttranslucent_triangle_distances
+    // Attribute 2: tangent
     glEnableVertexAttribArray(2);
     glVertexAttribIPointer(2, 3, GL_BYTE, sizeof(ChunkVertex), (void*)offsetof(ChunkVertex, tangent));
     // Attribute 3: bitangent
@@ -298,8 +298,8 @@ void Chunk::updateShaderData(const glm::vec3& _cam_pos) {
                     continue;
                 }
 
-                std::array<ChunkVertex, Chunk::MAX_VERTICES>& vertices = block.getTransparence() == BlockTransparence::TRANSLUCENT ? ChunkMeshScratch::translucent_vertices : ChunkMeshScratch::opaque_vertices;
-                std::array<glm::uvec3, Chunk::MAX_TRIANGLES>& triangles = block.getTransparence() == BlockTransparence::TRANSLUCENT ? ChunkMeshScratch::translucent_triangles : ChunkMeshScratch::opaque_triangles;
+                auto& vertices = block.getTransparence() == BlockTransparence::TRANSLUCENT ? ChunkMeshScratch::translucent_vertices : ChunkMeshScratch::opaque_vertices;
+                auto& triangles = block.getTransparence() == BlockTransparence::TRANSLUCENT ? ChunkMeshScratch::translucent_triangles : ChunkMeshScratch::opaque_triangles;
                 size_t& vertices_count = block.getTransparence() == BlockTransparence::TRANSLUCENT ? m_translucent_vertices : m_opaque_vertices;
                 size_t& triangles_count = block.getTransparence() == BlockTransparence::TRANSLUCENT ? m_translucent_triangles : m_opaque_triangles;
 
@@ -349,13 +349,13 @@ void Chunk::updateShaderData(const glm::vec3& _cam_pos) {
     glBindBuffer(GL_ARRAY_BUFFER, m_opaque_VBO);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_opaque_vertices * sizeof(ChunkVertex)), ChunkMeshScratch::opaque_vertices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_opaque_EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_opaque_triangles * sizeof(glm::uvec3)), ChunkMeshScratch::opaque_triangles.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_opaque_triangles * sizeof(MathHelpers::upvec3)), ChunkMeshScratch::opaque_triangles.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(m_translucent_VAO);
     glBindBuffer(GL_ARRAY_BUFFER, m_translucent_VBO);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_vertices * sizeof(ChunkVertex)), ChunkMeshScratch::translucent_vertices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_translucent_EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_triangles * sizeof(glm::uvec3)), ChunkMeshScratch::translucent_triangles.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_triangles * sizeof(MathHelpers::upvec3)), ChunkMeshScratch::translucent_triangles.data(), GL_STATIC_DRAW);
 }
 
 void Chunk::renderOpaque() {

@@ -1,5 +1,5 @@
 #pragma once
-
+#include "Data.hpp"
 #include "Component.hpp"
 #include "Entity.hpp"
 #include "Systems.hpp"
@@ -10,8 +10,8 @@ struct EntityFactory; // primary left undefined
 
 template <>
 struct EntityFactory<ECS::TestEntity> {
-    static ECS::EntityId create(ComponentManager& cm, EntityManager& em, SystemManager& sm,
-                                ECS::EntityTypeInputs<ECS::TestEntity> inputs) {
+    static constexpr ECS::EntityId create(ECS::ComponentManager& cm, ECS::EntityManager& em, ECS::SystemManager& sm,
+                                          ECS::EntityTypeInputs<ECS::TestEntity> inputs) {
         ECS::EntityId id = em.createEntity(ECS::entity_signature<ECS::TestEntity>);
         ECS::for_each_component_tuple<ECS::EntityTypeComponents<ECS::TestEntity>>([&]<ECS::Component C>() {
             cm.addComponent<C>(id, C{});
@@ -29,9 +29,9 @@ struct EntityFactory<ECS::TestEntity> {
 };
 
 class ECSManager {
-    ComponentManager cm;
-    EntityManager em;
-    SystemManager sm;
+    ECS::ComponentManager cm;
+    ECS::EntityManager em;
+    ECS::SystemManager sm;
 
     // Internal helper: propagates the entity's new signature to the SystemManager
     // so systems update their entity lists accordingly.
@@ -54,7 +54,7 @@ public:
         return em.hasEntity(entity);
     }
 
-    bool destroyEntity(ECS::EntityId entity) {
+    inline bool destroyEntity(ECS::EntityId entity) {
         if (em.destroyEntity(entity)) {
             cm.entityDestroyed(entity);
             sm.onEntitySignatureChanged(cm, entity, ECS::ComponentSignature{});
@@ -69,7 +69,7 @@ public:
 
     // Attach a component to an entity. The component is value-initialised with
     template <ECS::Component C>
-    void addComponent(ECS::EntityId entity, C component) {
+    inline void addComponent(ECS::EntityId entity, C component) {
         cm.addComponent<C>(entity, component);
 
         ECS::ComponentSignature& sig = em.entitySignature(entity);
@@ -80,7 +80,7 @@ public:
 
     // Detach a component from an entity and update bookkeeping.
     template <ECS::Component C>
-    void removeComponent(ECS::EntityId entity) {
+    inline void removeComponent(ECS::EntityId entity) {
         cm.removeComponent<C>(entity);
 
         ECS::ComponentSignature& sig = em.entitySignature(entity);
@@ -117,7 +117,7 @@ public:
     // -------------------------------------------------------------------------
 
     inline void startControl(Window& _window, ECS::EntityId entity) {
-        getSystem<ECS::CamerableSystem>().startControl(cm, entity);
+        getSystem<ECS::CamerableSystem>().startControl(cm, entity, _window);
         _window.keyboard.bind(GLFW_KEY_C, [&]() { getSystem<ECS::CamerableSystem>().toggleControlType(cm); }, nullptr);
     }
     inline void stopControl(Window& _window) {
@@ -128,8 +128,7 @@ public:
         // PositionSystem: delete every out of world entities
         std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm);
         for (ECS::EntityId entity : entities_to_destroy)
-            if (cm.getComponent<ECS::Positionnable>(entity).current_chunk == nullptr)
-                destroyEntity(entity);
+            destroyEntity(entity);
 
         // ControllingSystem: control entities
         if (getSystem<ECS::CamerableSystem>().getControlType() != ECS::ControlType::FreeCam) {
