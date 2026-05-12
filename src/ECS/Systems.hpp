@@ -259,13 +259,13 @@ public:
         }
     }
 
-    inline void render(ComponentManager& cm, ShaderProgram& _shader) const {
+    inline void render(const ComponentManager& cm, ShaderProgram& _shader) const {
         _shader.set("color", glm::vec3(1.f));
         for (ECS::EntityId entity : m_entities) {
-            ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
-            ECS::CollisionDisplay& collision_display = cm.getComponent<ECS::CollisionDisplay>(entity);
+            const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
+            const ECS::CollisionDisplay& collision_display = cm.getComponent<ECS::CollisionDisplay>(entity);
             _shader.set("position", positionnable.pos);
-            for (AABBRenderer& box : collision_display.boxes)
+            for (const AABBRenderer& box : collision_display.boxes)
                 box.render();
         }
     }

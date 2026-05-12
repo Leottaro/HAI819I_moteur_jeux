@@ -24,7 +24,7 @@ public:
         return id;
     }
 
-    inline bool hasEntity(ECS::EntityId entity) {
+    inline bool hasEntity(ECS::EntityId entity) const {
         return m_entities[entity];
     }
 
@@ -38,7 +38,7 @@ public:
         return true;
     }
 
-    inline ECS::ComponentSignature& entitySignature(ECS::EntityId entity) {
+    inline const ECS::ComponentSignature& entitySignature(ECS::EntityId entity) const {
         return m_signatures[entity];
     }
 };

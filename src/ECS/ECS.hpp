@@ -50,7 +50,7 @@ public:
         return EntityFactory<E>::create(cm, em, sm, inputs);
     }
 
-    inline bool hasEntity(ECS::EntityId entity) {
+    inline bool hasEntity(ECS::EntityId entity) const {
         return em.hasEntity(entity);
     }
 
@@ -90,7 +90,7 @@ public:
     }
 
     template <ECS::Component C>
-    inline bool hasComponent(ECS::EntityId entity) {
+    inline bool hasComponent(ECS::EntityId entity) const {
         return cm.hasComponent<C>(entity);
     }
 
@@ -109,6 +109,10 @@ public:
     // or invoke system-specific methods directly.
     template <ECS::System S>
     inline S& getSystem() {
+        return sm.getSystem<S>();
+    }
+    template <ECS::System S>
+    inline const S& getSystem() const {
         return sm.getSystem<S>();
     }
 
@@ -145,7 +149,7 @@ public:
         getSystem<ECS::CamerableSystem>().update(cm, window, _dt);
     }
 
-    void render(ShaderProgram& _line_shader) {
+    void render(ShaderProgram& _line_shader) const {
         _line_shader.use();
         _line_shader.set("view", getSystem<ECS::CamerableSystem>().getView());
         _line_shader.set("projection", getSystem<ECS::CamerableSystem>().getProjection());

@@ -26,7 +26,7 @@ Chunk* World::addChunk(const glm::ivec3& _chunk_pos) {
     if (isChunkLoaded(_chunk_pos))
         return nullptr;
 
-    m_chunks.add(Chunk(this, _chunk_pos, m_gentype));
+    m_chunks.emplace(this, _chunk_pos, m_gentype);
     m_chunks_frontier.erase(_chunk_pos);
     Chunk* inserted_chunk = m_chunks.at(_chunk_pos);
 
@@ -83,10 +83,11 @@ bool World::removeChunk(const glm::ivec3& _chunk_pos) {
 }
 
 bool World::generate(const glm::vec3& _pos) {
+    updateTime();
+
     glm::ivec3 _chunk_pos = Chunk::posToChunkPos(_pos);
     if (!isChunkLoaded(_chunk_pos)) {
         addChunk(_chunk_pos);
-        std::cout << m_chunks.size() << " CHUNKS" << std::endl;
         return true;
     }
 
@@ -100,7 +101,6 @@ bool World::generate(const glm::vec3& _pos) {
         removeChunk(chunk_pos);
     }
     if (!chunk_to_remove.empty()) {
-        std::cout << m_chunks.size() << " CHUNKS" << std::endl;
         return true;
     }
 
@@ -113,11 +113,9 @@ bool World::generate(const glm::vec3& _pos) {
     }
     if (!chunk_to_add.empty()) {
         addChunk(chunk_to_add.begin()->second);
-        std::cout << m_chunks.size() << " CHUNKS" << std::endl;
         return true;
     }
 
-    std::cout << m_chunks.size() << " CHUNKS" << std::endl;
     return false;
 }
 

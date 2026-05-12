@@ -17,8 +17,6 @@
 // MATH HELPERS
 // -------------------------------------------------------------------------
 
-
-
 namespace MathHelpers {
 template <typename T>
 using vec2 = glm::vec<2, T, glm::highp>;
@@ -32,24 +30,28 @@ using mat4 = glm::mat<4, 4, T, glm::highp>;
 template <typename T>
 using pvec2 = glm::vec<2, T, glm::packed_highp>;
 using fpvec2 = glm::vec<2, float, glm::packed_highp>;
+using dpvec2 = glm::vec<2, double, glm::packed_highp>;
 using upvec2 = glm::vec<2, uint32_t, glm::packed_highp>;
 using u8pvec2 = glm::vec<2, uint8_t, glm::packed_highp>;
 using i8pvec2 = glm::vec<2, int8_t, glm::packed_highp>;
 template <typename T>
 using pvec3 = glm::vec<3, T, glm::packed_highp>;
 using fpvec3 = glm::vec<3, float, glm::packed_highp>;
+using dpvec3 = glm::vec<3, double, glm::packed_highp>;
 using upvec3 = glm::vec<3, uint32_t, glm::packed_highp>;
 using u8pvec3 = glm::vec<3, uint8_t, glm::packed_highp>;
 using i8pvec3 = glm::vec<3, int8_t, glm::packed_highp>;
 template <typename T>
 using pvec4 = glm::vec<4, T, glm::packed_highp>;
 using fpvec4 = glm::vec<4, float, glm::packed_highp>;
+using dpvec4 = glm::vec<4, double, glm::packed_highp>;
 using upvec4 = glm::vec<4, uint32_t, glm::packed_highp>;
 using u8pvec4 = glm::vec<4, uint8_t, glm::packed_highp>;
 using i8pvec4 = glm::vec<4, int8_t, glm::packed_highp>;
 template <typename T>
 using pmat4 = glm::mat<4, 4, T, glm::packed_highp>;
 using fpmat4 = glm::mat<4, 4, float, glm::packed_highp>;
+using dpmat4 = glm::mat<4, 4, double, glm::packed_highp>;
 using upmat4 = glm::mat<4, 4, uint32_t, glm::packed_highp>;
 using u8pmat4 = glm::mat<4, 4, uint8_t, glm::packed_highp>;
 using i8pmat4 = glm::mat<4, 4, int8_t, glm::packed_highp>;
@@ -136,10 +138,18 @@ constexpr bool rayTriangleIntersection(const vec3<T>& origin, const vec3<T>& dir
 template <typename T, size_t n>
 struct glmVecLexicoGraphic {
     bool operator()(const glm::vec<n, T, glm::highp>& a, const glm::vec<n, T, glm::highp>& b) const {
-        if constexpr (n >= 1) if (a.x != b.x) return a.x < b.x;
-        if constexpr (n >= 2) if (a.y != b.y) return a.y < b.y;
-        if constexpr (n >= 3) if (a.z != b.z) return a.z < b.z;
-        if constexpr (n >= 4) if (a.w != b.w) return a.w < b.w;
+        if constexpr (n >= 1)
+            if (a.x != b.x)
+                return a.x < b.x;
+        if constexpr (n >= 2)
+            if (a.y != b.y)
+                return a.y < b.y;
+        if constexpr (n >= 3)
+            if (a.z != b.z)
+                return a.z < b.z;
+        if constexpr (n >= 4)
+            if (a.w != b.w)
+                return a.w < b.w;
         return false;
     }
 };

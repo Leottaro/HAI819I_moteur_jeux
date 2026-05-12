@@ -15,7 +15,7 @@
 
 template <typename T>
 struct AABB {
-    using vec3 = glm::vec<3, T, glm::defaultp>;
+    using vec3 = MathHelpers::vec3<T>;
     static constexpr T POSITIVE_EPSILON = std::numeric_limits<T>::min();
     static constexpr T NEGATIVE_EPSILON = -std::numeric_limits<T>::min();
     static constexpr T POSITIVE_MAX = std::numeric_limits<T>::max();
@@ -240,7 +240,7 @@ public:
         other.m_VAO = other.m_vertices_VBO = 0;
         return *this;
     }
-    AABBRenderer(const AABBRenderer& other): m_vertices(other.m_vertices) {
+    AABBRenderer(const AABBRenderer& other) : m_vertices(other.m_vertices) {
         resetShaderData();
     }
     AABBRenderer& operator=(const AABBRenderer& other) {

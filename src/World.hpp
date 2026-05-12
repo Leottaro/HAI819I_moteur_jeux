@@ -69,13 +69,15 @@ public:
     // ECS manager
     template <ECS::Component C>
     inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
+    template <ECS::Component C>
+    inline const C& getEntityComponent(ECS::EntityId entity) const { return m_ecs_manager.getComponent<C>(entity); }
     inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
     inline void stopControl(Window& _window) { m_ecs_manager.stopControl(_window); }
 
-    inline bool hasEntity(ECS::EntityId entity) { return m_ecs_manager.hasEntity(entity); }
+    inline bool hasEntity(ECS::EntityId entity) const { return m_ecs_manager.hasEntity(entity); }
     inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
     inline void updateEntities(Window& _window, float _dt) { m_ecs_manager.update(_window, _dt); }
-    inline void renderEntities(ShaderProgram& _line_shader) { m_ecs_manager.render(_line_shader); }
+    inline void renderEntities(ShaderProgram& _line_shader) const { m_ecs_manager.render(_line_shader); }
     ECS::EntityId addTestEntity(const glm::vec3& _pos);
 
     // World time
@@ -111,9 +113,7 @@ public:
 
     glm::ivec3 last_cam_chunk{Chunk::CHUNK_SIZE - 1}; // Initialisé a un chunk impossible
     void renderChunks(ShaderProgram& _block_shader) {
-        updateTime();
-
-        ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
+        const ECS::CamerableSystem& camerable_system = m_ecs_manager.getSystem<ECS::CamerableSystem>();
 
         _block_shader.use();
         _block_shader.set("view", camerable_system.getView());
@@ -127,7 +127,7 @@ public:
 
         glm::ivec3 cam_chunk = Chunk::posToChunkPos(camerable_system.getCamPos());
         bool rebuild_all_meshes = cam_chunk != last_cam_chunk;
-        std::vector<std::pair<float, Chunk*>> drawed_chunks;
+        std::vector<std::pair<float, const Chunk*>> drawed_chunks;
         drawed_chunks.reserve(m_chunks.size());
         m_chunks.forEach([&](Chunk& chunk) {
             if (rebuild_all_meshes)

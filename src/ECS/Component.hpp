@@ -59,12 +59,16 @@ public:
     }
 
     template <ECS::Component C>
-    constexpr bool hasComponent(ECS::EntityId entity) {
+    constexpr bool hasComponent(ECS::EntityId entity) const {
         return getComponentArray<C>().hasData(entity);
     }
 
     template <ECS::Component C>
     constexpr C& getComponent(ECS::EntityId entity) {
+        return getComponentArray<C>().getData(entity);
+    }
+    template <ECS::Component C>
+    constexpr const C& getComponent(ECS::EntityId entity) const {
         return getComponentArray<C>().getData(entity);
     }
 

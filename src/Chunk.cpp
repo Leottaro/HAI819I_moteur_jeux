@@ -98,29 +98,6 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     }
 }
 
-void Chunk::initNeighbours() {
-    glm::ivec3 world_pos;
-    int block_i = -1;
-    std::array<bool, 3> neighbour_exists{false};
-    for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-        neighbour_exists[2] = world_pos.y > m_pos.y;
-        for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-            neighbour_exists[0] = world_pos.z > m_pos.z;
-            for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                neighbour_exists[1] = world_pos.x > m_pos.x;
-                block_i++;
-                for (uint8_t _face_i = 0; _face_i < 3; _face_i++) {
-                    if (neighbour_exists[_face_i]) {
-                        int neighbour_i = block_i + BLOCK_NEIGHBOUR_I_OFFSET[_face_i];
-                        m_blocks[block_i].m_neighbours[_face_i] = &m_blocks[neighbour_i];
-                        m_blocks[neighbour_i].m_neighbours[OPPOSITE_FACE[_face_i]] = &m_blocks[block_i];
-                    }
-                }
-            }
-        }
-    }
-}
-
 void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     size_t block_i = 0;
@@ -209,7 +186,6 @@ void Chunk::generate(GenType _type) {
 
 Chunk::Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     m_heightmap.emplace("ressources/textures/heightmap.png");
-    initNeighbours();
     generate(_type);
     initShaderData();
 }
@@ -358,12 +334,12 @@ void Chunk::updateShaderData(const glm::vec3& _cam_pos) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_triangles * sizeof(MathHelpers::upvec3)), ChunkMeshScratch::translucent_triangles.data(), GL_STATIC_DRAW);
 }
 
-void Chunk::renderOpaque() {
+void Chunk::renderOpaque() const {
     glBindVertexArray(m_opaque_VAO);
     glDrawElements(GL_TRIANGLES, m_opaque_triangles * 3, GL_UNSIGNED_INT, 0);
 }
 
-void Chunk::renderTranslucent() {
+void Chunk::renderTranslucent() const {
     glBindVertexArray(m_translucent_VAO);
     glDrawElements(GL_TRIANGLES, m_translucent_triangles * 3, GL_UNSIGNED_INT, 0);
 }

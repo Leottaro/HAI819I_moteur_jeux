@@ -71,7 +71,7 @@ private:
 
     World* m_world;
     glm::ivec3 m_pos;
-    std::array<Block, NB_BLOCKS> m_blocks;
+    std::array<Block, NB_BLOCKS> m_blocks{initBlocks()};
     AABB<float> m_aabb;
     std::optional<GreyMap> m_heightmap;
 
@@ -85,9 +85,32 @@ private:
         1,                        // Right (+X)
         CHUNK_SIZE * CHUNK_SIZE,  // Top   (+Y)
     };
+    static constexpr std::array<Block, NB_BLOCKS> initBlocks() {
+        std::array<Block, NB_BLOCKS> blocks;
+        std::array<bool, 3> neighbour_exists{false};
+        glm::u8vec3 local_pos;
+        int block_i = -1;
+        for (local_pos.y = 0; local_pos.y < CHUNK_SIZE; local_pos.y++) {
+            neighbour_exists[2] = local_pos.y > 0;
+            for (local_pos.z = 0; local_pos.z < CHUNK_SIZE; local_pos.z++) {
+                neighbour_exists[0] = local_pos.z > 0;
+                for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
+                    neighbour_exists[1] = local_pos.x > 0;
+                    block_i++;
+                    for (uint8_t _face_i = 0; _face_i < 3; _face_i++) {
+                        if (neighbour_exists[_face_i]) {
+                            int neighbour_i = block_i + BLOCK_NEIGHBOUR_I_OFFSET[_face_i];
+                            blocks[block_i].m_neighbours[_face_i] = &blocks[neighbour_i];
+                            blocks[neighbour_i].m_neighbours[OPPOSITE_FACE[_face_i]] = &blocks[block_i];
+                        }
+                    }
+                }
+            }
+        }
+        return blocks;
+    }
 
     inline Block& getBlock(const glm::ivec3& _block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
-    void initNeighbours();
     void generate(GenType _type);
 
 public:
@@ -170,16 +193,16 @@ public:
 
     void initShaderData();
     void updateShaderData(const glm::vec3& _cam_pos);
-    void renderOpaque();
-    void renderTranslucent();
+    void renderOpaque() const;
+    void renderTranslucent() const;
     void clearShaderData();
 
     friend World;
 };
 
-class ChunkStorage {                                                                 // TODO: memcheck
+class ChunkStorage {
     static constexpr size_t BATCH_SIZE = (128UL * 1024UL * 1024UL) / sizeof(Chunk); // nombre de chunks qui font 1 GiB
-    static_assert(alignof(Chunk) <= alignof(std::max_align_t)); // if this fails, we need aligned_alloc
+    static_assert(alignof(Chunk) <= alignof(std::max_align_t));                     // if this fails, we need aligned_alloc
 
     std::vector<std::unique_ptr<std::array<Chunk, BATCH_SIZE>>> m_storage{}; // Ensemble de batch de chunk
     std::vector<std::unique_ptr<std::array<bool, BATCH_SIZE>>> m_alive{};    // Ensemble de batch de "en vie ?"
@@ -210,8 +233,8 @@ public:
         return m_lookup_table.find(_chunk_pos) != m_lookup_table.end();
     }
 
-    glm::uvec2 add(Chunk&& chunk) {
-        glm::ivec3 chunk_pos = chunk.getPos();
+    template <typename... Args>
+    glm::uvec2 emplace(Args&&... args) {
         glm::uvec2 indices;
         if (!m_free_list.empty()) {
             indices = m_free_list.back();
@@ -225,9 +248,12 @@ public:
             }
         }
 
-        m_storage[indices.x]->at(indices.y) = std::move(chunk);
+        // Construct directly in place — no move, no copy
+        Chunk* slot = &m_storage[indices.x]->at(indices.y);
+        std::construct_at(slot, std::forward<Args>(args)...);
+
         m_alive[indices.x]->at(indices.y) = true;
-        m_lookup_table.insert({chunk_pos, indices});
+        m_lookup_table.insert({slot->getPos(), indices});
         nb_chunks += 1;
         return indices;
     }
@@ -243,6 +269,13 @@ public:
 
     template <typename Func>
     inline void forEach(Func fn) {
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
+            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
+                if (m_alive[batch_i]->at(chunk_i))
+                    fn(m_storage[batch_i]->at(chunk_i));
+    }
+    template <typename Func>
+    inline void forEach(Func fn) const {
         for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
             for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
                 if (m_alive[batch_i]->at(chunk_i))
