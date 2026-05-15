@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "compilerPath": "/usr/bin/clang",
+            "compilerPath": "/usr/bin/c++",
             "configurationProvider": "ms-vscode.cmake-tools",
             "cppStandard": "c++23",
             "cStandard": "c23",
@@ -9,7 +9,7 @@
             "includePath": [
                 "${workspaceFolder}/src/**"
             ],
-            "intelliSenseMode": "linux-clang-x64",
+            "intelliSenseMode": "linux-gcc-x64",
             "name": "Linux"
         }
     ],

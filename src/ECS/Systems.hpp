@@ -474,6 +474,8 @@ public:
     // Convenience function to get the statically casted pointer to the System of type T.
     template <ECS::System S>
     constexpr S& getSystem() { return std::get<ECS::system_id<S>>(m_systems); }
+    template <ECS::System S>
+    constexpr const S& getSystem() const { return std::get<ECS::system_id<S>>(m_systems); }
 
     // Called whenever an entity's signature changes (add/remove component, destroy)
     void onEntitySignatureChanged(ECS::ComponentManager& cm, ECS::EntityId _entity, const ECS::ComponentSignature& _entity_sig) {

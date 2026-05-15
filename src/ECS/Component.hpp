@@ -23,8 +23,9 @@ public:
         m_size--;
     }
 
-    constexpr bool hasData(ECS::EntityId entity) { return m_has_component[entity]; }
+    constexpr bool hasData(ECS::EntityId entity) const { return m_has_component[entity]; }
     constexpr C& getData(ECS::EntityId entity) { return m_components[entity]; }
+    constexpr const C& getData(ECS::EntityId entity) const { return m_components[entity]; }
 };
 
 namespace COMPONENT_MANAGER_HELPERS {
@@ -42,6 +43,8 @@ class ECS::ComponentManager {
     // Convenience function to get the statically casted pointer to the ComponentArray of type T.
     template <ECS::Component C>
     constexpr ECS::ComponentArray<C>& getComponentArray() { return std::get<ECS::component_id<C>>(m_component_arrays); }
+    template <ECS::Component C>
+    constexpr const ECS::ComponentArray<C>& getComponentArray() const { return std::get<ECS::component_id<C>>(m_component_arrays); }
 
 public:
     template <ECS::Component C>
