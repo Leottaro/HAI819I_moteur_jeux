@@ -20,7 +20,11 @@ echo "Compiling $mode executable..."
 cd build || exit 1
 if make -j "$target"; then
     cd .. || exit 1
-    ./build/"$target"
+    if [ "$mode" = debug ]; then
+        gdb build/$target
+    else
+        ./build/$target
+    fi
 else
     cd .. || exit 1
     exit 1

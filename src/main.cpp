@@ -67,6 +67,7 @@ int main(void) {
     globalInit(window);
 
     auto world = std::make_unique<World>(); // heap allocated
+    WorldRenderer world_renderer(world.get());
 
     GLenum polygon_mode = GL_FILL;
     bool display_debug = false;
@@ -83,12 +84,15 @@ int main(void) {
                 polygon_mode = GL_FILL;
             }
             glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { world->clear();    world->generate(); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { world_renderer.clear();
+         world->clear();
+         world_renderer.setWorld(world.get());
+         world->generate(); }, nullptr);
     window.keyboard.bind(GLFW_KEY_G, [&]() { display_debug = !display_debug; }, nullptr);
 
     // Create and compile our GLSL program from the shaders
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
-    ShaderProgram block_shader("src/shaders/block_vertex.glsl", "src/shaders/block_fragment.glsl");
+    ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
 
     auto [albedo_atlas, normal_atlas, specular_atlas] = Texture::generateAtlasses();
 
@@ -104,9 +108,9 @@ int main(void) {
     // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
-    // ECS::EntityId truc = world->addTestEntity(glm::vec3(23.5f, 48.f, 25.5f));
+    ECS::EntityId truc = world->addTestEntity(glm::vec3(23.5f, 16.f, 26.5f));
     // world->getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
-    // world->startControl(window, truc);
+    world->startControl(window, truc);
 
     float delta_time = 0.0f;
     float last_frame = 0.0f;
@@ -115,7 +119,7 @@ int main(void) {
         glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        auto sky_color = world->skyColor();
+        glm::vec3 sky_color = world_renderer.skyColor();
         glClearColor(sky_color.r, sky_color.g, sky_color.b, 255.f);
 
         float current_time = glfwGetTime();
@@ -130,20 +134,21 @@ int main(void) {
 
         /**********==========OBJECTS UPDATE==========**********/
         // TODO: different world thread
+        world->updateTime();
         world->generate();
         world->updateEntities(window, delta_time);
 
         /**********==========RENDERING==========**********/
-        block_shader.use();
+        chunk_shader.use();
         albedo_atlas.bind(0);
         normal_atlas.bind(1);
         specular_atlas.bind(2);
 
-        world->renderChunks(block_shader);
-        world->renderEntities(line_shader);
-        world->updateWindow();
+        world_renderer.renderChunks(chunk_shader);
+        world_renderer.renderEntities(line_shader);
+        // world_renderer.updateWindow();
         if (display_debug) {
-            world->renderDebugBoxes(line_shader);
+            world_renderer.renderDebugBoxes(line_shader);
         }
 
         // ImGui Render

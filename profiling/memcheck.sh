@@ -6,9 +6,7 @@ if make -j hai819i_moteur_jeux_debug; then
         --leak-check=full \
         --show-leak-kinds=all \
         --track-origins=yes \
-        --track-fds=yes \
         --error-exitcode=1 \
-        --suppressions=profiling/opengl.supp \
         --log-file=valgrind_memcheck.log \
         ./build/hai819i_moteur_jeux_debug
 else

@@ -12,6 +12,7 @@
 #include <set>
 #include <map>
 #include <bitset>
+#include <memory>
 
 // -------------------------------------------------------------------------
 // MATH HELPERS
@@ -221,3 +222,102 @@ constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
         std::make_index_sequence<std::tuple_size_v<SubTuple>>{});
 }
 } // namespace ECS_HELPERS
+
+// -------------------------------------------------------------------------
+// STORAGE HELPERS
+// -------------------------------------------------------------------------
+
+template <typename T, size_t BATCH_BYTES, typename Key, typename KeyLess = std::less<Key>>
+class ContiguousStorage {
+    static_assert(sizeof(T) <= BATCH_BYTES);                      // We have to have the room for at least one chunk
+    static_assert(alignof(T) <= alignof(std::max_align_t));       // If this fails, we need aligned_alloc
+    static constexpr size_t BATCH_SIZE = BATCH_BYTES / sizeof(T); // nombre de T qui font au max BATCH_BYTES
+
+    std::vector<std::unique_ptr<std::array<T, BATCH_SIZE>>> m_storage{};  // Ensemble de batch de T
+    std::vector<std::unique_ptr<std::array<bool, BATCH_SIZE>>> m_alive{}; // Ensemble de batch de "en vie ?"
+    std::map<Key, glm::uvec2, KeyLess> m_lookup_table{};                  // Key -> idx de batch et idx de T
+
+    std::vector<glm::uvec2> m_free_list{};
+    size_t nb_elements{0};
+
+public:
+    ContiguousStorage(ContiguousStorage&&) = delete;
+    ContiguousStorage& operator=(ContiguousStorage&&) = delete;
+    ContiguousStorage(const ContiguousStorage& other) = delete;
+    ContiguousStorage& operator=(const ContiguousStorage&) = delete;
+    ~ContiguousStorage() { clear(); }
+
+    ContiguousStorage() {}
+
+    inline size_t size() const { return nb_elements; }
+    inline T* at(const Key& _key) {
+        auto it = m_lookup_table.find(_key);
+        if (it == m_lookup_table.end())
+            return nullptr;
+        return &m_storage[it->second.x]->at(it->second.y);
+    }
+    inline T& operator[](const Key& _key) {
+        glm::uvec2 pos = m_lookup_table[_key];
+        return m_storage[pos.x]->at(pos.y);
+    }
+    inline const T& operator[](const Key& _key) const {
+        glm::uvec2 pos = m_lookup_table[_key];
+        return m_storage[pos.x]->at(pos.y);
+    }
+
+    template <typename... Args>
+    T& emplace(Args&&... args) {
+        glm::uvec2 indices;
+        if (!m_free_list.empty()) {
+            indices = m_free_list.back();
+            m_free_list.pop_back();
+        } else {
+            indices.x = nb_elements / BATCH_SIZE;
+            indices.y = nb_elements - BATCH_SIZE * indices.x;
+            if (indices.y == 0) {
+                m_storage.push_back(std::make_unique<std::array<T, BATCH_SIZE>>());
+                m_alive.push_back(std::make_unique<std::array<bool, BATCH_SIZE>>());
+            }
+        }
+
+        // Construct directly in place — no move, no copy
+        T* slot = &m_storage[indices.x]->at(indices.y);
+        std::construct_at(slot, args...);
+
+        m_alive[indices.x]->at(indices.y) = true;
+        m_lookup_table.insert({slot->getPos(), indices});
+        nb_elements += 1;
+        return *slot;
+    }
+
+    bool remove(const Key& _chunk_pos) {
+        glm::uvec2 indices = m_lookup_table[_chunk_pos];
+        if (!m_alive[indices.x]->at(indices.y))
+            return false;
+        nb_elements -= 1;
+        m_alive[indices.x]->at(indices.y) = false;
+        m_free_list.emplace_back(indices);
+        m_lookup_table.erase(_chunk_pos);
+        return true;
+    }
+
+    inline void forEach(std::function<void(T&)> fn) {
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
+            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
+                if (m_alive[batch_i]->at(chunk_i))
+                    fn(m_storage[batch_i]->at(chunk_i));
+    }
+    inline void forEach(std::function<void(const T&)> fn) const {
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
+            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
+                if (m_alive[batch_i]->at(chunk_i))
+                    fn(m_storage[batch_i]->at(chunk_i));
+    }
+
+    inline void clear() {
+        m_storage.clear();
+        m_free_list.clear();
+        m_alive.clear();
+        nb_elements = 0;
+    }
+};

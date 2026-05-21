@@ -202,3 +202,5 @@ constexpr void for_each_systems(F&& f) {
 class SystemManager;
 
 }; // namespace ECS
+
+class ECSManager;

@@ -6,7 +6,7 @@
 #include "src/ShaderProgram.hpp"
 
 bool WORLD_API::isChunkLoaded(ECS::Positionnable& positionnable) {
-    return positionnable.current_world->isChunkLoaded(Chunk::posToChunkPos(positionnable.pos));
+    return positionnable.current_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) != nullptr;
 }
 Block* WORLD_API::findBlock(ECS::Positionnable& positionnable, const glm::ivec3& _block_pos) {
     return positionnable.current_world->findBlock(_block_pos);

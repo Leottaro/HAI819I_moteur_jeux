@@ -2,6 +2,7 @@
 #include "Data.hpp"
 
 #include <queue>
+#include <functional>
 
 class ECS::EntityManager {
     std::bitset<ECS::MAX_ENTITIES> m_entities{0};
@@ -41,4 +42,18 @@ public:
     inline const ECS::ComponentSignature& entitySignature(ECS::EntityId entity) const {
         return m_signatures[entity];
     }
+
+    inline void forEach(std::function<void(ECS::EntityId)> _f) const {
+        ECS::EntityId entity = 0;
+        size_t nb_entities = 0;
+        while (nb_entities != m_nb_entities) {
+            if (m_entities[entity]) {
+                _f(entity);
+                nb_entities++;
+            }
+            entity++;
+        }
+    }
+
+    friend ECSManager;
 };

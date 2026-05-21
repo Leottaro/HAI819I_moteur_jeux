@@ -491,4 +491,6 @@ public:
             }
         });
     }
+
+    friend ECSManager;
 };

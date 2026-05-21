@@ -63,6 +63,8 @@ public:
         return false;
     }
 
+    inline void forEachEntity(std::function<void(ECS::EntityId)> _f) { em.forEach(_f); }
+
     // -------------------------------------------------------------------------
     // Component management
     // -------------------------------------------------------------------------

@@ -82,4 +82,6 @@ public:
                 arr.removeData(entity);
         });
     }
+
+    friend ECSManager;
 };
