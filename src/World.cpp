@@ -1,8 +1,6 @@
 // USUAL INCLUDES
 #include "World.hpp"
 
-#include <list>
-
 Chunk* World::findChunk(const glm::ivec3& _chunk_pos) {
     return m_chunks.at(_chunk_pos);
 }
@@ -26,7 +24,7 @@ Chunk* World::addChunk(const glm::ivec3& _chunk_pos) {
     if (findChunk(_chunk_pos) != nullptr)
         return nullptr;
 
-    m_chunks.emplace(this, _chunk_pos, m_gentype);
+    m_chunks.emplace(_chunk_pos, this, _chunk_pos, m_gentype);
     m_chunks_frontier.erase(_chunk_pos);
     Chunk* inserted_chunk = m_chunks.at(_chunk_pos);
 
@@ -46,8 +44,7 @@ Chunk* World::addChunk(const glm::ivec3& _chunk_pos) {
         }
     }
 
-    if (onAddChunk != nullptr)
-        onAddChunk(inserted_chunk);
+    m_added_chunks.push_back(inserted_chunk);
     return inserted_chunk;
 }
 bool World::removeChunk(const glm::ivec3& _chunk_pos) {
@@ -83,8 +80,7 @@ bool World::removeChunk(const glm::ivec3& _chunk_pos) {
         }
     }
 
-    if (onRemoveChunk != nullptr)
-        onRemoveChunk(_chunk_pos);
+    m_removed_chunks.push_back(_chunk_pos);
     return true;
 }
 
@@ -158,8 +154,6 @@ bool World::updateTime() {
 }
 
 void World::updateChunks() {
-    // Update world time
-
     // load / unload the chunks
     std::vector<glm::vec3> controlled_pos;
     std::unordered_set<ECS::EntityId>& controlled_entities = m_ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
@@ -178,32 +172,21 @@ void World::updateChunks() {
 void WorldRenderer::setWorld(World* _world) {
     if (m_world == _world)
         return;
-
-    if (m_world != nullptr) {
-        m_world->onAddChunk = nullptr;
-        m_world->onRemoveChunk = nullptr;
-    }
-
     m_world = _world;
-    if (m_world != nullptr) {
-        m_world->onAddChunk = [this](Chunk* added_chunk) {
-            m_render_chunks.emplace(added_chunk, m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos());
-        };
-        m_world->onRemoveChunk = [this](const glm::ivec3& removed_pos) {
-            m_render_chunks.remove(removed_pos);
-        };
-        glm::vec3 cam_pos = m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos();
-        m_world->m_chunks.forEach([&](Chunk& chunk) {
-            m_render_chunks.emplace(&chunk, cam_pos);
-        });
-    }
+    if (m_world == nullptr)
+        return;
+
+    m_world->m_added_chunks = std::list<Chunk*>();
+    m_world->m_removed_chunks = std::list<glm::ivec3>();
+
+    glm::vec3 cam_pos = m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos();
+    m_world->m_chunks.forEach([&](Chunk& chunk) {
+        m_render_chunks.emplace(chunk.getPos(), &chunk, cam_pos);
+    });
 }
 void WorldRenderer::clear() {
-    if (m_world != nullptr) {
-        m_world->onAddChunk = nullptr;
-        m_world->onRemoveChunk = nullptr;
+    if (m_world != nullptr)
         m_world = nullptr;
-    }
     m_render_chunks.clear();
 }
 
@@ -222,6 +205,13 @@ glm::vec3 WorldRenderer::sunColor() const {
     return glm::mix(SUN_NOON, SUN_DUSK, t);
 }
 
+void WorldRenderer::updateLoadedChunks() {
+    m_removed_chunks = m_world->m_removed_chunks;
+    m_added_chunks = m_world->m_added_chunks;
+    m_world->m_removed_chunks.clear();
+    m_world->m_added_chunks.clear();
+}
+
 void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader) {
     if (m_world == nullptr)
         return;
@@ -233,6 +223,13 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader) {
     const ECS::CamerableSystem& camerable_system = m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>();
     const Frustum& frustum = camerable_system.getFrustum();
     const glm::vec3& cam_pos = camerable_system.getCamPos();
+
+    for (const glm::ivec3& chunk_pos : m_removed_chunks)
+        m_render_chunks.remove(chunk_pos);
+    for (Chunk* chunk : m_added_chunks)
+        m_render_chunks.emplace(chunk->getPos(), chunk, cam_pos);
+    m_removed_chunks.clear();
+    m_added_chunks.clear();
 
     glm::ivec3 cam_chunk = Chunk::posToChunkPos(camerable_system.getCamPos());
     bool rebuild_all = cam_chunk != m_last_cam_chunk;
@@ -296,7 +293,7 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader) {
 void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader) const {
     if (m_world == nullptr)
         return;
-    ECS::CamerableSystem& camerable_system = m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>();
+    const ECS::CamerableSystem& camerable_system = m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>();
     _line_shader.use();
     _line_shader.set("view", camerable_system.getView());
     _line_shader.set("projection", camerable_system.getProjection());
@@ -322,4 +319,40 @@ void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader) const {
 void WorldRenderer::renderEntities(ShaderProgram& _line_shader) const {
     if (m_world != nullptr)
         m_world->m_ecs_manager.render(_line_shader);
+}
+
+void WorldRenderer::updateInterface(Window& _window) {
+    if (m_world == nullptr || !ImGui::Begin("World Info")) {
+        ImGui::End();
+        return;
+    }
+
+    m_world->m_ecs_manager.updateInterfaces(_window);
+
+    int current_type = static_cast<int>(m_world->m_gentype);
+    if (ImGui::Combo("Generation Type", &current_type, GenTypeNames, IM_ARRAYSIZE(GenTypeNames))) {
+        m_world->m_gentype = static_cast<GenType>(current_type);
+        m_render_chunks.clear();
+        m_world->clearChunks();
+        m_world->updateChunks();
+    }
+
+    if (ImGui::InputInt("Render distance", &m_world->m_render_distance, 1, 2)) {
+        m_world->m_render_distance = std::max(m_world->m_render_distance, 1);
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if (ImGui::DragScalar("World Time", ImGuiDataType_U64, &m_world->m_world_time, 10.0f, 0, &DAY_LENGTH)) {
+        m_world->updateTime();
+    }
+    if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_2_PIf, M_2_PIf)) {
+        m_sun_season = std::clamp(m_sun_season, -M_2_PIf, M_2_PIf);
+    }
+    if (ImGui::Button(m_world->m_play ? "Pause" : "Play")) {
+        m_world->toggleTime();
+    }
+    ImGui::End();
 }

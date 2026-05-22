@@ -266,7 +266,12 @@ public:
     }
 
     template <typename... Args>
-    T& emplace(Args&&... args) {
+    T& emplace(Key _key, Args&&... args) {
+        auto it = m_lookup_table.find(_key);
+        if (it != m_lookup_table.end()) {
+            return m_storage[it->second.x]->at(it->second.y);
+        }
+
         glm::uvec2 indices;
         if (!m_free_list.empty()) {
             indices = m_free_list.back();
@@ -285,14 +290,14 @@ public:
         std::construct_at(slot, args...);
 
         m_alive[indices.x]->at(indices.y) = true;
-        m_lookup_table.insert({slot->getPos(), indices});
+        m_lookup_table.insert({_key, indices});
         nb_elements += 1;
         return *slot;
     }
 
     bool remove(const Key& _chunk_pos) {
         glm::uvec2 indices = m_lookup_table[_chunk_pos];
-        if (!m_alive[indices.x]->at(indices.y))
+        if (indices.x >= m_alive.size() || !m_alive[indices.x]->at(indices.y))
             return false;
         // Destruct directly in place
         T* slot = &m_storage[indices.x]->at(indices.y);

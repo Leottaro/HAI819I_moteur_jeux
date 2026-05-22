@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <list>
 
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
 constexpr uint16_t TICK_SPEED = 20;    // ticks par seconde
@@ -51,12 +52,11 @@ class World {
 
     uint64_t m_world_time{TIME_NOON};
 
+    std::list<Chunk*> m_added_chunks;
+    std::list<glm::ivec3> m_removed_chunks;
     bool generate(const std::vector<glm::vec3>& _positions);
 
 public:
-    std::function<void(Chunk*)> onAddChunk{nullptr};
-    std::function<void(const glm::ivec3&)> onRemoveChunk{nullptr};
-
     World(World&&) = delete;
     World& operator=(World&&) = delete;
     World(const World&) = delete;
@@ -104,9 +104,11 @@ public:
 
 class WorldRenderer {
     World* m_world{nullptr};
+    std::list<Chunk*> m_added_chunks;
+    std::list<glm::ivec3> m_removed_chunks;
+
     ChunkRendererStorage m_render_chunks{};
     glm::ivec3 m_last_cam_chunk{Chunk::CHUNK_SIZE + 1}; // Initialisé a un chunk impossible
-
     float m_sun_season{0.f};
 
 public:
@@ -115,8 +117,6 @@ public:
     WorldRenderer(const WorldRenderer& other) = delete;
     WorldRenderer& operator=(const WorldRenderer& other) = delete;
     ~WorldRenderer() {
-        m_world->onAddChunk = nullptr;
-        m_world->onRemoveChunk = nullptr;
         m_world = nullptr;
         m_render_chunks.clear();
     }
@@ -130,43 +130,10 @@ public:
     glm::vec3 skyColor() const;
     glm::vec3 sunColor() const;
 
-    void renderChunks(ShaderProgram& _chunk_shader);
-    void renderDebugBoxes(ShaderProgram& _line_shader) const;
-    void renderEntities(ShaderProgram& _line_shader) const;
+    void renderChunks(ShaderProgram& _chunk_shader);          // need world read !
+    void renderDebugBoxes(ShaderProgram& _line_shader) const; // need world read !
+    void renderEntities(ShaderProgram& _line_shader) const;   // need world read !
 
-    inline void updateInterface(Window& _window) {
-        if (m_world == nullptr || !ImGui::Begin("World Info")) {
-            ImGui::End();
-            return;
-        }
-
-        m_world->m_ecs_manager.updateInterfaces(_window);
-
-        int current_type = static_cast<int>(m_world->m_gentype);
-        if (ImGui::Combo("Generation Type", &current_type, GenTypeNames, IM_ARRAYSIZE(GenTypeNames))) {
-            m_world->m_gentype = static_cast<GenType>(current_type);
-            m_render_chunks.clear();
-            m_world->clearChunks();
-            m_world->updateChunks();
-        }
-
-        if (ImGui::InputInt("Render distance", &m_world->m_render_distance, 1, 2)) {
-            m_world->m_render_distance = std::max(m_world->m_render_distance, 1);
-        }
-
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        if (ImGui::DragScalar("World Time", ImGuiDataType_U64, &m_world->m_world_time, 10.0f, 0, &DAY_LENGTH)) {
-            m_world->updateTime();
-        }
-        if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_2_PIf, M_2_PIf)) {
-            m_sun_season = std::clamp(m_sun_season, -M_2_PIf, M_2_PIf);
-        }
-        if (ImGui::Button(m_world->m_play ? "Pause" : "Play")) {
-            m_world->toggleTime();
-        }
-        ImGui::End();
-    }
+    void updateLoadedChunks();             // need world write !
+    void updateInterface(Window& _window); // need world write !
 };
