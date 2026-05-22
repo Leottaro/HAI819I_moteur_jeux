@@ -130,6 +130,10 @@ public:
         getSystem<ECS::CamerableSystem>().stopControl();
     }
 
+    void updateInterfaces(Window& _window) {
+        getSystem<ECS::CamerableSystem>().updateInterface(cm, _window);
+    }
+
     void update(Window& window, float _dt) {
         // PositionSystem: delete every out of world entities
         std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm);
@@ -137,8 +141,9 @@ public:
             destroyEntity(entity);
 
         // ControllingSystem: control entities
-        if (getSystem<ECS::CamerableSystem>().getControlType() != ECS::ControlType::FreeCam) {
-            getSystem<ECS::ControllingSystem>().update(cm, window, _dt);
+        std::optional<ECS::EntityId> controlled_entity = getSystem<ECS::CamerableSystem>().getControlledEntity();
+        if (controlled_entity.has_value() && getSystem<ECS::CamerableSystem>().getControlType() != ECS::ControlType::FreeCam) {
+            getSystem<ECS::ControllingSystem>().update(cm, controlled_entity.value(), window, _dt);
         }
 
         // PhysicsSystem: integrate forces and update velocities.

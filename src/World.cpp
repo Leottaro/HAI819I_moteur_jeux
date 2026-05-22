@@ -88,44 +88,52 @@ bool World::removeChunk(const glm::ivec3& _chunk_pos) {
     return true;
 }
 
-bool World::generate(const glm::vec3& _pos) {
-    glm::ivec3 _chunk_pos = Chunk::posToChunkPos(_pos);
-    if (findChunk(_chunk_pos) == nullptr) {
-        addChunk(_chunk_pos);
-        return true;
+bool World::generate(const std::vector<glm::vec3>& _positions) {
+    bool chunk_in_pos = false;
+    for (const glm::vec3& pos : _positions) {
+        glm::ivec3 _chunk_pos = Chunk::posToChunkPos(pos);
+        if (findChunk(_chunk_pos) == nullptr) {
+            addChunk(_chunk_pos);
+            chunk_in_pos = true;
+        }
     }
+    if (chunk_in_pos)
+        return true;
 
-    std::list<glm::ivec3> chunk_to_remove;
+    bool removed = false;
     m_chunks.forEach([&](Chunk& chunk) {
-        if (Chunk::chunkDistance(_pos, chunk.getPos()) > m_render_distance) {
-            chunk_to_remove.push_back(chunk.getPos());
+        bool should_remove = true;
+        for (const glm::vec3& pos : _positions) {
+            if (Chunk::chunkDistance(chunk.getPos(), pos) <= m_render_distance) {
+                should_remove = false;
+                break;
+            }
+        }
+        if (should_remove) {
+            removeChunk(chunk.getPos());
+            removed = true;
         }
     });
-    for (const glm::ivec3& chunk_pos : chunk_to_remove) {
-        removeChunk(chunk_pos);
-    }
-    if (!chunk_to_remove.empty()) {
+    if (removed)
         return true;
-    }
 
-    std::map<float, glm::ivec3> chunk_to_add;
+    std::vector<std::map<float, glm::ivec3>> chunk_to_add(_positions.size());
     for (const glm::ivec3& chunk_pos : m_chunks_frontier) {
-        float chunk_dist = Chunk::chunkDistance(_pos, chunk_pos);
-        if (chunk_dist <= m_render_distance) {
-            chunk_to_add.insert({chunk_dist, chunk_pos});
+        for (uint i = 0; i < _positions.size(); i++) {
+            float dist = Chunk::chunkDistance(_positions[i], chunk_pos);
+            chunk_to_add[i].insert({dist, chunk_pos});
         }
     }
-    if (!chunk_to_add.empty()) {
-        addChunk(chunk_to_add.begin()->second);
-        return true;
+
+    bool res = false;
+    for (uint i = 0; i < _positions.size(); i++) {
+        if (!chunk_to_add[i].empty()) {
+            addChunk(chunk_to_add[i].begin()->second);
+            res = true;
+        }
     }
 
-    return false;
-}
-
-void World::clear() {
-    m_ecs_manager.forEachEntity([&](ECS::EntityId entity) { m_ecs_manager.destroyEntity(entity); });
-    m_chunks.clear();
+    return res;
 }
 
 bool World::updateTime() {
@@ -149,8 +157,18 @@ bool World::updateTime() {
     return true;
 }
 
-ECS::EntityId World::addTestEntity(const glm::vec3& _pos) {
-    return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}});
+void World::updateChunks() {
+    // Update world time
+
+    // load / unload the chunks
+    std::vector<glm::vec3> controlled_pos;
+    std::unordered_set<ECS::EntityId>& controlled_entities = m_ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
+    controlled_pos.reserve(controlled_entities.size());
+    for (ECS::EntityId entity : controlled_entities)
+        controlled_pos.push_back(m_ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
+    generate(controlled_pos);
+
+    // update the chunks (water, redstone, ....)
 }
 
 // -------------------------------------------------------------------------
@@ -174,6 +192,10 @@ void WorldRenderer::setWorld(World* _world) {
         m_world->onRemoveChunk = [this](const glm::ivec3& removed_pos) {
             m_render_chunks.remove(removed_pos);
         };
+        glm::vec3 cam_pos = m_world->m_ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos();
+        m_world->m_chunks.forEach([&](Chunk& chunk) {
+            m_render_chunks.emplace(&chunk, cam_pos);
+        });
     }
 }
 void WorldRenderer::clear() {

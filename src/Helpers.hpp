@@ -294,6 +294,9 @@ public:
         glm::uvec2 indices = m_lookup_table[_chunk_pos];
         if (!m_alive[indices.x]->at(indices.y))
             return false;
+        // Destruct directly in place
+        T* slot = &m_storage[indices.x]->at(indices.y);
+        std::destroy_at(slot);
         nb_elements -= 1;
         m_alive[indices.x]->at(indices.y) = false;
         m_free_list.emplace_back(indices);
@@ -315,9 +318,14 @@ public:
     }
 
     inline void clear() {
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
+            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
+                if (m_alive[batch_i]->at(chunk_i))
+                    std::destroy_at(&m_storage[batch_i]->at(chunk_i));
         m_storage.clear();
-        m_free_list.clear();
         m_alive.clear();
+        m_lookup_table.clear();
+        m_free_list.clear();
         nb_elements = 0;
     }
 };

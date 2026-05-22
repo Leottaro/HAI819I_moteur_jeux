@@ -84,10 +84,7 @@ int main(void) {
                 polygon_mode = GL_FILL;
             }
             glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { world_renderer.clear();
-         world->clear();
-         world_renderer.setWorld(world.get());
-         world->generate(); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_R, [&]() { world_renderer.clear(); world->clearChunks();  world_renderer.setWorld(world.get());  world->updateChunks(); }, nullptr);
     window.keyboard.bind(GLFW_KEY_G, [&]() { display_debug = !display_debug; }, nullptr);
 
     // Create and compile our GLSL program from the shaders
@@ -109,8 +106,12 @@ int main(void) {
     specular_atlas.initShaderData();
 
     ECS::EntityId truc = world->addTestEntity(glm::vec3(23.5f, 16.f, 26.5f));
-    // world->getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
+    world->getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
     world->startControl(window, truc);
+
+    ECS::EntityId truc2 = world->addTestEntity(glm::vec3(23.5f, 16.f, 26.5f));
+    world->getEntityComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, -0.5f, 0.f);
+    // world->startControl(window, truc2);
 
     float delta_time = 0.0f;
     float last_frame = 0.0f;
@@ -135,7 +136,7 @@ int main(void) {
         /**********==========OBJECTS UPDATE==========**********/
         // TODO: different world thread
         world->updateTime();
-        world->generate();
+        world->updateChunks();
         world->updateEntities(window, delta_time);
 
         /**********==========RENDERING==========**********/
@@ -144,9 +145,9 @@ int main(void) {
         normal_atlas.bind(1);
         specular_atlas.bind(2);
 
+        world_renderer.updateInterface(window);
         world_renderer.renderChunks(chunk_shader);
         world_renderer.renderEntities(line_shader);
-        // world_renderer.updateWindow();
         if (display_debug) {
             world_renderer.renderDebugBoxes(line_shader);
         }

@@ -27,6 +27,7 @@ enum class ControlType {
     FreeCam,
     __COUNT
 };
+constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
 constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 
 // -------------------------------------------------------------------------

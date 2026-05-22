@@ -139,7 +139,6 @@ void Chunk::generate(GenType _type) {
                         block.getType() = BlockType::Dirt;
                     } else if (world_pos.y <= 4) {
                         block.getType() = BlockType::Grass;
-
                     } else {
                         block.getType() = BlockType::Air;
                     }
