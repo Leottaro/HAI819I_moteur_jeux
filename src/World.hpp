@@ -1,11 +1,9 @@
 #pragma once
 
-// IMGUI
-#include <imgui.h>
-
 // USUAL INCLUDES
-#include "ECS/ECS.hpp"
+#include "Window.hpp"
 #include "Chunk.hpp"
+#include "ShaderProgram.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -21,19 +19,12 @@ constexpr uint64_t TIME_SUNSET = DAY_LENGTH / 2;
 constexpr uint64_t TIME_MIDNIGHT = 3 * DAY_LENGTH / 4;
 constexpr double TIME_ANGLE_FACTOR = 2 * M_PIf32 / DAY_LENGTH;
 
-// DISPLAY CONST
-constexpr glm::vec4 SKY_DAY(187.f / 255.f, 255.f / 255.f, 250.f / 255.f, 255.f / 255.f);
-constexpr glm::vec4 SKY_NIGHT(14.f / 255.f, 5.f / 255.f, 61.f / 255.f, 255.f / 255.f);
-constexpr glm::vec3 SUN_NOON(209.f / 255.f, 209.f / 255.f, 175.f / 255.f);
-// constexpr glm::vec3 SUN_NOON(0.f / 255.f, 0.f / 255.f, 175.f / 255.f);
-constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 167.f / 255.f, 41.f / 255.f);
-
 enum class Gamerules : size_t {
     doDaylightCycle = 0,
     NB_GAMERULES
 };
 
-constexpr size_t CHUNK_BATCH_SIZE{128 * 1024 * 1024};
+constexpr size_t CHUNK_BATCH_SIZE{128 * 1024 * 1024}; // 128MiB
 using ChunkStorage = ContiguousStorage<Chunk, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 using ChunkRendererStorage = ContiguousStorage<ChunkRenderer, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 
@@ -43,18 +34,13 @@ class World {
     GenType m_gentype{GenType::DEBUG_};
     ChunkStorage m_chunks{};
     MathHelpers::VecSet<int, 3> m_chunks_frontier{};
-    ECSManager m_ecs_manager{};
 
-    double m_last_update{};
-    bool m_time_ff{true};
     bool m_play{true};
-    double m_tick_accumulator{0.};
-
-    uint64_t m_world_time{TIME_NOON};
+    uint64_t m_world_time{TIME_NOON}; // en ticks
 
     std::list<Chunk*> m_added_chunks;
     std::list<glm::ivec3> m_removed_chunks;
-    bool generate(const std::vector<glm::vec3>& _positions);
+    bool generate(const std::vector<glm::vec3>& _centers);
 
 public:
     World(World&&) = delete;
@@ -66,74 +52,37 @@ public:
 
     // Chunk functions
     inline bool isChunkFrontier(const glm::ivec3& _chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
-    Chunk* findChunk(const glm::ivec3& _chunk_pos);
+    inline const Chunk* findChunk(const glm::ivec3& _chunk_pos) const { return m_chunks.at(_chunk_pos); }
+    const Block* findBlock(const glm::ivec3& _block_pos) const;
+    std::vector<const Block*> findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end) const;
+
+    inline Chunk* findChunk(const glm::ivec3& _chunk_pos) { return m_chunks.at(_chunk_pos); }
     Block* findBlock(const glm::ivec3& _block_pos);
-    std::vector<const Block*> findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end);
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
 
-    // ECS manager
-    template <ECS::Component C>
-    inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
-    template <ECS::Component C>
-    inline const C& getEntityComponent(ECS::EntityId entity) const { return m_ecs_manager.getComponent<C>(entity); }
-    inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
-    inline void stopControl(Window& _window) { m_ecs_manager.stopControl(_window); }
-    inline bool hasEntity(ECS::EntityId entity) const { return m_ecs_manager.hasEntity(entity); }
-    inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
-    inline ECS::EntityId addTestEntity(const glm::vec3& _pos) { return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}}); }
-
     // World time
     inline uint64_t& getWorldTime() { return m_world_time; }
-    inline void play() { m_play = m_time_ff = true; }
-    inline void pause() { m_play = false; }
-    inline void toggleTime() { m_play ? pause() : play(); }
+
+    // ECS manager
+    // template <ECS::Component C>
+    // inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
+    // template <ECS::Component C>
+    // inline const C& getEntityComponent(ECS::EntityId entity) const { return m_ecs_manager.getComponent<C>(entity); }
+    // inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
+    // inline void stopControl(Window& _window) { m_ecs_manager.stopControl(_window); }
+    // inline bool hasEntity(ECS::EntityId entity) const { return m_ecs_manager.hasEntity(entity); }
+    // inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
+    // inline ECS::EntityId addTestEntity(const glm::vec3& _pos) { return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}}); }
 
     // Update
-    bool updateTime();
-    void updateChunks();
-    inline void clearChunks() { m_chunks.clear(); }
+    void update(std::vector<glm::vec3> _centers);
+    inline void clear() { m_chunks.clear(); }
 
-    inline void updateEntities(Window& _window, float _dt) { m_ecs_manager.update(_window, _dt); }
-    inline void clearEntities() {
-        m_ecs_manager.forEachEntity([&](ECS::EntityId entity) { m_ecs_manager.destroyEntity(entity); });
-    }
+    // inline void updateEntities(Window& _window, float _dt) { m_ecs_manager.update(_window, _dt); }
+    // inline void clearEntities() {
+    //     m_ecs_manager.forEachEntity([&](ECS::EntityId entity) { m_ecs_manager.destroyEntity(entity); });
+    // }
 
     friend WorldRenderer;
-};
-
-class WorldRenderer {
-    World* m_world{nullptr};
-    std::list<Chunk*> m_added_chunks;
-    std::list<glm::ivec3> m_removed_chunks;
-
-    ChunkRendererStorage m_render_chunks{};
-    glm::ivec3 m_last_cam_chunk{Chunk::CHUNK_SIZE + 1}; // Initialisé a un chunk impossible
-    float m_sun_season{0.f};
-
-public:
-    WorldRenderer(WorldRenderer&& other) = delete;
-    WorldRenderer& operator=(WorldRenderer&& other) = delete;
-    WorldRenderer(const WorldRenderer& other) = delete;
-    WorldRenderer& operator=(const WorldRenderer& other) = delete;
-    ~WorldRenderer() {
-        m_world = nullptr;
-        m_render_chunks.clear();
-    }
-
-    WorldRenderer() {}
-    WorldRenderer(World* _world) { setWorld(_world); }
-
-    void setWorld(World* _world);
-    void clear();
-
-    glm::vec3 skyColor() const;
-    glm::vec3 sunColor() const;
-
-    void renderChunks(ShaderProgram& _chunk_shader);          // need world read !
-    void renderDebugBoxes(ShaderProgram& _line_shader) const; // need world read !
-    void renderEntities(ShaderProgram& _line_shader) const;   // need world read !
-
-    void updateLoadedChunks();             // need world write !
-    void updateInterface(Window& _window); // need world write !
 };

@@ -15,6 +15,8 @@
 #include <mutex>
 #include <shared_mutex>
 
+#include "WorldRenderer.hpp"
+#include "ECS/ECS.hpp"
 #include "World.hpp"
 #include "Chunk.hpp"
 #include "Texture.hpp"
@@ -66,41 +68,50 @@ void globalInit(Window& window) {
 }
 
 Window window;
-GLenum polygon_mode = GL_FILL;
-bool display_debug = false;
-
-std::unique_ptr<World> world; // heap allocated
+std::unique_ptr<World> world;
 WorldRenderer world_renderer;
+ECSManager ecs_manager;
+std::vector<glm::vec3> controlled_pos;
 
 // https://stackoverflow.com/questions/244316/reader-writer-locks-in-c
 typedef std::shared_mutex Lock;
-typedef std::unique_lock<Lock> WriteLock; // C++ 11
-typedef std::shared_lock<Lock> ReadLock;  // C++ 14
-Lock world_lock;
-bool kill_threads = false;
+typedef std::unique_lock<Lock> WriteLock;
+typedef std::shared_lock<Lock> ReadLock;
 
-constexpr size_t WORLD_TPS = 10;
-constexpr size_t ENTITIES_TPS = 20;
+bool kill_threads{false};
+Lock world_lock;
+Lock entities_lock;
+Lock renderer_lock;
+Lock window_lock;
+
+constexpr size_t WORLD_TPS = 20;
+constexpr size_t ENTITIES_TPS = 60;
 
 void worldThread() {
     float last_frame = 0.0f;
     float frame_time = 1.0f / WORLD_TPS;
+
     while (!kill_threads) {
         float current_time = glfwGetTime();
         float delta_time = current_time - last_frame;
 
         if (delta_time >= frame_time) {
-            WriteLock w_lock(world_lock);
-            world->updateTime();
-            world->updateChunks();
+            {
+                WriteLock world_write(world_lock);
+                world->update(controlled_pos);
+            }
+            {
+                ReadLock world_read(world_lock);
+                WriteLock renderer_write(renderer_lock);
+                world_renderer.updateWorld(world.get());
+            }
+
             // world_renderer.updateInterface(window);
-            world_renderer.updateLoadedChunks();
             last_frame = current_time;
         }
     }
 }
-
-void entitiesThread() { // TODO: external ecs manager ?
+void entitiesThread() {
     float last_frame = 0.0f;
     float frame_time = 1.0f / ENTITIES_TPS;
     while (!kill_threads) {
@@ -108,9 +119,17 @@ void entitiesThread() { // TODO: external ecs manager ?
         float delta_time = current_time - last_frame;
 
         if (delta_time >= frame_time) {
-            WriteLock w_lock(world_lock);
-            world->updateEntities(window, delta_time);
             last_frame = current_time;
+            ReadLock world_read(world_lock);
+            ReadLock entities_read(entities_lock);
+            ecs_manager.update(window, delta_time);
+
+            const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
+            controlled_pos.clear();
+            controlled_pos.reserve(controlled_entities.size());
+            for (ECS::EntityId entity : controlled_entities) {
+                controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
+            }
         }
     }
 }
@@ -120,21 +139,29 @@ int main(void) {
 
     world = std::make_unique<World>();
     world_renderer.setWorld(world.get());
-    glm::vec3 sky_color = world_renderer.skyColor();
 
     // Create player entities
-    ECS::EntityId truc = world->addTestEntity(glm::vec3(23.5f, 16.f, 26.5f));
-    world->getEntityComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
-    world->startControl(window, truc);
-    ECS::EntityId truc2 = world->addTestEntity(glm::vec3(23.5f, 16.f, 26.5f));
-    world->getEntityComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, -0.5f, 0.f);
-    // world->startControl(window, truc2);
+    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 16.f, 26.5f)});
+    ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, -0.5f, 0.f);
+    ecs_manager.startControl(window, truc);
+    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 16.f, 26.5f)});
+    ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, -0.5f, 0.f);
+    ecs_manager.startControl(window, truc2);
+
+    const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
+    controlled_pos.clear();
+    controlled_pos.reserve(controlled_entities.size());
+    for (ECS::EntityId entity : controlled_entities) {
+        controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
+    }
 
     // Start world thread
     thread world_thread(worldThread);
     thread entities_thread(entitiesThread);
 
     // Setup key bindings
+    GLenum polygon_mode{GL_FILL};
+    bool display_debug{false};
     window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr);
     window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr);
     window.keyboard.bind(GLFW_KEY_Z, [&]() {
@@ -146,8 +173,16 @@ int main(void) {
                 polygon_mode = GL_FILL;
             }
             glPolygonMode(GL_FRONT_AND_BACK, polygon_mode); }, nullptr);
-    window.keyboard.bind(GLFW_KEY_R, [&]() { world_renderer.clear(); world->clearChunks();  world_renderer.setWorld(world.get());  world->updateChunks(); }, nullptr);
     window.keyboard.bind(GLFW_KEY_G, [&]() { display_debug = !display_debug; }, nullptr);
+    window.keyboard.bind(
+        GLFW_KEY_R,
+        [&]() {
+            world_renderer.setWorld(nullptr);
+            world->clear();
+            ecs_manager.destroyEntities();
+            world_renderer.setWorld(world.get());
+        },
+        nullptr);
 
     // Create and compile our GLSL program from the shaders
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
@@ -161,11 +196,16 @@ int main(void) {
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
 
+    float last_frame = 0.0f;
+    // float frame_time = 1.0f / ENTITIES_TPS;
     do {
         glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(sky_color.r, sky_color.g, sky_color.b, 255.f);
+        {
+            ReadLock renderer_read(renderer_lock);
+            glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 255.f);
+        }
 
         // Imgui
         ImGui_ImplOpenGL3_NewFrame();
@@ -176,16 +216,13 @@ int main(void) {
         albedo_atlas.bind(0);
         normal_atlas.bind(1);
         specular_atlas.bind(2);
-
-        // Read needed
         {
-            ReadLock r_lock(world_lock);
-            world_renderer.renderChunks(chunk_shader);
-            world_renderer.renderEntities(line_shader);
-            if (display_debug) {
-                world_renderer.renderDebugBoxes(line_shader);
-            }
-            sky_color = world_renderer.skyColor();
+            ReadLock renderer_read(renderer_lock);
+            world_renderer.renderChunks(chunk_shader, ecs_manager);
+        }
+        {
+            ReadLock entities_read(entities_lock);
+            ecs_manager.render(line_shader);
         }
 
         // ImGui Render
@@ -198,6 +235,5 @@ int main(void) {
     kill_threads = true;
     world_thread.join();
     entities_thread.join();
-
     return 0;
 }

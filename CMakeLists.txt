@@ -17,14 +17,17 @@ include_directories(${PROJECT_SOURCE_DIR} .)
 set(APP_SOURCES
     src/main.cpp
 
+    src/WorldRenderer.hpp
+    src/WorldRenderer.cpp
+
     src/World.hpp
     src/World.cpp
 
+    src/ECS/ECS.hpp
     src/ECS/Data.hpp
     src/ECS/Entity.hpp
     src/ECS/Component.hpp
     src/ECS/Systems.hpp
-    src/ECS/ECS.cpp
 
     src/Chunk.hpp
     src/Chunk.cpp
@@ -39,6 +42,9 @@ set(APP_SOURCES
     src/objects/textures.hpp
 
     src/Window.hpp
+
+    src/Camera.hpp
+    src/Camera.cpp
 
     src/ShaderProgram.hpp
     src/ShaderProgram.cpp

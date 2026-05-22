@@ -3,11 +3,6 @@
 
 #include <imgui.h>
 
-namespace WORLD_API {
-bool isChunkLoaded(ECS::Positionnable& pos);
-Block* findBlock(ECS::Positionnable& pos, const glm::ivec3& _block_pos);
-} // namespace WORLD_API
-
 // -------------------------------------------------------------------------
 // SYSTEMS
 // -------------------------------------------------------------------------
@@ -33,7 +28,7 @@ public:
         std::vector<ECS::EntityId> entities;
         for (ECS::EntityId entity : m_entities) {
             ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
-            if (!WORLD_API::isChunkLoaded(positionnable))
+            if (positionnable.current_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr)
                 entities.push_back(entity);
         }
 
@@ -64,7 +59,7 @@ public:
                     glm::ivec3 under_block_pos{0, min_block.y - 1, 0};
                     for (under_block_pos.z = min_block.z; under_block_pos.z <= max_block.z; under_block_pos.z++) {
                         for (under_block_pos.x = min_block.x; under_block_pos.x <= max_block.x; under_block_pos.x++) {
-                            Block* block = WORLD_API::findBlock(positionnable, under_block_pos);
+                            const Block* block = positionnable.current_world->findBlock(under_block_pos);
                             groundable.on_ground = groundable.on_ground || (block != nullptr && block->getType() != BlockType::Air);
                             max_static_friction = block != nullptr ? std::max(max_static_friction, block->getStaticFriction()) : max_static_friction;
                         }
@@ -78,7 +73,7 @@ public:
             } else {
                 glm::vec3 gravity = G * stats.weight; // g
                 acceleration += gravity;
-                float densite_fluide = WORLD_API::findBlock(positionnable, positionnable.pos)->getDensity();
+                float densite_fluide = positionnable.current_world->findBlock(positionnable.pos)->getDensity();
                 if (densite_fluide > 0.f) {
                     acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume); // flottaison
                     acceleration += densite_fluide * movable.vel * -stats.drag;                               // drag
@@ -116,22 +111,22 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
     bool detectCollision(float _deltaTime, CollisionsInfos& res, ECS::Positionnable& _positionnable, ECS::Collisionnable& _collisionnable, ECS::Movable& _movable) {
         res.t = std::numeric_limits<float>::max();
 
-        std::vector<Block*> to_explore;
+        std::vector<const Block*> to_explore;
         for (const AABB<float>& hitbox : _collisionnable.hitboxes) {
             glm::ivec3 min_block = Block::posToBlockPos(_positionnable.pos + hitbox.min);
             glm::ivec3 max_block = Block::posToBlockPos(_positionnable.pos + hitbox.max);
             for (uint y : {min_block.y - 1, min_block.y, max_block.y, max_block.y + 1})
                 for (uint z : {min_block.z - 1, min_block.z, max_block.z, max_block.z + 1})
                     for (uint x : {min_block.x - 1, min_block.x, max_block.x, max_block.x + 1}) {
-                        Block* block = WORLD_API::findBlock(_positionnable, glm::ivec3(x, y, z));
+                        const Block* block = _positionnable.current_world->findBlock(glm::ivec3(x, y, z));
                         if (block != nullptr)
                             to_explore.push_back(block);
                     }
         }
 
-        std::set<Block*> explored;
+        std::set<const Block*> explored;
         while (!to_explore.empty()) {
-            Block* block = to_explore.back();
+            const Block* block = to_explore.back();
             to_explore.pop_back();
             if (!explored.insert(block).second)
                 continue;
@@ -169,7 +164,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
                         for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
                             for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
                                 for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
-                                    Block* block = WORLD_API::findBlock(_positionnable, collision_block);
+                                    const Block* block = _positionnable.current_world->findBlock(collision_block);
                                     if (block == nullptr || block->getType() == BlockType::Air)
                                         continue;
                                     res.friction = std::max(res.friction, block->getFriction());
@@ -219,7 +214,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
                 collision.pos.y += 1.e-2f;
             }
             positionnable.pos = collision.pos;
-            if (!WORLD_API::isChunkLoaded(positionnable)) {
+            if (positionnable.current_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr) {
                 return;
             }
             _deltaTime *= (1.f - collision.t);
@@ -233,7 +228,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
         //           << "\t\tnew pos: " << glm::to_string(positionnable.pos) << std::endl
         //           << "\t\tnew vel: " << glm::to_string(movable.vel) << std::endl;
 
-        if (!WORLD_API::isChunkLoaded(positionnable)) {
+        if (positionnable.current_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr) {
             return;
         }
 

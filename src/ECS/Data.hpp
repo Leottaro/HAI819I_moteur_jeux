@@ -1,7 +1,7 @@
 #pragma once
 
 // USUAL INCLUDES
-class World;
+#include "src/World.hpp"
 #include "src/Window.hpp"
 #include "src/Frustum.hpp"
 #include "src/Transformation.hpp"
@@ -34,7 +34,7 @@ constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 // COMPONENTS
 // -------------------------------------------------------------------------
 struct Positionnable {
-    World* current_world{nullptr};
+    const World* current_world{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
 };
 struct Collisionnable {

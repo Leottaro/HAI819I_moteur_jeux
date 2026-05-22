@@ -113,10 +113,8 @@ void main() {
 
   vec3 ambient_light = vec3(0.03) * albedo * ao;
   vec3 emited_light = albedo * emission;
-  vec3 color = ambient_light + emited_light + Lo;
+  out_color.xyz = ambient_light + emited_light + Lo;
 
-  color = color / (color + vec3(1.0));
-  color = pow(color, vec3(1.0 / 2.2));
-
-  out_color = vec4(color, 1.0);
+  out_color.xyz = out_color.xyz / (out_color.xyz + vec3(1.0));
+  out_color.xyz = pow(out_color.xyz, vec3(1.0 / 2.2));
 }

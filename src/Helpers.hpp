@@ -256,6 +256,12 @@ public:
             return nullptr;
         return &m_storage[it->second.x]->at(it->second.y);
     }
+    inline const T* at(const Key& _key) const {
+        auto it = m_lookup_table.find(_key);
+        if (it == m_lookup_table.end())
+            return nullptr;
+        return &m_storage[it->second.x]->at(it->second.y);
+    }
     inline T& operator[](const Key& _key) {
         glm::uvec2 pos = m_lookup_table[_key];
         return m_storage[pos.x]->at(pos.y);
