@@ -22,6 +22,7 @@
 #include "Texture.hpp"
 #include "Window.hpp"
 #include "ShaderProgram.hpp"
+#include "Camera.hpp"
 
 using namespace std;
 
@@ -68,21 +69,23 @@ void globalInit(Window& window) {
 }
 
 Window window;
+Camera camera;
 std::unique_ptr<World> world;
 WorldRenderer world_renderer;
 ECSManager ecs_manager;
-std::vector<glm::vec3> controlled_pos;
 
 // https://stackoverflow.com/questions/244316/reader-writer-locks-in-c
 typedef std::shared_mutex Lock;
 typedef std::unique_lock<Lock> WriteLock;
 typedef std::shared_lock<Lock> ReadLock;
 
+std::vector<glm::vec3> controlled_pos;
 bool kill_threads{false};
-Lock world_lock;
-Lock entities_lock;
-Lock renderer_lock;
 Lock window_lock;
+Lock camera_lock;
+Lock world_lock;
+Lock renderer_lock;
+Lock entities_lock;
 
 constexpr size_t WORLD_TPS = 20;
 constexpr size_t ENTITIES_TPS = 60;
@@ -99,9 +102,7 @@ void worldThread() {
             {
                 WriteLock world_write(world_lock);
                 world->update(controlled_pos);
-            }
-            {
-                ReadLock world_read(world_lock);
+
                 WriteLock renderer_write(renderer_lock);
                 world_renderer.updateWorld(world.get());
             }
@@ -120,15 +121,21 @@ void entitiesThread() {
 
         if (delta_time >= frame_time) {
             last_frame = current_time;
-            ReadLock world_read(world_lock);
-            ReadLock entities_read(entities_lock);
-            ecs_manager.update(window, delta_time);
 
-            const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
-            controlled_pos.clear();
-            controlled_pos.reserve(controlled_entities.size());
-            for (ECS::EntityId entity : controlled_entities) {
-                controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
+            {
+                WriteLock entities_write(entities_lock);
+                ReadLock world_read(world_lock);
+                ecs_manager.update(delta_time);
+            }
+
+            {
+                ReadLock entities_read(entities_lock);
+                std::unordered_set<ECS::EntityId> controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
+                controlled_pos.clear();
+                controlled_pos.reserve(controlled_entities.size());
+                for (ECS::EntityId entity : controlled_entities) {
+                    controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
+                }
             }
         }
     }
@@ -138,7 +145,7 @@ int main(void) {
     globalInit(window);
 
     world = std::make_unique<World>();
-    world_renderer.setWorld(world.get());
+    world_renderer.setWorld(world.get(), camera);
 
     // Create player entities
     ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 16.f, 26.5f)});
@@ -177,10 +184,11 @@ int main(void) {
     window.keyboard.bind(
         GLFW_KEY_R,
         [&]() {
-            world_renderer.setWorld(nullptr);
+            // TODO:
+            world_renderer.setWorld(nullptr, camera);
             world->clear();
             ecs_manager.destroyEntities();
-            world_renderer.setWorld(world.get());
+            world_renderer.setWorld(world.get(), camera);
         },
         nullptr);
 
@@ -197,14 +205,16 @@ int main(void) {
     specular_atlas.initShaderData();
 
     float last_frame = 0.0f;
-    // float frame_time = 1.0f / ENTITIES_TPS;
     do {
         glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
+        float current_time = glfwGetTime();
+        float delta_time = current_time - last_frame;
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         {
             ReadLock renderer_read(renderer_lock);
-            glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 255.f);
+            glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 1.f);
         }
 
         // Imgui
@@ -217,8 +227,15 @@ int main(void) {
         normal_atlas.bind(1);
         specular_atlas.bind(2);
         {
-            ReadLock renderer_read(renderer_lock);
-            world_renderer.renderChunks(chunk_shader, ecs_manager);
+            ReadLock window_read(window_lock);
+            ReadLock entities_read(entities_lock);
+            WriteLock camera_write(camera_lock);
+            camera.update(window, ecs_manager, delta_time);
+        }
+        {
+            ReadLock camera_read(camera_lock);
+            WriteLock renderer_write(renderer_lock);
+            world_renderer.renderChunks(chunk_shader, camera);
         }
         {
             ReadLock entities_read(entities_lock);

@@ -3,17 +3,17 @@
 // IMGUI
 #include <imgui.h>
 
-void WorldRenderer::setWorld(World* _world) {
+void WorldRenderer::setWorld(World* _world, const Camera& camera) {
     if (_world == nullptr)
         return;
 
     _world->m_added_chunks = std::list<Chunk*>();
     _world->m_removed_chunks = std::list<glm::ivec3>();
 
-    // glm::vec3 cam_pos = _ecs_manager.getSystem<ECS::CamerableSystem>().getCamPos();
+    // glm::vec3 cam_pos = _ecs_manager.getSystem<ECS::ControllableSystem>().getCamPos();
     m_render_chunks.clear();
     _world->m_chunks.forEach([&](Chunk& chunk) {
-        m_render_chunks.emplace(chunk.getPos(), &chunk, glm::vec3(0.)); // TODO:
+        m_render_chunks.emplace(chunk.getPos(), &chunk, camera.getCamPos());
     });
 }
 
@@ -30,13 +30,12 @@ void WorldRenderer::updateWorld(World* _world) {
     m_last_time = _world->m_world_time;
 }
 
-void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, ECSManager& _ecs_manager) {
+void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& camera) {
     glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR); // angle du soleil (nord<->sud, est<->ouest)
     glm::vec3 sun_direction(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y));
 
-    const ECS::CamerableSystem& camerable_system = _ecs_manager.getSystem<ECS::CamerableSystem>();
-    const Frustum& frustum = camerable_system.getFrustum();
-    const glm::vec3& cam_pos = camerable_system.getCamPos();
+    const Camera::Frustum& frustum = camera.getFrustum();
+    const glm::vec3& cam_pos = camera.getCamPos();
 
     for (const glm::ivec3& chunk_pos : m_removed_chunks)
         m_render_chunks.remove(chunk_pos);
@@ -78,8 +77,8 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, ECSManager& _ecs_
 
     // --- PASS 3: draw (sequential pointer chasing, unavoidable) ---
     _chunk_shader.use();
-    _chunk_shader.set("view", camerable_system.getView());
-    _chunk_shader.set("projection", camerable_system.getProjection());
+    _chunk_shader.set("view", camera.getView());
+    _chunk_shader.set("projection", camera.getProjection());
     _chunk_shader.set("camera_pos", cam_pos);
     _chunk_shader.set("sun_direction", sun_direction);
     _chunk_shader.set("sun_color", m_sun_color);
@@ -105,10 +104,10 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, ECSManager& _ecs_
     glDisable(GL_BLEND);
 }
 // void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader, ECSManager* _ecs_manager) const {
-//     const ECS::CamerableSystem& camerable_system = _ecs_manager.getSystem<ECS::CamerableSystem>();
+//     const ECS::ControllableSystem& controllable_system = _ecs_manager.getSystem<ECS::ControllableSystem>();
 //     _line_shader.use();
-//     _line_shader.set("view", camerable_system.getView());
-//     _line_shader.set("projection", camerable_system.getProjection());
+//     _line_shader.set("view", controllable_system.getView());
+//     _line_shader.set("projection", controllable_system.getProjection());
 //     _line_shader.set("color", glm::vec3(1.f));
 
 //     AABB<float> chunk_hitbox(glm::vec3(0), glm::vec3(Chunk::CHUNK_SIZE));

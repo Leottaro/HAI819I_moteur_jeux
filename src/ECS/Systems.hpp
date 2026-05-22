@@ -274,89 +274,10 @@ public:
     }
 };
 
-class ECS::CamerableSystem : public SystemBase<ECS::Positionnable, ECS::Orientable, ECS::Camerable> {
-    ECS::ControlType m_control_type{ECS::ControlType::ThirdPerson};
+class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orientable, ECS::Controllable, ECS::Movable, ECS::Groundable> {
     std::optional<ECS::EntityId> m_controlled_entity{};
-    bool m_disable_mouse_actions{false};
-
-    glm::vec3 m_cam_pos;
-    glm::vec2 m_cam_orientation;
-    glm::vec3 m_front;
-    glm::vec3 m_right;
-    glm::vec3 m_real_up;
-    glm::mat4 m_view;
-    glm::mat4 m_projection;
-    Frustum m_frustum;
-
-    inline void applyPosConstraint(ECS::Positionnable& positionnable, ECS::Camerable& camerable) {
-        switch (m_control_type) {
-        case ControlType::FreeCam:
-            break;
-        case ControlType::FirstPerson:
-            m_cam_pos = positionnable.pos + camerable.eye_pos;
-            break;
-        case ControlType::ThirdPerson:
-            // update target pos
-            m_cam_pos = positionnable.pos + camerable.eye_pos - camerable.distance_to_center * m_front;
-
-            // re update angle
-            m_front = positionnable.pos + camerable.eye_pos - m_cam_pos;
-            m_cam_orientation = Transformation::EuclidianToEuler(m_front);
-            Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-            break;
-        case ControlType::__COUNT:
-            break;
-        }
-    }
-    inline void updateRenderingData(float _aspect_ratio) {
-        m_projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
-        m_view = glm::lookAt(m_cam_pos, m_cam_pos + m_front, m_real_up);
-        m_frustum.updatePlanes(m_projection, m_view);
-    }
-    inline void updateFreeFrustum(float _aspect_ratio, const glm::vec3& pos, const glm::vec3& front, const glm::vec3& real_up) {
-        glm::mat4 projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
-        glm::mat4 view = glm::lookAt(pos, pos + front, real_up);
-        m_frustum.updatePlanes(projection, view);
-    }
-
-    inline void updateKeyboardInput(Window& _window, float _deltaTime) {
-        glm::vec3 motion = glm::vec3(
-            _window.keyboard.isHeld(GLFW_KEY_SPACE) - _window.keyboard.isHeld(GLFW_KEY_LEFT_CONTROL),
-            _window.keyboard.isHeld(GLFW_KEY_D) - _window.keyboard.isHeld(GLFW_KEY_A),
-            _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
-        if (motion.x != 0.f || motion.y != 0.f || motion.z != 0.f)
-            motion = glm::normalize(motion);
-        glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, m_right);
-        m_cam_pos += _deltaTime * m_free_cam_speed * (motion.x * MathHelpers::VEC_UP + motion.y * m_right + motion.z * flat_front);
-    }
-
-    inline void updateMouseInput(Window& _window, float _deltaTime) {
-        float rotation_speed = _deltaTime * _window.m_rotation_speed;
-        if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            m_cam_orientation.x -= rotation_speed * _window.getCursorVel().y;
-            m_cam_orientation.y -= rotation_speed * _window.getCursorVel().x;
-            Transformation::clampOrientation(m_cam_orientation);
-            Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-        }
-    }
 
 public:
-    float m_free_cam_speed = 16.f;
-    float m_fovy{M_PI_2f};
-    glm::vec2 m_near_far{1.e-1f, 1.e8f};
-
-    CamerableSystem() {
-        Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-        updateRenderingData(16.f / 9.f);
-    }
-
-    inline const glm::vec3& getCamPos() const { return m_cam_pos; }
-    inline const glm::mat4& getView() const { return m_view; }
-    inline const glm::mat4& getProjection() const { return m_projection; }
-    inline const Frustum& getFrustum() const { return m_frustum; }
-    inline ECS::ControlType getControlType() { return m_control_type; }
-    inline std::optional<ECS::EntityId> getControlledEntity() { return m_controlled_entity; }
-
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {
         if (m_controlled_entity.has_value() && m_controlled_entity.value() == entity) {
@@ -364,161 +285,21 @@ public:
         }
     }
 
-    inline void startControl(ComponentManager& cm, ECS::EntityId _entity, Window& _window) {
-        m_controlled_entity = _entity;
-        ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(_entity);
-        ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(_entity);
-        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(_entity);
-        m_cam_orientation = orientable.orientation;
-        Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-        applyPosConstraint(positionnable, camerable);
-        updateRenderingData(_window.getAspectRatio());
-    }
-    inline void stopControl() {
-        m_controlled_entity.reset();
-    }
+    inline void startControl(ComponentManager& cm, ECS::EntityId _entity, Window& _window) { m_controlled_entity = _entity; }
+    inline void stopControl() { m_controlled_entity.reset(); }
 
     inline void changeControlType(ComponentManager& cm, ECS::ControlType _new_type) {
-        m_control_type = _new_type;
-
-        if (!m_controlled_entity.has_value())
-            return;
-        ECS::EntityId entity = m_controlled_entity.value();
-        ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
-        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
-
-        switch (m_control_type) {
-        case ControlType::FreeCam:
-            break;
-        case ControlType::FirstPerson:
-            m_cam_pos = positionnable.pos + camerable.eye_pos;
-            break;
-        case ControlType::ThirdPerson:
-            // update target posm_zoom_rate
-            m_cam_pos = positionnable.pos + camerable.eye_pos - camerable.distance_to_center * m_front;
-            break;
-        case ControlType::__COUNT:
-            break;
+        if (m_controlled_entity.has_value()) {
+            cm.getComponent<ECS::Controllable>(m_controlled_entity.value()).type = _new_type;
         }
     }
     inline void toggleControlType(ComponentManager& cm) {
-        changeControlType(cm, ECS::ControlType((int(m_control_type) + 1) % ECS::NB_CONTROL_TYPES));
-    }
-
-    void updateInterface(ComponentManager& cm, Window& _window) {
-        m_disable_mouse_actions = false;
-        if (ImGui::Begin("Camera Interface")) {
-            m_disable_mouse_actions = ImGui::IsWindowHovered() || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
-
-            // Camera Type Selection
-            int current_type = static_cast<int>(m_control_type);
-            if (ImGui::Combo("Camera Type", &current_type, CONTROL_TYPES_STR)) {
-                changeControlType(cm, ControlType(current_type));
-            }
-
-            ImGui::Separator();
-            ImGui::BeginDisabled(m_control_type == ControlType::FreeCam);
-            ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
-            ImGui::Separator();
-            ImGui::EndDisabled();
-
-            // Orientation Controls
-            glm::vec2 angles_degree = glm::degrees(m_cam_orientation);
-            bool pitch_changed = ImGui::DragFloat("Pitch", &angles_degree[0], 1.f, -89.943f, 89.943f, "%.3f°");
-            bool yaw_changed = ImGui::DragFloat("Yaw", &angles_degree[1], -1.f, -180.f, 180.f, "%.3f°");
-            if (pitch_changed || yaw_changed) {
-                m_cam_orientation = glm::radians(angles_degree);
-                Transformation::clampOrientation(m_cam_orientation);
-                Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-            }
-
-            ImGui::Separator();
-
-            // FOV Control
-            float fovy_degree = glm::degrees(m_fovy);
-            bool fovy_changed = ImGui::DragFloat("FOV", &fovy_degree, 0.1f, 1.f, 179.f, "%.3f°");
-            if (fovy_changed) {
-                m_fovy = glm::radians(fovy_degree);
-            }
-
-            ImGui::Separator();
-
-            // Speed Controls
-            ImGui::DragFloat("Rotation Speed", &_window.m_rotation_speed, 1.e-4f, 0.f, 1.e2f);
-            ImGui::BeginDisabled(m_control_type != ControlType::FreeCam);
-            ImGui::DragFloat("Translation Speed", &m_free_cam_speed, 1.e-2f, 0.f, 1.e2f);
-            ImGui::EndDisabled();
-
-            // Distance to center
-            if (m_controlled_entity.has_value()) {
-                ImGui::BeginDisabled(m_control_type != ControlType::ThirdPerson);
-                ImGui::DragFloat("Distance to Center", &cm.getComponent<ECS::Camerable>(m_controlled_entity.value()).distance_to_center, 0.1f, 1.e-4f, 1.e4f);
-                ImGui::DragFloat("Zoom Rate", &_window.m_zoom_rate, 1.e-4f, 0.f, 1.f);
-                ImGui::EndDisabled();
-            }
-        }
-
-        ImGui::End();
-    }
-
-    void update(ComponentManager& cm, Window& _window, float _deltaTime) {
-        if (m_control_type == ControlType::FreeCam) {
-            updateKeyboardInput(_window, _deltaTime);
-        }
-        if (!m_disable_mouse_actions) {
-            updateMouseInput(_window, _deltaTime);
-        }
-        if (!m_controlled_entity.has_value())
-            return;
-
-        ECS::EntityId entity = m_controlled_entity.value();
-        ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
-        ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
-        ECS::Camerable& camerable = cm.getComponent<ECS::Camerable>(entity);
-        applyPosConstraint(positionnable, camerable);
-        updateRenderingData(_window.getAspectRatio());
-
-        if (m_control_type != ControlType::FreeCam) {
-            orientable.orientation = m_cam_orientation;
-        } else {
-            glm::vec3 front, right, real_up;
-            Transformation::getViewVectors(orientable.orientation, front, right, real_up);
-            updateFreeFrustum(_window.getAspectRatio(), positionnable.pos, front, real_up);
-        }
-    }
-};
-
-class ECS::ControllingSystem : public SystemBase<ECS::Movable, ECS::Groundable, ECS::Orientable, ECS::Controllable> {
-public:
-    inline void init(ComponentManager& cm, ECS::EntityId entity) {}
-    inline void clear(ComponentManager& cm, ECS::EntityId entity) {}
-
-    inline void updateKeyboardInput(ECS::Movable& movable, ECS::Groundable& groundable, ECS::Orientable& orientable, Window& _window, float _deltaTime) {
-        glm::vec2 motion = glm::vec2(
-            _window.keyboard.isHeld(GLFW_KEY_D) - _window.keyboard.isHeld(GLFW_KEY_A),
-            _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
-        if (motion.x != 0.f || motion.y != 0.f)
-            motion = glm::normalize(motion);
-        glm::vec3 front = Transformation::EulerToEuclidian(orientable.orientation);
-        glm::vec3 right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
-        glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, right);
-
-        movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.x * right + motion.y * flat_front);
-        if (_window.keyboard.isHeld(GLFW_KEY_SPACE) && groundable.on_ground) {
-            movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
-            groundable.on_ground = false;
+        if (m_controlled_entity.has_value()) {
+            cm.getComponent<ECS::Controllable>(m_controlled_entity.value()).type = ECS::ControlType((int(m_controlled_entity.value()) + 1) % ECS::NB_CONTROL_TYPES);
         }
     }
 
-    void update(ComponentManager& cm, ECS::EntityId entity, Window& _window, float _deltaTime) {
-        // ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
-        ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
-        ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
-        ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
-
-        updateKeyboardInput(movable, groundable, orientable, _window, _deltaTime);
-        // updateMouseInput(orientable, _window, _deltaTime);
-    }
+    inline std::optional<ECS::EntityId> getControlledEntity() const { return m_controlled_entity; }
 };
 
 // -------------------------------------------------------------------------

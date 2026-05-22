@@ -23,6 +23,8 @@ set(APP_SOURCES
     src/World.hpp
     src/World.cpp
 
+    src/Camera.hpp
+
     src/ECS/ECS.hpp
     src/ECS/Data.hpp
     src/ECS/Entity.hpp
@@ -42,9 +44,6 @@ set(APP_SOURCES
     src/objects/textures.hpp
 
     src/Window.hpp
-
-    src/Camera.hpp
-    src/Camera.cpp
 
     src/ShaderProgram.hpp
     src/ShaderProgram.cpp

@@ -1,6 +1,6 @@
 #pragma once
 #include "World.hpp"
-#include "ECS/ECS.hpp"
+#include "Camera.hpp"
 
 // DISPLAY CONST
 constexpr glm::vec4 SKY_DAY(187.f / 255.f, 255.f / 255.f, 250.f / 255.f, 255.f / 255.f);
@@ -28,12 +28,12 @@ public:
     ~WorldRenderer() { m_render_chunks.clear(); }
 
     WorldRenderer() {}
-    WorldRenderer(World* _world) { setWorld(_world); }
+    WorldRenderer(World* _world, const Camera& camera) { setWorld(_world, camera); }
 
-    void setWorld(World* _world);    // need world write
-    void updateWorld(World* _world); // need world read
+    void setWorld(World* _world, const Camera& camera); // need world write
+    void updateWorld(World* _world);                    // need world read
 
-    void renderChunks(ShaderProgram& _chunk_shader, ECSManager& _ecs_manager);
+    void renderChunks(ShaderProgram& _chunk_shader, const Camera& camera);
     // void renderDebugBoxes(ShaderProgram& _line_shader, ECSManager* _ecs_manager) const;
 
     // void updateInterface(Window& _window, World* _world);

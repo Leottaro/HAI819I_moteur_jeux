@@ -3,7 +3,6 @@
 // USUAL INCLUDES
 #include "src/World.hpp"
 #include "src/Window.hpp"
-#include "src/Frustum.hpp"
 #include "src/Transformation.hpp"
 #include "src/AABB.hpp"
 #include "src/ShaderProgram.hpp"
@@ -27,8 +26,8 @@ enum class ControlType {
     FreeCam,
     __COUNT
 };
-constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
-constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
+static constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
+static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 
 // -------------------------------------------------------------------------
 // COMPONENTS
@@ -60,12 +59,10 @@ struct CollisionDisplay {
 struct Orientable {
     glm::vec2 orientation{0.f, 0.f};
 };
-struct Camerable {
-    glm::vec3 eye_pos{0.f};        // Only in first and third person
-    float distance_to_center{5.f}; // Only in third person
-};
 struct Controllable {
     ControlType type;
+    glm::vec3 eye_pos{0.f};        // Only in first and third person
+    float distance_to_center{5.f}; // Only in third person
 };
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
@@ -77,7 +74,6 @@ using ComponentList = std::tuple<
     PhysicsStats,
     CollisionDisplay,
     Orientable,
-    Camerable,
     Controllable>;
 
 // Le nombre total de composants
@@ -146,7 +142,7 @@ struct __EntityTypeInputs;
 
 template <>
 struct __EntityTypeComponents<TestEntity> {
-    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, Camerable, Controllable>;
+    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, Controllable>;
 };
 template <>
 struct __EntityTypeInputs<TestEntity> {
@@ -175,14 +171,12 @@ class PositionSystem;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
-class CamerableSystem;
 class ControllingSystem;
 using SystemList = std::tuple<
     PositionSystem,
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,
-    CamerableSystem,
     ControllingSystem>;
 
 using SystemId = std::uint8_t;
