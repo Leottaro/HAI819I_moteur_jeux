@@ -284,13 +284,13 @@ class ECS::CamerableSystem : public SystemBase<ECS::Positionnable, ECS::Orientab
     std::optional<ECS::EntityId> m_controlled_entity{};
     bool m_disable_mouse_actions{false};
 
-    glm::vec3 m_cam_pos;
-    glm::vec2 m_cam_orientation;
-    glm::vec3 m_front;
-    glm::vec3 m_right;
-    glm::vec3 m_real_up;
-    glm::mat4 m_view;
-    glm::mat4 m_projection;
+    glm::vec3 m_cam_pos{0.f};
+    glm::vec2 m_cam_orientation{0.f};
+    glm::vec3 m_front{0.f, 0.f, -1.f};
+    glm::vec3 m_right{1.f, 0.f, 0.f};
+    glm::vec3 m_real_up{0.f, 1.f, 0.f};
+    glm::mat4 m_view{1.f};
+    glm::mat4 m_projection{1.f};
     Frustum m_frustum;
 
     inline void applyPosConstraint(ECS::Positionnable& positionnable, ECS::Camerable& camerable) {

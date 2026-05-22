@@ -12,8 +12,8 @@ uniform vec3 sun_color;
 
 // TODO: lights uniforms
 const int nb_lights = 2;
-const vec3 lightPositions[nb_lights] = vec3[](vec3(23.5f, 6.f, 29.5f), vec3(20.5f, 6.f, 29.5f));
-const vec3 lightColors[nb_lights] = vec3[](vec3(1.f, 1.f, 0.f), vec3(1.f, 0.f, 0.f));
+const vec3 lightPositions[nb_lights] = vec3[](vec3(23.5, 6., 29.5), vec3(20.5, 6., 29.5));
+const vec3 lightColors[nb_lights] = vec3[](vec3(1., 1., 0.), vec3(1., 0., 0.));
 
 in vec3 f_worldpos;
 in vec3 f_normal;
@@ -61,7 +61,7 @@ void main() {
   vec4 f_albedo = texture(albedo_atlas, f_uv).rgba;
   vec3 albedo = pow(f_albedo.xyz, vec3(2.2));
   float transparency = f_albedo.a;
-  if (transparency == 0.)
+  if(transparency == 0.)
     discard;
   out_color = vec4(0., 0., 0., transparency);
 
@@ -82,8 +82,8 @@ void main() {
   vec3 V = normalize(camera_pos - f_worldpos);
 
   // reflectance equation
-  vec3 Lo = vec3(0.f);
-  for (int i = 0; i <= nb_lights; i++) {
+  vec3 Lo = vec3(0.);
+  for(int i = 0; i <= nb_lights; i++) {
     // calculate per-light radiance
     vec3 L = i == nb_lights ? sun_direction : lightPositions[i] - f_worldpos;
     float distance = length(L);
@@ -113,10 +113,8 @@ void main() {
 
   vec3 ambient_light = vec3(0.03) * albedo * ao;
   vec3 emited_light = albedo * emission;
-  vec3 color = ambient_light + emited_light + Lo;
+  out_color.xyz = ambient_light + emited_light + Lo;
 
-  color = color / (color + vec3(1.0));
-  color = pow(color, vec3(1.0 / 2.2));
-
-  out_color = vec4(color, 1.0);
+  out_color.xyz = out_color.xyz / (out_color.xyz + vec3(1.0));
+  out_color.xyz = pow(out_color.xyz, vec3(1.0 / 2.2));
 }

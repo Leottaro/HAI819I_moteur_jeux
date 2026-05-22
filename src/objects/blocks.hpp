@@ -1,10 +1,11 @@
 #pragma once
 
 #define GLM_FORCE_CONSTEXPR
-#include <glm/glm.hpp>
-
 #include <array>
 #include <cstddef>
+#include <glm/glm.hpp>
+
+#include "src/objects/textures.hpp"
 
 enum class BlockType : size_t {
     Air = 0,
@@ -20,16 +21,20 @@ enum class BlockType : size_t {
 };
 constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::__NUMBER_OF_TYPES);
 
-constexpr std::array<std::array<glm::vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DATA = {{
-    // Front (-Z)    Left  (-X)    Bottom(-Y)    Back  (+Z)    Right (+X)    Top   (+Y)
-    {{{0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}, {0.f, 0.f}}}, // Stone
-    {{{1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}, {1.f, 0.f}}}, // Dirt
-    {{{2.f, 0.f}, {2.f, 0.f}, {1.f, 0.f}, {2.f, 0.f}, {2.f, 0.f}, {3.f, 0.f}}}, // Grass
-    {{{0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}, {0.f, 1.f}}}, // Glass
-    {{{1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}, {1.f, 1.f}}}, // IronBlock
-    {{{2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}, {2.f, 1.f}}}, // RedstoneLamp
-    {{{3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}, {3.f, 1.f}}}, // DiamondOre
-    {{{0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}, {0.f, 2.f}}}, // SlimeBlock
+using Te = Textures; // Pour pas que les lignes en dessous fassent 3.5km
+
+// si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
+// clang-format off
+constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DATA = {{
+ // Front (-Z)                  Left (-X)              Bottom (-Y)              Back (+Z)               Right (+X)              Top (+Y)
+    {{TEX(Te::stone),           TEX(Te::stone),         TEX(Te::stone),         TEX(Te::stone),         TEX(Te::stone),         TEX(Te::stone)}},           // Stone
+    {{TEX(Te::dirt),            TEX(Te::dirt),          TEX(Te::dirt),          TEX(Te::dirt),          TEX(Te::dirt),          TEX(Te::dirt)}},            // Dirt
+    {{TEX(Te::grass_side),      TEX(Te::grass_side),    TEX(Te::dirt),          TEX(Te::grass_side),    TEX(Te::grass_side),    TEX(Te::grass_top)}},       // Grass
+    {{TEX(Te::glass),           TEX(Te::glass),         TEX(Te::glass),         TEX(Te::glass),         TEX(Te::glass),         TEX(Te::glass)}},           // Glass
+    {{TEX(Te::iron_block),      TEX(Te::iron_block),    TEX(Te::iron_block),    TEX(Te::iron_block),    TEX(Te::iron_block),    TEX(Te::iron_block)}},      // IronBlock
+    {{TEX(Te::redstone_lamp),   TEX(Te::redstone_lamp), TEX(Te::redstone_lamp), TEX(Te::redstone_lamp), TEX(Te::redstone_lamp), TEX(Te::redstone_lamp)}},   // RedstoneLamp
+    {{TEX(Te::diamond_ore),     TEX(Te::diamond_ore),   TEX(Te::diamond_ore),   TEX(Te::diamond_ore),   TEX(Te::diamond_ore),   TEX(Te::diamond_ore)}},     // DiamondOre
+    {{TEX(Te::slime_block),     TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block)}},     // SlimeBlock
 }};
 
 enum class BlockTransparence : size_t {

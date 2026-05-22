@@ -9,24 +9,25 @@
 // USUAL INCLUDES
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <iostream>
 #include <string>
 
-#include "World.hpp"
 #include "Chunk.hpp"
+#include "ShaderProgram.hpp"
 #include "Texture.hpp"
 #include "Window.hpp"
-#include "ShaderProgram.hpp"
+#include "World.hpp"
 
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
-    glEnable(GL_DEPTH_TEST);                           // Enable depth test
-    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
-    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
+    glEnable(GL_DEPTH_TEST);                            // Enable depth test
+    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
+    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -56,7 +57,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -66,7 +67,7 @@ int main(void) {
     Window window;
     globalInit(window);
 
-    auto world = std::make_unique<World>(); // heap allocated
+    auto world = std::make_unique<World>();  // heap allocated
     WorldRenderer world_renderer(world.get());
 
     GLenum polygon_mode = GL_FILL;
@@ -93,16 +94,16 @@ int main(void) {
 
     auto [albedo_atlas, normal_atlas, specular_atlas] = Texture::generateAtlasses();
 
-    albedo_atlas.savePNG("ressources/textures/atlasses/albedo_atlas");
-    normal_atlas.savePNG("ressources/textures/atlasses/normal_atlas");
-    specular_atlas.savePNG("ressources/textures/atlasses/specular_atlas");
+    albedo_atlas.savePNG("build/albedo_atlas");
+    normal_atlas.savePNG("build/normal_atlas");
+    specular_atlas.savePNG("build/specular_atlas");
 
-    // Import needed textures
-    // Texture albedo_atlas("ressources/textures/albedo_atlas.png");
+    // Test de l'atlas vide, qui est utilisé comme base pour l'atlas courant
+    Texture atlas_vide(128, 128);
+    atlas_vide.savePNG("build/test_atlas");
+
     albedo_atlas.initShaderData();
-    // Texture normal_atlas("ressources/textures/normal_atlas.png");
     normal_atlas.initShaderData();
-    // Texture specular_atlas("ressources/textures/specular_atlas.png");
     specular_atlas.initShaderData();
 
     ECS::EntityId truc = world->addTestEntity(glm::vec3(23.5f, 16.f, 26.5f));

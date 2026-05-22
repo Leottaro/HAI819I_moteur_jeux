@@ -146,14 +146,14 @@ bool World::updateTime() {
         return false;
     }
 
-    double current_time = glfwGetTime();                               // in seconds, capture
-    double delta_time = current_time - m_last_update;                  // in seconds, computing delta time
-    m_last_update = current_time;                                      // update for next step
-    double delta_ticks = delta_time * TICK_SPEED;                      // seconds * ticks / seconds = ticks
-    m_tick_accumulator += delta_ticks;                                 // save to avoir drifting
-    uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator); // seconds -> ticks
-    m_tick_accumulator -= ticks_passed;                                // reset for next delta
-    m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;         // in ticks % ticks per day (time changed)
+    double current_time = glfwGetTime();                                // in seconds, capture
+    double delta_time = current_time - m_last_update;                   // in seconds, computing delta time
+    m_last_update = current_time;                                       // update for next step
+    double delta_ticks = delta_time * TICK_SPEED;                       // seconds * ticks / seconds = ticks
+    m_tick_accumulator += delta_ticks;                                  // save to avoir drifting
+    uint64_t ticks_passed = static_cast<uint64_t>(m_tick_accumulator);  // seconds -> ticks
+    m_tick_accumulator -= ticks_passed;                                 // reset for next delta
+    m_world_time = (m_world_time + ticks_passed) % DAY_LENGTH;          // in ticks % ticks per day (time changed)
     return true;
 }
 
@@ -226,7 +226,7 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader) {
     if (m_world == nullptr)
         return;
 
-    glm::vec2 sun_angle(m_sun_season, m_world->m_world_time * TIME_ANGLE_FACTOR); // angle du soleil (nord<->sud, est<->ouest)
+    glm::vec2 sun_angle(m_sun_season, m_world->m_world_time * TIME_ANGLE_FACTOR);  // angle du soleil (nord<->sud, est<->ouest)
     glm::vec3 sun_direction(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y));
     glm::vec3 sun_color = sunColor();
 
@@ -255,8 +255,8 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader) {
     draw_list.reserve(m_render_chunks.size());
 
     m_render_chunks.forEach([&draw_list, frustum, cam_pos](const ChunkRenderer& chunk_renderer) {
-        if (chunk_renderer.getOpaqueTriangles() > 0 && chunk_renderer.getTranslucentTriangles() > 0 // on skip les chunks sans triangles
-            && frustum.isVisible(chunk_renderer.getAABB())                                          // On skip les chunk hors du frustum
+        if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0)  // on skip les chunks sans triangles
+            && frustum.isVisible(chunk_renderer.getAABB())                                             // On skip les chunk hors du frustum
         ) {
             float dist = glm::distance(cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
             draw_list.push_back({dist, &chunk_renderer});

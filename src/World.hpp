@@ -4,16 +4,16 @@
 #include <imgui.h>
 
 // USUAL INCLUDES
-#include "ECS/ECS.hpp"
-#include "Chunk.hpp"
-
 #include <algorithm>
-#include <vector>
 #include <functional>
+#include <vector>
+
+#include "Chunk.hpp"
+#include "ECS/ECS.hpp"
 
 // 28800 = 24 minutes de 60 secondes à 20 ticks par seconde
-constexpr uint16_t TICK_SPEED = 20;    // ticks par seconde
-constexpr uint64_t DAY_LENGTH = 28800; // journée en ticks
+constexpr uint16_t TICK_SPEED = 20;     // ticks par seconde
+constexpr uint64_t DAY_LENGTH = 28800;  // journée en ticks
 constexpr uint64_t TIME_SUNRISE = 0;
 constexpr uint64_t TIME_NOON = DAY_LENGTH / 4;
 constexpr uint64_t TIME_SUNSET = DAY_LENGTH / 2;
@@ -38,6 +38,7 @@ using ChunkRendererStorage = ContiguousStorage<ChunkRenderer, CHUNK_BATCH_SIZE, 
 
 class WorldRenderer;
 class World {
+    int m_world_seed = 0;
     int m_render_distance{4};
     GenType m_gentype{GenType::DEBUG_};
     ChunkStorage m_chunks{};
@@ -53,7 +54,7 @@ class World {
 
     bool generate(const std::vector<glm::vec3>& _positions);
 
-public:
+   public:
     std::function<void(Chunk*)> onAddChunk{nullptr};
     std::function<void(const glm::ivec3&)> onRemoveChunk{nullptr};
 
@@ -63,6 +64,12 @@ public:
     World& operator=(const World&) = delete;
     ~World() = default;
     World() {}
+
+    inline const int getWorldSeed() const { return m_world_seed; }
+    inline void setWorldSeed(int _seed) {
+        m_world_seed = _seed;
+        m_chunks.clear();
+    }
 
     // Chunk functions
     inline bool isChunkFrontier(const glm::ivec3& _chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
@@ -105,11 +112,11 @@ public:
 class WorldRenderer {
     World* m_world{nullptr};
     ChunkRendererStorage m_render_chunks{};
-    glm::ivec3 m_last_cam_chunk{Chunk::CHUNK_SIZE + 1}; // Initialisé a un chunk impossible
+    glm::ivec3 m_last_cam_chunk{Chunk::CHUNK_SIZE + 1};  // Initialisé a un chunk impossible
 
     float m_sun_season{0.f};
 
-public:
+   public:
     WorldRenderer(WorldRenderer&& other) = delete;
     WorldRenderer& operator=(WorldRenderer&& other) = delete;
     WorldRenderer(const WorldRenderer& other) = delete;

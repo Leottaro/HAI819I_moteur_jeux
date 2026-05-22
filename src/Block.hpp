@@ -2,6 +2,7 @@
 
 // USUAL INCLUDES
 #include "objects/blocks.hpp"
+#include "objects/textures.hpp"
 
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
@@ -36,14 +37,15 @@ public:
         glm::ivec3(0, 1, 0),  // Top   (+Y)
     };
 
-    static constexpr std::array<glm::vec2, 4> getUV(float atlas_size, BlockType block_type, int face_i) {
+    static constexpr std::array<glm::vec2, 4> getUV(BlockType block_type, int face_i) {
         size_t type_idx = static_cast<size_t>(block_type) - 1;
         const auto& uv = UV_TABLE_DATA[type_idx][face_i];
+        const float atlas_dims = static_cast<float>(ATLAS_DIMS);
         return {
-            glm::vec2(uv[0], uv[1] + 1.f) / atlas_size,
-            glm::vec2(uv[0] + 1.f, uv[1] + 1.f) / atlas_size,
-            glm::vec2(uv[0] + 1.f, uv[1]) / atlas_size,
-            glm::vec2(uv[0], uv[1]) / atlas_size,
+            glm::vec2(uv[0], uv[1] + 1.f) / atlas_dims,
+            glm::vec2(uv[0] + 1.f, uv[1] + 1.f) / atlas_dims,
+            glm::vec2(uv[0] + 1.f, uv[1]) / atlas_dims,
+            glm::vec2(uv[0], uv[1]) / atlas_dims,
         };
     }
 

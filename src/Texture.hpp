@@ -23,13 +23,13 @@
 #include "src/Helpers.hpp"
 
 class Texture {
-private:
+   private:
     GLuint m_texture_id{0};
 
     std::vector<MathHelpers::u8pvec4> m_data;
     int m_width, m_height, m_channels;
 
-public:
+   public:
     Texture(const std::string& _path) {
         unsigned char* data = stbi_load(_path.c_str(), &m_width, &m_height, &m_channels, 4);
         if (!data) {
@@ -40,6 +40,20 @@ public:
         stbi_image_free(data);
 
         initShaderData();
+    }
+
+    Texture(const uint64_t w, uint64_t h) : m_width(w), m_height(h), m_channels(4) {
+        m_data.resize(w * h);
+        const MathHelpers::u8pvec4 black(0, 0, 0, 255);
+        const MathHelpers::u8pvec4 purple(255, 0, 255, 255);
+        for (int y = 0; y < m_height; y += 2) {
+            int y1_index = y * w;
+            int y2_index = (y + 1) * w;
+            for (int x = 0; x < m_height; ++x) {
+                m_data[y1_index + x] = x & 1 ? black : purple;
+                m_data[y2_index + x] = x & 1 ? purple : black;
+            }
+        }
     }
 
     ~Texture() {
@@ -127,9 +141,9 @@ public:
     }
 
     static constexpr std::tuple<Texture, Texture, Texture> generateAtlasses() {
-        Texture atlas_albedo("ressources/textures/atlasses/atlas_empty.png");
-        Texture atlas_normal("ressources/textures/atlasses/atlas_empty.png");
-        Texture atlas_specular("ressources/textures/atlasses/atlas_empty.png");
+        Texture atlas_albedo(ATLAS_SIZE, ATLAS_SIZE);
+        Texture atlas_normal(ATLAS_SIZE, ATLAS_SIZE);
+        Texture atlas_specular(ATLAS_SIZE, ATLAS_SIZE);
 
         size_t x = 0;
         size_t y = 0;
@@ -137,10 +151,13 @@ public:
             if (c == "air")
                 continue;
 
-            if (x == atlas_dims) {
+            if (x == ATLAS_DIMS) {
                 x = 0;
                 ++y;
             }
+
+            const size_t x_pos = x * TEXTURE_SIZE;
+            const size_t y_pos = y * TEXTURE_SIZE;
 
             std::string name(c);
 
@@ -151,9 +168,9 @@ public:
             Texture tex_albedo(path_albedo);
             Texture tex_normal(path_normal);
             Texture tex_specular(path_specular);
-            atlas_albedo.applyTexture(tex_albedo, x * texture_size, y * texture_size);
-            atlas_normal.applyTexture(tex_normal, x * texture_size, y * texture_size);
-            atlas_specular.applyTexture(tex_specular, x * texture_size, y * texture_size);
+            atlas_albedo.applyTexture(tex_albedo, x_pos, y_pos);
+            atlas_normal.applyTexture(tex_normal, x_pos, y_pos);
+            atlas_specular.applyTexture(tex_specular, x_pos, y_pos);
             ++x;
         }
         return {atlas_albedo, atlas_normal, atlas_specular};
