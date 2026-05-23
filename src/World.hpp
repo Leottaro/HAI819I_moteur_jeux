@@ -68,7 +68,6 @@ class World {
     inline const int getWorldSeed() const { return m_world_seed; }
     inline void setWorldSeed(int _seed) {
         m_world_seed = _seed;
-        m_chunks.clear();
     }
 
     // Chunk functions
@@ -174,6 +173,36 @@ class WorldRenderer {
         if (ImGui::Button(m_world->m_play ? "Pause" : "Play")) {
             m_world->toggleTime();
         }
+        ImGui::Text("Seed actuelle : %d", m_world->getWorldSeed());
+
+
+        static char new_seed[64];
+        ImGui::InputText("New Seed", new_seed, sizeof(new_seed));
+        ImGui::SameLine();
+        if (ImGui::Button("Regen")) {
+            int new_seed_val;
+            std::string_view new_seed_str(new_seed);
+            std::cout << "current string : " << new_seed << "\n";
+
+            // Trying to parse string to int
+            auto [ptr, ec] = std::from_chars(
+                new_seed_str.data(),
+                new_seed_str.data() + new_seed_str.size(),
+                new_seed_val);
+
+            // If not possible, hashing string to int
+            if (ec != std::errc() || ptr != new_seed_str.data() + new_seed_str.size()) {
+                // https://stackoverflow.com/questions/16075271/hashing-a-string-to-an-integer-in-c
+                std::cout << new_seed_str << " is not a number, hashing...\n";
+                new_seed_val = std::hash<std::string_view>{}(new_seed_str);
+            }
+
+            std::cout << new_seed_val << '\n';
+            m_world->setWorldSeed(new_seed_val);
+            m_render_chunks.clear();
+            m_world->clearChunks();
+        }
+
         ImGui::End();
     }
 };
