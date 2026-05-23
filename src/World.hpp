@@ -35,9 +35,9 @@ public:
     static constexpr size_t getMaxChunkNumber(size_t render_distance) { return 0.75f * M_PIf * render_distance * render_distance * render_distance; }
 
 private:
-    uint m_render_distance{4};
+    uint m_render_distance{12};
     GenType m_gentype{GenType::DEBUG_};
-    ChunkStorage m_chunks{getMaxChunkNumber(m_render_distance)};
+    ChunkStorage m_chunks{};
     MathHelpers::VecSet<int, 3> m_chunks_frontier{};
 
     bool m_play{true};
@@ -62,6 +62,7 @@ public:
     const Block* findBlock(const glm::ivec3& _block_pos) const;
     std::vector<const Block*> findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end) const;
 
+    inline void reserveChunks() { m_chunks.reserve(World::getMaxChunkNumber(m_render_distance)); }
     inline Chunk* findChunk(const glm::ivec3& _chunk_pos) { return m_chunks.at(_chunk_pos); }
     Block* findBlock(const glm::ivec3& _block_pos);
     Chunk* addChunk(const glm::ivec3& _chunk_pos);

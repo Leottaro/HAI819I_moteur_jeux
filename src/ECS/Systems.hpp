@@ -275,6 +275,49 @@ public:
     }
 };
 
+class ECS::OrientationDisplaySystem : public SystemBase<ECS::Positionnable, ECS::Orientable, ECS::OrientationDisplay> {
+    inline static GLuint LINE_VAO{0};
+    inline static GLuint LINE_VBO{0};
+
+public:
+    inline void init(ComponentManager& cm, ECS::EntityId entity) {}
+    inline void clear(ComponentManager& cm, ECS::EntityId entity) {}
+
+    inline void render(const ComponentManager& cm, ShaderProgram& _shader) const {
+        if (LINE_VAO == 0) {
+            glGenVertexArrays(1, &LINE_VAO);
+        }
+        glBindVertexArray(LINE_VAO);
+
+        if (LINE_VBO == 0) {
+            glGenBuffers(1, &LINE_VBO);
+            glBindBuffer(GL_ARRAY_BUFFER, LINE_VBO);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        } else {
+            glBindBuffer(GL_ARRAY_BUFFER, LINE_VBO);
+        }
+
+        std::vector<glm::vec3> points;
+        points.reserve(m_entities.size() * 2);
+
+        for (ECS::EntityId entity : m_entities) {
+            const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
+            const ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
+            glm::vec3 front, right, real_up;
+            Transformation::getViewVectors(orientable.orientation, front, right, real_up);
+
+            points.push_back(positionnable.pos + orientable.eye_pos);
+            points.push_back(positionnable.pos + orientable.eye_pos + glm::normalize(front));
+        }
+
+        glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(glm::vec3), points.data(), GL_DYNAMIC_DRAW);
+        _shader.set("color", glm::vec3(0.f, 0.f, 1.f));
+        _shader.set("position", glm::vec3(0.f));
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(points.size()));
+    }
+};
+
 class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orientable, ECS::Controllable, ECS::Movable, ECS::Groundable> {
     std::optional<ECS::EntityId> m_controlled_entity{};
 
@@ -308,6 +351,9 @@ public:
             return;
 
         ECS::EntityId entity = m_controlled_entity.value();
+        const ECS::Controllable& controllable = cm.getComponent<ECS::Controllable>(entity);
+        if (controllable.type == ControlType::FreeCam)
+            return;
         ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
         ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
         const ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);

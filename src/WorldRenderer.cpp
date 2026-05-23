@@ -6,6 +6,7 @@
 void WorldRenderer::clear() {
     m_added_chunks.clear();
     m_removed_chunks.clear();
+    m_last_frontier.clear();
     m_render_chunks.clear();
 }
 
@@ -15,10 +16,10 @@ void WorldRenderer::setWorld(World* _world, const Camera& camera) {
 
     _world->m_added_chunks = std::list<Chunk*>();
     _world->m_removed_chunks = std::list<glm::ivec3>();
+    m_last_frontier = _world->m_chunks_frontier;
 
     // glm::vec3 cam_pos = _ecs_manager.getSystem<ECS::ControllableSystem>().getCamPos();
     m_render_chunks.clear();
-    m_render_chunks.reserve(World::getMaxChunkNumber(_world->m_render_distance));
     _world->m_chunks.forEach([&](Chunk& chunk) {
         m_render_chunks.emplace(chunk.getPos(), &chunk, camera.getCamPos());
     });
@@ -27,6 +28,8 @@ void WorldRenderer::setWorld(World* _world, const Camera& camera) {
 void WorldRenderer::updateWorld(World* _world) {
     m_removed_chunks.insert(m_removed_chunks.end(), _world->m_removed_chunks.begin(), _world->m_removed_chunks.end());
     m_added_chunks.insert(m_added_chunks.end(), _world->m_added_chunks.begin(), _world->m_added_chunks.end());
+    m_last_frontier = _world->m_chunks_frontier;
+
     _world->m_removed_chunks.clear();
     _world->m_added_chunks.clear();
 
@@ -110,30 +113,27 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
 }
-// void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader, ECSManager* _ecs_manager) const {
-//     const ECS::ControllableSystem& controllable_system = _ecs_manager.getSystem<ECS::ControllableSystem>();
-//     _line_shader.use();
-//     _line_shader.set("view", controllable_system.getView());
-//     _line_shader.set("projection", controllable_system.getProjection());
-//     _line_shader.set("color", glm::vec3(1.f));
+void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader, const Camera& camera) const {
+    _line_shader.use();
+    _line_shader.set("view", camera.getView());
+    _line_shader.set("projection", camera.getProjection());
+    _line_shader.set("color", glm::vec3(1.f));
 
-//     AABB<float> chunk_hitbox(glm::vec3(0), glm::vec3(Chunk::CHUNK_SIZE));
-//     AABBRenderer box(chunk_hitbox);
-//     m_render_chunks.forEach([&_line_shader, &box](const ChunkRenderer& chunk_renderer) {
-//         _line_shader.set("position", glm::vec3(chunk_renderer.getPos()));
-//         box.render();
-//     });
-//     box.clearShaderData();
+    AABB<float> chunk_hitbox(glm::vec3(0), glm::vec3(Chunk::CHUNK_SIZE));
+    AABBRenderer box(chunk_hitbox);
+    m_render_chunks.forEach([&_line_shader, &box](const ChunkRenderer& chunk_renderer) {
+        _line_shader.set("position", glm::vec3(chunk_renderer.getPos()));
+        box.render();
+    });
 
-//     chunk_hitbox.min = glm::vec3(Chunk::CHUNK_SIZE / 4);
-//     chunk_hitbox.max = glm::vec3(3 * Chunk::CHUNK_SIZE / 4);
-//     box.initShaderData(chunk_hitbox);
-//     for (const glm::ivec3& chunk_pos : _world->m_chunks_frontier) {
-//         _line_shader.set("position", glm::vec3(chunk_pos));
-//         box.render();
-//     }
-//     box.clearShaderData();
-// }
+    chunk_hitbox.min = glm::vec3(Chunk::CHUNK_SIZE / 4);
+    chunk_hitbox.max = glm::vec3(3 * Chunk::CHUNK_SIZE / 4);
+    box.upateAABB(chunk_hitbox);
+    for (const glm::ivec3& chunk_pos : m_last_frontier) {
+        _line_shader.set("position", glm::vec3(chunk_pos));
+        box.render();
+    }
+}
 
 void WorldRenderer::updateInterface(World* _world) {
     if (!ImGui::Begin("World Info")) {

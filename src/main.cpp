@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <chrono>
 #include <shared_mutex>
 #include <atomic>
 
@@ -90,26 +91,34 @@ Lock renderer_lock;
 Lock entities_lock;
 Lock pos_lock;
 
-constexpr size_t WORLD_TPS = 60;
+constexpr size_t WORLD_TPS = 10;
 constexpr float WORLD_FRAME_TIME = 1.0f / WORLD_TPS;
 void worldThread() {
     float current_time, delta_time, last_frame = glfwGetTime();
     while (!kill_threads) {
         current_time = glfwGetTime();
         delta_time = current_time - last_frame;
-        if (delta_time < WORLD_FRAME_TIME)
+        if (delta_time < WORLD_FRAME_TIME) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
+        }
         last_frame = current_time;
+
+        std::vector<glm::vec3> pos_copy;
+        {
+            ReadLock pos_write(pos_lock);
+            pos_copy = controlled_pos;
+        }
 
         {
             WriteLock world_write(world_lock);
-            WriteLock renderer_write(renderer_lock);
-            ReadLock pos_write(pos_lock);
-
             world->update(controlled_pos);
-            world_renderer.updateWorld(world.get());
         }
 
+        {
+            WriteLock renderer_write(renderer_lock);
+            world_renderer.updateWorld(world.get());
+        }
         // world_renderer.updateInterface(window);
     }
 }
@@ -119,6 +128,7 @@ int main(void) {
 
     world = std::make_unique<World>();
     world_renderer.setWorld(world.get(), camera);
+    // world_renderer.reserve(world.get());
 
     // Create player entities
     ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 16.f, 26.5f)});
@@ -128,19 +138,16 @@ int main(void) {
     ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
     // ecs_manager.startControl(truc2);
 
-    {
-        const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
-        controlled_pos.clear();
-        controlled_pos.reserve(controlled_entities.size());
-        for (ECS::EntityId entity : controlled_entities) {
-            controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
-        }
-    }
-
     // Setup key bindings
     GLenum polygon_mode{GL_FILL};
     bool display_debug{false};
-    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { std::lock_guard<std::mutex> lock(Window::glfw_mutex); glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr);
+    window.keyboard.bind(
+        GLFW_KEY_ESCAPE,
+        [&]() {
+            std::lock_guard<std::mutex> lock(Window::glfw_mutex);
+            glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE);
+        },
+        nullptr);
     window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr);
     window.keyboard.bind(GLFW_KEY_Z, [&]() {
         if (polygon_mode == GL_FILL) {
@@ -184,8 +191,17 @@ int main(void) {
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
 
-    world->update(controlled_pos);
-    camera.update(window, ecs_manager, 0.f);
+    { // Pre start actions
+        const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
+        controlled_pos.clear();
+        controlled_pos.reserve(controlled_entities.size());
+        for (ECS::EntityId entity : controlled_entities) {
+            controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
+        }
+
+        world->update(controlled_pos);
+        camera.update(window, ecs_manager, 1.f);
+    }
 
     // Start world thread
     thread world_thread(worldThread);
@@ -250,6 +266,12 @@ int main(void) {
             ReadLock camera_read(camera_lock);
             WriteLock renderer_write(renderer_lock);
             world_renderer.renderChunks(chunk_shader, camera);
+        }
+
+        if (display_debug) {
+            ReadLock camera_read(camera_lock);
+            ReadLock renderer_read(renderer_lock);
+            world_renderer.renderDebugBoxes(line_shader, camera);
         }
         {
             ReadLock camera_read(camera_lock);

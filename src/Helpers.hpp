@@ -276,7 +276,7 @@ public:
         size_t nb_batches = (_n + BATCH_SIZE - 1) / BATCH_SIZE; // ceil de n/batch_size
         m_storage.reserve(nb_batches);
         m_alive.reserve(nb_batches);
-        for (size_t i = 0; i < nb_batches; i++) {
+        for (size_t i = m_storage.size(); i < nb_batches; i++) {
             m_storage.push_back(std::make_unique<std::array<T, BATCH_SIZE>>());
             m_alive.push_back(std::make_unique<std::array<bool, BATCH_SIZE>>());
         }

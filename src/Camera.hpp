@@ -93,22 +93,22 @@ public:
     float m_elasticity{0.5f};
 
 private:
-    inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Controllable& controllable) {
+    inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Orientable& orientable, const ECS::Controllable& controllable) {
         glm::vec3 should_pos;
         switch (controllable.type) {
         case ECS::ControlType::FreeCam:
             break;
         case ECS::ControlType::FirstPerson:
-            should_pos = positionnable.pos + controllable.eye_pos;
+            should_pos = positionnable.pos + orientable.eye_pos;
             m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
             break;
         case ECS::ControlType::ThirdPerson:
             // update target pos
-            should_pos = positionnable.pos + controllable.eye_pos - controllable.distance_to_center * m_front;
+            should_pos = positionnable.pos + orientable.eye_pos - controllable.distance_to_center * m_front;
             m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
 
             // re update angle
-            m_front = positionnable.pos + controllable.eye_pos - should_pos;
+            m_front = positionnable.pos + orientable.eye_pos - should_pos;
             m_cam_orientation = Transformation::EuclidianToEuler(m_front);
             Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
             break;
@@ -179,7 +179,7 @@ public:
         const ECS::Controllable& controllable = _ecs_manager.getComponent<ECS::Controllable>(entity);
         if (controllable.type != ECS::ControlType::FreeCam) {
             orientable.orientation = m_cam_orientation;
-            applyPosConstraint(positionnable, controllable);
+            applyPosConstraint(positionnable, orientable, controllable);
             updateRenderingData(_window.getAspectRatio());
         } else {
             updateFreeKeyboardInput(_window, _deltaTime);
@@ -193,8 +193,9 @@ public:
 
     void updateInterface(ECSManager& _ecs_manager) {
         m_disable_mouse_actions = false;
-        ECS::ControlType fallback_type = ECS::ControlType::FreeCam;
-        float fallback_distance = 0.f;
+        ECS::ControlType fallback_type{ECS::ControlType::FreeCam};
+        float fallback_distance{0.f};
+        glm::vec3 fallback_pos{0.f};
 
         ECS::ControllingSystem& controlling = _ecs_manager.getSystem<ECS::ControllingSystem>();
         bool has_entity = controlling.getControlledEntity().has_value();
@@ -202,6 +203,8 @@ public:
                                                     : fallback_type;
         float& distance_to_center = has_entity ? _ecs_manager.getComponent<ECS::Controllable>(controlling.getControlledEntity().value()).distance_to_center
                                                : fallback_distance;
+        glm::vec3& entity_pos = has_entity ? _ecs_manager.getComponent<ECS::Positionnable>(controlling.getControlledEntity().value()).pos
+                                           : fallback_pos;
 
         if (!ImGui::Begin("Camera Interface")) {
             ImGui::End();
@@ -218,10 +221,17 @@ public:
         ImGui::EndDisabled();
 
         ImGui::Separator();
+
         ImGui::BeginDisabled(control_type == ECS::ControlType::FreeCam);
         ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
-        ImGui::Separator();
         ImGui::EndDisabled();
+
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        if (ImGui::Button("Snap entity to Pos")) {
+            entity_pos = m_cam_pos;
+        }
+        ImGui::EndDisabled();
+        ImGui::Separator();
 
         // Orientation Controls
         glm::vec2 angles_degree = glm::degrees(m_cam_orientation);
@@ -241,13 +251,13 @@ public:
         if (fovy_changed) {
             m_fovy = glm::radians(fovy_degree);
         }
-        ImGui::DragFloat2("nearFar", glm::value_ptr(m_near_far), 1.e-4f, 0.f, 1.f);
+        ImGui::DragFloat2("nearFar", glm::value_ptr(m_near_far), 1.e-4f, 0.f, 1.e8f);
         ImGui::DragFloat("rotationSpeed", &m_rotation_speed, 1.e-4f, 0.f, 1.e2f);
 
         ImGui::Separator();
 
         ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
-        ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.e-4f, 0.f, 1.f);
+        ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.e-4f, 0.f, 1.e8f);
         ImGui::EndDisabled();
 
         // Distance to center

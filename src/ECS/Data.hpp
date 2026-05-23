@@ -57,12 +57,13 @@ struct PhysicsStats {
 struct CollisionDisplay {
     std::vector<AABBRenderer> boxes{};
 };
+struct OrientationDisplay {};
 struct Orientable {
     glm::vec2 orientation{0.f, 0.f};
+    glm::vec3 eye_pos{0.f};
 };
 struct Controllable {
     ControlType type{ControlType::ThirdPerson};
-    glm::vec3 eye_pos{0.f};        // Only in first and third person
     float distance_to_center{5.f}; // Only in third person
 };
 
@@ -75,6 +76,7 @@ using ComponentList = std::tuple<
     PhysicsStats,
     CollisionDisplay,
     Orientable,
+    OrientationDisplay,
     Controllable>;
 
 // Le nombre total de composants
@@ -143,7 +145,7 @@ struct __EntityTypeInputs;
 
 template <>
 struct __EntityTypeComponents<TestEntity> {
-    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, Controllable>;
+    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, OrientationDisplay, Controllable>;
 };
 template <>
 struct __EntityTypeInputs<TestEntity> {
@@ -172,12 +174,14 @@ class PositionSystem;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
+class OrientationDisplaySystem;
 class ControllingSystem;
 using SystemList = std::tuple<
     PositionSystem,
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,
+    OrientationDisplaySystem,
     ControllingSystem>;
 
 using SystemId = std::uint8_t;
