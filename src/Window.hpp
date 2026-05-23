@@ -13,6 +13,7 @@
 // #include <glm/gtx/string_cast.hpp>
 
 // USUAL INCLUDES
+#include <mutex>
 #include <string>
 
 struct KeyState {
@@ -72,6 +73,13 @@ public:
 };
 
 struct Window {
+    inline static std::mutex glfw_mutex;
+
+    static Window* getWindow(GLFWwindow* w) {
+        std::lock_guard<std::mutex> lock(glfw_mutex);
+        return static_cast<Window*>(glfwGetWindowUserPointer(w));
+    }
+
 private:
     std::string m_title{"Minecraft clown"};
     GLFWwindow* m_window{nullptr};
@@ -83,12 +91,12 @@ private:
     glm::vec2 m_cursor_vel{0, 0};
     glm::vec2 m_scroll{0, 0};
 
-    static void _sizeCallback(GLFWwindow* w, int width, int height) { static_cast<Window*>(glfwGetWindowUserPointer(w))->sizeCallback(w, width, height); }
-    static void _posCallback(GLFWwindow* w, int x, int y) { static_cast<Window*>(glfwGetWindowUserPointer(w))->posCallback(w, x, y); }
-    static void _mouseButtonCallback(GLFWwindow* w, int button, int action, int mods) { static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseButtonCallback(w, button, action, mods); }
-    static void _cursorPosCallback(GLFWwindow* w, double xpos, double ypos) { static_cast<Window*>(glfwGetWindowUserPointer(w))->cursorPosCallback(w, xpos, ypos); }
-    static void _scrollCallback(GLFWwindow* w, double xoffset, double yoffset) { static_cast<Window*>(glfwGetWindowUserPointer(w))->scrollCallback(w, xoffset, yoffset); }
-    static void _keyCallback(GLFWwindow* w, int key, int scancode, int action, int mods) { static_cast<Window*>(glfwGetWindowUserPointer(w))->keyCallback(w, key, scancode, action, mods); }
+    static void _sizeCallback(GLFWwindow* w, int width, int height) { getWindow(w)->sizeCallback(w, width, height); }
+    static void _posCallback(GLFWwindow* w, int x, int y) { getWindow(w)->posCallback(w, x, y); }
+    static void _mouseButtonCallback(GLFWwindow* w, int button, int action, int mods) { getWindow(w)->mouseButtonCallback(w, button, action, mods); }
+    static void _cursorPosCallback(GLFWwindow* w, double xpos, double ypos) { getWindow(w)->cursorPosCallback(w, xpos, ypos); }
+    static void _scrollCallback(GLFWwindow* w, double xoffset, double yoffset) { getWindow(w)->scrollCallback(w, xoffset, yoffset); }
+    static void _keyCallback(GLFWwindow* w, int key, int scancode, int action, int mods) { getWindow(w)->keyCallback(w, key, scancode, action, mods); }
 
     inline void sizeCallback(GLFWwindow* window, int width, int height) {
         // cout << "window size: " << width << ", " << height << endl;
@@ -146,8 +154,6 @@ public:
         }
     }
 
-    float m_rotation_speed{0.5f};
-    float m_zoom_rate{0.05f};
     KeyboardHandler keyboard;
 
     inline const std::string& getTitle() const { return m_title; }
@@ -160,15 +166,18 @@ public:
     inline const glm::vec2& getCursorVel() const { return m_cursor_vel; }
     inline const glm::vec2& getScroll() const { return m_scroll; }
 
-    inline void setPos(const glm::uvec2& _pos) {
+    void setPos(const glm::uvec2& _pos) {
+        std::lock_guard<std::mutex> lock(glfw_mutex);
         m_pos = _pos;
         glfwSetWindowPos(m_window, m_pos.x, m_pos.y);
     }
-    inline void setSize(const glm::uvec2& _size) {
+    void setSize(const glm::uvec2& _size) {
+        std::lock_guard<std::mutex> lock(glfw_mutex);
         m_size = _size;
         glfwSetWindowSize(m_window, m_size.x, m_size.y);
     }
-    inline void setFullscreen(bool _fullscreen) {
+    void setFullscreen(bool _fullscreen) {
+        std::lock_guard<std::mutex> lock(glfw_mutex);
         m_fullscreen = _fullscreen;
         if (m_fullscreen) {
             GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -184,6 +193,7 @@ public:
     }
 
     inline void init() {
+        std::lock_guard<std::mutex> lock(glfw_mutex);
         glfwWindowHint(GLFW_SAMPLES, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);

@@ -11,6 +11,7 @@
 // USUAL INCLUDESs
 #include "Block.hpp"
 #include "Helpers.hpp"
+#include "GLGlobalContext.hpp"
 #include <iostream>
 
 template <typename T>
@@ -258,8 +259,6 @@ public:
 
     template <typename T>
     inline void initShaderData(const AABB<T>& _aabb) {
-        clearShaderData();
-
         if (LINES_EBO == 0) {
             glGenBuffers(1, &LINES_EBO);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, LINES_EBO);
@@ -286,6 +285,21 @@ public:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, LINES_EBO);
     }
 
+    template <typename T>
+    inline void upateAABB(const AABB<T>& _aabb) {
+        size_t i = 0;
+        _aabb.forAllCorners([&](const auto& corner) {
+            m_vertices[i].x = corner.x;
+            m_vertices[i].y = corner.y;
+            m_vertices[i].z = corner.z;
+            i++;
+        });
+
+        glBindVertexArray(m_VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vertices_VBO);
+        glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(MathHelpers::fpvec3), m_vertices.data(), GL_STATIC_DRAW);
+    }
+
     inline void render() const {
         glBindVertexArray(m_VAO);
         glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
@@ -293,11 +307,11 @@ public:
 
     inline void clearShaderData() {
         if (m_VAO) {
-            glDeleteVertexArrays(1, &m_VAO);
+            gl_global_context.addArrayToDelete(m_VAO);
             m_VAO = 0;
         }
         if (m_vertices_VBO) {
-            glDeleteBuffers(1, &m_vertices_VBO);
+            gl_global_context.addBufferToDelete(m_VAO);
             m_vertices_VBO = 0;
         }
     }

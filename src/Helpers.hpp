@@ -227,11 +227,11 @@ constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
 // STORAGE HELPERS
 // -------------------------------------------------------------------------
 
-template <typename T, size_t BATCH_BYTES, typename Key, typename KeyLess = std::less<Key>>
+template <typename T, size_t BATCH_MAX_BYTES, typename Key, typename KeyLess = std::less<Key>>
 class ContiguousStorage {
-    static_assert(sizeof(T) <= BATCH_BYTES);                      // We have to have the room for at least one chunk
-    static_assert(alignof(T) <= alignof(std::max_align_t));       // If this fails, we need aligned_alloc
-    static constexpr size_t BATCH_SIZE = BATCH_BYTES / sizeof(T); // nombre de T qui font au max BATCH_BYTES
+    static_assert(sizeof(T) <= BATCH_MAX_BYTES);                      // We have to have the room for at least one chunk
+    static_assert(alignof(T) <= alignof(std::max_align_t));           // If this fails, we need aligned_alloc
+    static constexpr size_t BATCH_SIZE = BATCH_MAX_BYTES / sizeof(T); // nombre de T qui font au max BATCH_MAX_BYTES
 
     std::vector<std::unique_ptr<std::array<T, BATCH_SIZE>>> m_storage{};  // Ensemble de batch de T
     std::vector<std::unique_ptr<std::array<bool, BATCH_SIZE>>> m_alive{}; // Ensemble de batch de "en vie ?"
@@ -248,9 +248,16 @@ public:
     ~ContiguousStorage() { clear(); }
 
     ContiguousStorage() {}
+    ContiguousStorage(size_t _n) { reserve(_n); }
 
     inline size_t size() const { return nb_elements; }
     inline T* at(const Key& _key) {
+        auto it = m_lookup_table.find(_key);
+        if (it == m_lookup_table.end())
+            return nullptr;
+        return &m_storage[it->second.x]->at(it->second.y);
+    }
+    inline const T* at(const Key& _key) const {
         auto it = m_lookup_table.find(_key);
         if (it == m_lookup_table.end())
             return nullptr;
@@ -265,8 +272,39 @@ public:
         return m_storage[pos.x]->at(pos.y);
     }
 
+    inline void reserve(size_t _n) {
+        size_t nb_batches = (_n + BATCH_SIZE - 1) / BATCH_SIZE; // ceil de n/batch_size
+        m_storage.reserve(nb_batches);
+        m_alive.reserve(nb_batches);
+        for (size_t i = m_storage.size(); i < nb_batches; i++) {
+            m_storage.push_back(std::make_unique<std::array<T, BATCH_SIZE>>());
+            m_alive.push_back(std::make_unique<std::array<bool, BATCH_SIZE>>());
+        }
+
+        // adjust the m_lookup_table
+        std::map<Key, glm::uvec2, KeyLess> new_lookup_table;
+        for (auto& [key, i] : m_lookup_table)
+            if (i.x < nb_batches)
+                new_lookup_table.insert({key, i});
+        m_lookup_table.swap(new_lookup_table);
+
+        // adjust the free list
+        std::vector<glm::uvec2> new_free;
+        new_free.reserve(m_free_list.size());
+        for (const glm::uvec2& i : m_free_list)
+            if (i.x < nb_batches)
+                new_free.push_back(i);
+
+        m_free_list.swap(new_free);
+    }
+
     template <typename... Args>
-    T& emplace(Args&&... args) {
+    T& emplace(Key _key, Args&&... args) {
+        auto it = m_lookup_table.find(_key);
+        if (it != m_lookup_table.end()) {
+            return m_storage[it->second.x]->at(it->second.y);
+        }
+
         glm::uvec2 indices;
         if (!m_free_list.empty()) {
             indices = m_free_list.back();
@@ -274,7 +312,7 @@ public:
         } else {
             indices.x = nb_elements / BATCH_SIZE;
             indices.y = nb_elements - BATCH_SIZE * indices.x;
-            if (indices.y == 0) {
+            while (indices.x >= m_storage.size()) {
                 m_storage.push_back(std::make_unique<std::array<T, BATCH_SIZE>>());
                 m_alive.push_back(std::make_unique<std::array<bool, BATCH_SIZE>>());
             }
@@ -285,43 +323,84 @@ public:
         std::construct_at(slot, args...);
 
         m_alive[indices.x]->at(indices.y) = true;
-        m_lookup_table.insert({slot->getPos(), indices});
+        m_lookup_table.insert({_key, indices});
         nb_elements += 1;
         return *slot;
     }
 
     bool remove(const Key& _chunk_pos) {
-        glm::uvec2 indices = m_lookup_table[_chunk_pos];
-        if (!m_alive[indices.x]->at(indices.y))
+        auto it = m_lookup_table.find(_chunk_pos);
+        if (it == m_lookup_table.end())
+            return false;
+        glm::uvec2 indices = it->second;
+        if (indices.x >= m_alive.size() || !m_alive[indices.x]->at(indices.y))
             return false;
         // Destruct directly in place
         T* slot = &m_storage[indices.x]->at(indices.y);
         std::destroy_at(slot);
+
         nb_elements -= 1;
-        m_alive[indices.x]->at(indices.y) = false;
         m_free_list.emplace_back(indices);
         m_lookup_table.erase(_chunk_pos);
+        m_alive[indices.x]->at(indices.y) = false;
+
+        // Return the batch if an object is still alive
+        for (size_t i = 0; i < BATCH_SIZE; i++)
+            if (m_alive[indices.x]->at(i))
+                return true;
+
+        // If no object is left at indices.x, remove this array
+        m_storage.erase(m_storage.begin() + indices.x);
+        m_alive.erase(m_alive.begin() + indices.x);
+
+        // adjust the m_lookup_table
+        for (auto& [key, i] : m_lookup_table)
+            if (i.x > indices.x)
+                i.x--;
+
+        // adjust the free list
+        std::vector<glm::uvec2> new_free;
+        new_free.reserve(m_free_list.size());
+        for (const glm::uvec2& i : m_free_list) {
+            if (i.x == indices.x)
+                continue;
+            new_free.push_back(glm::uvec2(i.x < indices.x ? i.x : i.x - 1, i.y));
+        }
+        m_free_list.swap(new_free);
+
         return true;
     }
 
     inline void forEach(std::function<void(T&)> fn) {
-        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
-            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
-                if (m_alive[batch_i]->at(chunk_i))
-                    fn(m_storage[batch_i]->at(chunk_i));
+        size_t alive_explored = 0;
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++) {
+            for (uint obj_i = 0; obj_i < BATCH_SIZE; obj_i++) {
+                if (m_alive[batch_i]->at(obj_i)) {
+                    fn(m_storage[batch_i]->at(obj_i));
+                    if (alive_explored++ == nb_elements)
+                        return;
+                }
+            }
+        }
     }
     inline void forEach(std::function<void(const T&)> fn) const {
-        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
-            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
-                if (m_alive[batch_i]->at(chunk_i))
-                    fn(m_storage[batch_i]->at(chunk_i));
+        size_t alive_explored = 0;
+        for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++) {
+            for (uint obj_i = 0; obj_i < BATCH_SIZE; obj_i++) {
+                if (m_alive[batch_i]->at(obj_i)) {
+                    fn(m_storage[batch_i]->at(obj_i));
+                    if (alive_explored++ == nb_elements)
+                        return;
+                }
+            }
+        }
     }
 
     inline void clear() {
         for (uint batch_i = 0; batch_i < m_storage.size(); batch_i++)
-            for (uint chunk_i = 0; chunk_i < BATCH_SIZE; chunk_i++)
-                if (m_alive[batch_i]->at(chunk_i))
-                    std::destroy_at(&m_storage[batch_i]->at(chunk_i));
+            for (uint obj_i = 0; obj_i < BATCH_SIZE; obj_i++)
+                if (m_alive[batch_i]->at(obj_i))
+                    std::destroy_at(&m_storage[batch_i]->at(obj_i));
         m_storage.clear();
         m_alive.clear();
         m_lookup_table.clear();

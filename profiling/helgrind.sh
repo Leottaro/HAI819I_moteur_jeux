@@ -5,6 +5,7 @@ if make -j hai819i_moteur_jeux_debug; then
         --tool=helgrind \
         --history-level=full \
         --log-file=valgrind_helgrind.log \
+        -s \
         ./build/hai819i_moteur_jeux_debug
 else
     cd .. || exit 1

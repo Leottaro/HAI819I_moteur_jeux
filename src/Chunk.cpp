@@ -104,93 +104,98 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
 
 void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
-    std::vector<glm::ivec3> surface_blocks;
+    std::vector<glm::u8vec3> surface_blocks;
     size_t block_i = 0;
     constexpr uint32_t MOUTAINT_HEIGHT = 20.f;
     switch (_type) {
-        case GenType::DEBUG_:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= 0) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= 4) {
-                            uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
-                            block.getType() = BlockType(truc % BLOCK_TYPES_N);
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
-                        // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? BlockType::Stone : BlockType::Air;
+    case GenType::DEBUG_:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block& block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= 0) {
+                        block.getType() = BlockType::Stone;
+                    } else if (world_pos.y <= 3) {
+                        block.getType() = BlockType::Dirt;
+                    } else if (world_pos.y <= 4) {
+                        uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
+                        block.getType() = BlockType(truc % BLOCK_TYPES_N);
+                    } else {
+                        block.getType() = BlockType::Air;
+                    }
+                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? BlockType::Stone : BlockType::Air;
+                }
+            }
+        }
+        break;
+    case GenType::SUPERFLAT:
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    Block& block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= 0) {
+                        block.getType() = BlockType::Stone;
+                    } else if (world_pos.y <= 3) {
+                        block.getType() = BlockType::Dirt;
+                    } else if (world_pos.y <= 4) {
+                        block.getType() = BlockType::Grass;
+                    } else {
+                        block.getType() = BlockType::Air;
                     }
                 }
             }
-            break;
-        case GenType::SUPERFLAT:
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= 0) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= 4) {
-                            block.getType() = BlockType::Grass;
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
+        }
+        break;
+    case GenType::OVERWORLD:
+        surface_blocks.reserve(CHUNK_SIZE * CHUNK_SIZE);
+        for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
+            for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
+                for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
+                    glm::vec3 world_float = glm::vec3(world_pos) / Chunk::CHUNK_SIZE;
+                    const float perlin_height = stb_perlin_noise3_seed(world_float.x, 0.f, world_float.z, 0.f, 0.f, 0.000000000f, m_world->getWorldSeed());
+                    const int ground_height = static_cast<int>((perlin_height + 1) * MOUTAINT_HEIGHT);
+                    // std::cout << world_pos << "/" << ground_height << "\n";
+                    Block& block = m_blocks[block_i++];
+                    block.getPos() = world_pos;
+                    if (world_pos.y <= -45) {
+                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= ground_height) {
+                        block.getType() = BlockType::Stone;
+                    } else if (world_pos.y <= ground_height + 3) {
+                        block.getType() = BlockType::Dirt;
+                    } else if (world_pos.y <= ground_height + 4) {
+                        block.getType() = BlockType::Grass;
+                        surface_blocks.push_back(world_pos - m_pos);
+                    } else {
+                        block.getType() = BlockType::Air;
                     }
                 }
             }
-            break;
-        case GenType::OVERWORLD:
-            surface_blocks.reserve(CHUNK_SIZE * CHUNK_SIZE);
-            for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
-                for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
-                    for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
-                        glm::vec3 world_float = glm::vec3(world_pos) / Chunk::CHUNK_SIZE;
-                        const float perlin_height = stb_perlin_noise3_seed(world_float.x, 0.f, world_float.z, 0.f, 0.f, 0.000000000f, m_world->getWorldSeed());
-                        const int ground_height = static_cast<int>((perlin_height + 1) * MOUTAINT_HEIGHT);
-                        // std::cout << world_pos << "/" << ground_height << "\n";
-                        Block& block = m_blocks[block_i++];
-                        block.getPos() = world_pos;
-                        if (world_pos.y <= -45) {
-                            block.getType() = BlockType::Air;
-                        } else if (world_pos.y <= ground_height) {
-                            block.getType() = BlockType::Stone;
-                        } else if (world_pos.y <= ground_height + 3) {
-                            block.getType() = BlockType::Dirt;
-                        } else if (world_pos.y <= ground_height + 4) {
-                            block.getType() = BlockType::Grass;
-                            surface_blocks.push_back(world_pos - m_pos);
-                        } else {
-                            block.getType() = BlockType::Air;
-                        }
-                    }
-                }
+        }
+        // std::cout << "taille de la surface : " << surface_blocks.size() << " !!!\n";
+        for (const glm::u8vec3& surface_pos : surface_blocks) {
+            if (rand() >= TREE_CHANCE)
+                continue;
+
+            for (const auto& [block_type, struct_pos] : TREE_DATA) {
+                glm::u8vec3 block_pos = surface_pos + glm::u8vec3(struct_pos);
+                if (block_pos.x >= CHUNK_SIZE || block_pos.y >= CHUNK_SIZE || block_pos.z >= CHUNK_SIZE)
+                    continue;
+
+                // std::cout << "block de type: " << block_names[static_cast<size_t>(block_type)] << " à la position " << block_pos << " de " << m_pos << "\n";
+                Block& block = m_blocks[posToBlockI(block_pos)];
+                block.getType() = block_type;
             }
-            // std::cout << "taille de la surface : " << surface_blocks.size() << " !!!\n";
-            for (const glm::ivec3& chunk_pos : surface_blocks) {
-                if (rand() < TREE_CHANCE) {
-                    for (const auto& [block_type, struct_pos] : TREE_DATA) {
-                        // std::cout << "block de type: " << block_names[static_cast<size_t>(block_type)] << " à la position " << chunk_pos << "\n";
-                        Block& block = m_blocks[posToBlockI(chunk_pos + glm::ivec3(struct_pos))];
-                        block.getType() = block_type;
-                    }
-                }
-            }
-            break;
-        default:
-            throw std::runtime_error("ChunkGenType not supported in Chunk generation");
+        }
+        break;
+    default:
+        throw std::runtime_error("ChunkGenType not supported in Chunk generation");
     }
 }
 
@@ -340,28 +345,28 @@ void ChunkRenderer::renderTranslucent() const {
 
 void ChunkRenderer::clearShaderData() {
     if (m_opaque_VAO) {
-        glDeleteVertexArrays(1, &m_opaque_VAO);
+        gl_global_context.addArrayToDelete(m_opaque_VAO);
         m_opaque_VAO = 0;
     }
     if (m_opaque_VBO) {
-        glDeleteBuffers(1, &m_opaque_VBO);
+        gl_global_context.addBufferToDelete(m_opaque_VBO);
         m_opaque_VBO = 0;
     }
     if (m_opaque_EBO) {
-        glDeleteBuffers(1, &m_opaque_EBO);
+        gl_global_context.addBufferToDelete(m_opaque_EBO);
         m_opaque_EBO = 0;
     }
 
     if (m_translucent_VAO) {
-        glDeleteVertexArrays(1, &m_translucent_VAO);
+        gl_global_context.addArrayToDelete(m_translucent_VAO);
         m_translucent_VAO = 0;
     }
     if (m_translucent_VBO) {
-        glDeleteBuffers(1, &m_translucent_VBO);
+        gl_global_context.addBufferToDelete(m_translucent_VBO);
         m_translucent_VBO = 0;
     }
     if (m_translucent_EBO) {
-        glDeleteBuffers(1, &m_translucent_EBO);
+        gl_global_context.addBufferToDelete(m_translucent_EBO);
         m_translucent_EBO = 0;
     }
 }

@@ -29,7 +29,7 @@ public:
         orientation.y = Transformation::clipAnglePI(orientation.y);
     }
 
-    static constexpr void getViewVectors(glm::vec2& orientation, glm::vec3& front, glm::vec3& right, glm::vec3& real_up) {
+    static constexpr void getViewVectors(const glm::vec2& orientation, glm::vec3& front, glm::vec3& right, glm::vec3& real_up) {
         front = glm::normalize(Transformation::EulerToEuclidian(orientation));
         right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
         real_up = glm::normalize(glm::cross(right, front));

@@ -65,8 +65,8 @@ private:
     // std::optional<GreyMap> m_heightmap;
     bool* m_should_rebuild_mesh{nullptr}; // For the ChunkRenderer
 
-    inline static constexpr size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
-    inline static constexpr size_t posToBlockI(const glm::uvec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
+    inline static constexpr size_t posToBlockI(uint8_t x, uint8_t y, uint8_t z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
+    inline static constexpr size_t posToBlockI(const glm::u8vec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
     static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
         -CHUNK_SIZE,              // Front (-Z)
         -1,                       // Left  (-X)

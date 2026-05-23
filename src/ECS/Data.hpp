@@ -1,9 +1,8 @@
 #pragma once
 
 // USUAL INCLUDES
-class World;
+#include "src/World.hpp"
 #include "src/Window.hpp"
-#include "src/Frustum.hpp"
 #include "src/Transformation.hpp"
 #include "src/AABB.hpp"
 #include "src/ShaderProgram.hpp"
@@ -27,15 +26,16 @@ enum class ControlType {
     FreeCam,
     __COUNT
 };
-constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
-constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
+static constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
+static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 
 // -------------------------------------------------------------------------
 // COMPONENTS
 // -------------------------------------------------------------------------
 struct Positionnable {
-    World* current_world{nullptr};
+    const World* current_world{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
+    glm::vec3 last_pos{0.f, 0.f, 0.f};
 };
 struct Collisionnable {
     std::vector<AABB<float>> hitboxes{};
@@ -57,15 +57,14 @@ struct PhysicsStats {
 struct CollisionDisplay {
     std::vector<AABBRenderer> boxes{};
 };
+struct OrientationDisplay {};
 struct Orientable {
     glm::vec2 orientation{0.f, 0.f};
-};
-struct Camerable {
-    glm::vec3 eye_pos{0.f};        // Only in first and third person
-    float distance_to_center{5.f}; // Only in third person
+    glm::vec3 eye_pos{0.f};
 };
 struct Controllable {
-    ControlType type;
+    ControlType type{ControlType::ThirdPerson};
+    float distance_to_center{5.f}; // Only in third person
 };
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
@@ -77,7 +76,7 @@ using ComponentList = std::tuple<
     PhysicsStats,
     CollisionDisplay,
     Orientable,
-    Camerable,
+    OrientationDisplay,
     Controllable>;
 
 // Le nombre total de composants
@@ -146,7 +145,7 @@ struct __EntityTypeInputs;
 
 template <>
 struct __EntityTypeComponents<TestEntity> {
-    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, Camerable, Controllable>;
+    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, OrientationDisplay, Controllable>;
 };
 template <>
 struct __EntityTypeInputs<TestEntity> {
@@ -175,14 +174,14 @@ class PositionSystem;
 class PhysicsSystem;
 class WorldCollisionSystem;
 class HitBoxDisplaySystem;
-class CamerableSystem;
+class OrientationDisplaySystem;
 class ControllingSystem;
 using SystemList = std::tuple<
     PositionSystem,
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,
-    CamerableSystem,
+    OrientationDisplaySystem,
     ControllingSystem>;
 
 using SystemId = std::uint8_t;
