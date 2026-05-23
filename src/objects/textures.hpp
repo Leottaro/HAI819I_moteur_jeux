@@ -16,22 +16,32 @@ enum class Textures : uint64_t {
     redstone_lamp,
     diamond_ore,
     slime_block,
+    oak_log_side,
+    oak_log_top,
+    oak_leaves,
     NUMBER_OF_TEXTURES
 };
+
+
 
 constexpr uint32_t ATLAS_DIMS = ceil(sqrt(static_cast<float>(Textures::NUMBER_OF_TEXTURES) - 1));
 
 constexpr uint64_t TEXTURE_NUMBER = static_cast<size_t>(Textures::NUMBER_OF_TEXTURES);
-constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{"air",
-                                                                         "stone",
-                                                                         "dirt",
-                                                                         "grass_side",
-                                                                         "grass_top",
-                                                                         "glass",
-                                                                         "iron_block",
-                                                                         "redstone_lamp",
-                                                                         "diamond_ore",
-                                                                         "slime_block"}};
+constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{
+    "air",
+    "stone",
+    "dirt",
+    "grass_side",
+    "grass_top",
+    "glass",
+    "iron_block",
+    "redstone_lamp",
+    "diamond_ore",
+    "slime_block",
+    "oak_log_side",
+    "oak_log_top",
+    "oak_leaves",
+}};
 
 constexpr uint8_t TEXTURE_SIZE = 16;
 constexpr uint64_t ATLAS_SIZE = ATLAS_DIMS * TEXTURE_SIZE;

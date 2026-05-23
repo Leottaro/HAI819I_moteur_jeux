@@ -113,5 +113,5 @@ public:
     constexpr float getStaticFriction() const { return getBlockTypeData(m_type).static_friction; }
     constexpr float getDensity() const { return getBlockTypeData(m_type).fluid_density; }
     constexpr bool hasHitbox() const { return getBlockTypeData(m_type).has_hitbox; }
-    constexpr BlockTransparence getTransparence() const { return getBlockTypeData(m_type).transparence; }
+    constexpr BlockTransparency getTransparence() const { return getBlockTypeData(m_type).transparence; }
 };

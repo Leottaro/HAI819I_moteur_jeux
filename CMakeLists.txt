@@ -32,6 +32,8 @@ set(APP_SOURCES
     src/Block.hpp
     src/objects/blocks.hpp
 
+    src/objects/structures.hpp
+
     src/Transformation.hpp
     src/AABB.hpp
 

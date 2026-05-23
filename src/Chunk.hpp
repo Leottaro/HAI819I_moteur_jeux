@@ -65,8 +65,8 @@ private:
     // std::optional<GreyMap> m_heightmap;
     bool* m_should_rebuild_mesh{nullptr}; // For the ChunkRenderer
 
-    static constexpr size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
-    static constexpr size_t posToBlockI(const glm::uvec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
+    inline static constexpr size_t posToBlockI(uint x, uint y, uint z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
+    inline static constexpr size_t posToBlockI(const glm::uvec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
     static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
         -CHUNK_SIZE,              // Front (-Z)
         -1,                       // Left  (-X)
@@ -152,7 +152,7 @@ public:
         Block& block = getBlock(_block_pos);
         BlockType& block_type = block.getType();
         if (m_should_rebuild_mesh != nullptr) {
-            int translucent_diff = (getBlockTypeData(_type).transparence == BlockTransparence::TRANSLUCENT) - (getBlockTypeData(block_type).transparence == BlockTransparence::TRANSLUCENT);
+            int translucent_diff = (getBlockTypeData(_type).transparence == BlockTransparency::TRANSLUCENT) - (getBlockTypeData(block_type).transparence == BlockTransparency::TRANSLUCENT);
             if (translucent_diff != 0) {
                 *m_should_rebuild_mesh = true;
             }

@@ -17,11 +17,27 @@ enum class BlockType : size_t {
     RedstoneLamp,
     DiamondOre,
     SlimeBlock,
+    OakLog,
+    OakLeaves,
     __NUMBER_OF_TYPES
 };
 constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::__NUMBER_OF_TYPES);
 
-using Te = Textures; // Pour pas que les lignes en dessous fassent 3.5km
+constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
+    "air",
+    "Stone",
+    "Dirt",
+    "Grass",
+    "Glass",
+    "Iron Block",
+    "Redstone Lamp",
+    "Diamond Ore",
+    "Slime Block",
+    "Oak Log",
+    "Oak Leaves",
+}};
+
+using Te = Textures;  // Pour pas que les lignes en dessous fassent 3.5km
 
 // si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
 // clang-format off
@@ -35,9 +51,11 @@ constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DA
     {{TEX(Te::redstone_lamp),   TEX(Te::redstone_lamp), TEX(Te::redstone_lamp), TEX(Te::redstone_lamp), TEX(Te::redstone_lamp), TEX(Te::redstone_lamp)}},   // RedstoneLamp
     {{TEX(Te::diamond_ore),     TEX(Te::diamond_ore),   TEX(Te::diamond_ore),   TEX(Te::diamond_ore),   TEX(Te::diamond_ore),   TEX(Te::diamond_ore)}},     // DiamondOre
     {{TEX(Te::slime_block),     TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block)}},     // SlimeBlock
+    {{TEX(Te::oak_log_side),    TEX(Te::oak_log_side),  TEX(Te::oak_log_side),  TEX(Te::oak_log_side),  TEX(Te::oak_log_side),  TEX(Te::oak_log_top)}},     // OakLog
+    {{TEX(Te::oak_leaves),      TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves)}},      // OakLeaves
 }};
 
-enum class BlockTransparence : size_t {
+enum class BlockTransparency : size_t {
     SOLID = 0,
     TRANSPARENT,
     TRANSLUCENT
@@ -48,19 +66,21 @@ struct BlockTypeData {
     float static_friction;          // Describes the friction when standing on it
     float fluid_density;            // Describes the block's density when in it
     bool has_hitbox;                // Describes if the block has an hitbox
-    BlockTransparence transparence; // Describes the block's transparence // TODO: dans l'atlas map ?
+    BlockTransparency transparence; // Describes the block's transparence // TODO: dans l'atlas map ?
 };
 
 constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
-    {0.f, 0.f, 0.f, 1.f, false, BlockTransparence::TRANSPARENT},              // Air
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // Stone
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // Dirt
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // Grass
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::TRANSPARENT},   // Glass
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // IronBlock
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // RedstoneLamp
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparence::SOLID},         // DiamondOre
-    {1.f / 2.f, 0.75f, 1.f / 3.f, 0.f, true, BlockTransparence::TRANSLUCENT}, // SlimeBlock
+    {0.f, 0.f, 0.f, 1.f, false, BlockTransparency::TRANSPARENT},              // Air
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Stone
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Dirt
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Grass
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSPARENT},   // Glass
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // IronBlock
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // RedstoneLamp
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // DiamondOre
+    {1.f / 2.f, 0.75f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSLUCENT}, // SlimeBlock
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // OakLog
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSPARENT}    // OakLog
 }};
 
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<size_t>(type)]; }

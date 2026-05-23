@@ -7,6 +7,7 @@
 
 #include "World.hpp"
 #include "objects/blocks.hpp"
+#include "objects/structures.hpp"
 #include "objects/textures.hpp"
 
 Chunk* Chunk::getChunk(const glm::vec3& _pos) const {
@@ -103,6 +104,7 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
 
 void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
+    std::vector<glm::ivec3> surface_blocks;
     size_t block_i = 0;
     constexpr uint32_t MOUTAINT_HEIGHT = 20.f;
     switch (_type) {
@@ -151,6 +153,7 @@ void Chunk::generate(GenType _type) {
             }
             break;
         case GenType::OVERWORLD:
+            surface_blocks.reserve(CHUNK_SIZE * CHUNK_SIZE);
             for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
                 for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
                     for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
@@ -168,10 +171,20 @@ void Chunk::generate(GenType _type) {
                             block.getType() = BlockType::Dirt;
                         } else if (world_pos.y <= ground_height + 4) {
                             block.getType() = BlockType::Grass;
-
+                            surface_blocks.push_back(world_pos - m_pos);
                         } else {
                             block.getType() = BlockType::Air;
                         }
+                    }
+                }
+            }
+            // std::cout << "taille de la surface : " << surface_blocks.size() << " !!!\n";
+            for (const glm::ivec3& chunk_pos : surface_blocks) {
+                if (rand() < TREE_CHANCE) {
+                    for (const auto& [block_type, struct_pos] : TREE_DATA) {
+                        // std::cout << "block de type: " << block_names[static_cast<size_t>(block_type)] << " à la position " << chunk_pos << "\n";
+                        Block& block = m_blocks[posToBlockI(chunk_pos + glm::ivec3(struct_pos))];
+                        block.getType() = block_type;
                     }
                 }
             }
@@ -255,15 +268,15 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                     continue;
                 }
 
-                auto& vertices = block.getTransparence() == BlockTransparence::TRANSLUCENT ? translucent_vertices : opaque_vertices;
-                auto& triangles = block.getTransparence() == BlockTransparence::TRANSLUCENT ? translucent_triangles : opaque_triangles;
-                size_t& vertices_count = block.getTransparence() == BlockTransparence::TRANSLUCENT ? m_translucent_vertices : m_opaque_vertices;
-                size_t& triangles_count = block.getTransparence() == BlockTransparence::TRANSLUCENT ? m_translucent_triangles : m_opaque_triangles;
+                auto& vertices = block.getTransparence() == BlockTransparency::TRANSLUCENT ? translucent_vertices : opaque_vertices;
+                auto& triangles = block.getTransparence() == BlockTransparency::TRANSLUCENT ? translucent_triangles : opaque_triangles;
+                size_t& vertices_count = block.getTransparence() == BlockTransparency::TRANSLUCENT ? m_translucent_vertices : m_opaque_vertices;
+                size_t& triangles_count = block.getTransparence() == BlockTransparency::TRANSLUCENT ? m_translucent_triangles : m_opaque_triangles;
 
                 glm::vec3 block_center = glm::vec3(m_chunk->m_pos + glm::ivec3(local_pos)) + glm::vec3(0.5f);
                 for (int face_i = 0; face_i < 6; face_i++) {
                     const Block* neighbour = block.m_neighbours[face_i];
-                    if (neighbour != nullptr && (neighbour->getTransparence() == BlockTransparence::SOLID || block.getType() == neighbour->getType()))
+                    if (neighbour != nullptr && (neighbour->getTransparence() == BlockTransparency::SOLID || block.getType() == neighbour->getType()))
                         continue;
                     const Block::FaceData& face = Block::FACE_DATA[face_i];
 
@@ -278,7 +291,7 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                     }
 
                     glm::uvec3 offset(vertices_count - 4);
-                    if (block.getTransparence() == BlockTransparence::TRANSLUCENT) {
+                    if (block.getTransparence() == BlockTransparency::TRANSLUCENT) {
                         glm::vec3 face_centroid = block_center + 0.5f * glm::vec3(face.normal);
                         float distance_to_cam = glm::distance(_cam_pos, face_centroid);
 
