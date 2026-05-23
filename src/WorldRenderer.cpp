@@ -135,35 +135,33 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
 //     box.clearShaderData();
 // }
 
-// void WorldRenderer::updateInterface(Window& _window, World* _world) {
-//     if (!ImGui::Begin("World Info")) {
-//         ImGui::End();
-//         return;
-//     }
+void WorldRenderer::updateInterface(World* _world) {
+    if (!ImGui::Begin("World Info")) {
+        ImGui::End();
+        return;
+    }
 
-//     _ecs_manager.updateInterfaces(_window);
+    int current_type = static_cast<int>(_world->m_gentype);
+    if (ImGui::Combo("Generation Type", &current_type, GenTypeNames, IM_ARRAYSIZE(GenTypeNames))) {
+        _world->m_gentype = static_cast<GenType>(current_type);
+        m_render_chunks.clear();
+        _world->clear();
+    }
 
-//     int current_type = static_cast<int>(_world->m_gentype);
-//     if (ImGui::Combo("Generation Type", &current_type, GenTypeNames, IM_ARRAYSIZE(GenTypeNames))) {
-//         _world->m_gentype = static_cast<GenType>(current_type);
-//         m_render_chunks.clear();
-//         _world->clear();
-//     }
+    if (ImGui::InputScalar("Render distance", ImGuiDataType_U32, &_world->m_render_distance)) {
+        _world->m_render_distance = std::max(_world->m_render_distance, 1U);
+    }
 
-//     if (ImGui::InputInt("Render distance", &_world->m_render_distance, 1, 2)) {
-//         _world->m_render_distance = std::max(_world->m_render_distance, 1);
-//     }
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
 
-//     ImGui::Spacing();
-//     ImGui::Separator();
-//     ImGui::Spacing();
-
-//     ImGui::DragScalar("World Time", ImGuiDataType_U64, &_world->m_world_time, 10.0f, 0, &DAY_LENGTH);
-//     if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_2_PIf, M_2_PIf)) {
-//         m_sun_season = std::clamp(m_sun_season, -M_2_PIf, M_2_PIf);
-//     }
-//     if (ImGui::Button(_world->m_play ? "Pause" : "Play")) {
-//         _world->m_play = !_world->m_play;
-//     }
-//     ImGui::End();
-// }
+    ImGui::DragScalar("World Time", ImGuiDataType_U64, &_world->m_world_time, 10.0f, 0, &DAY_LENGTH);
+    if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_2_PIf, M_2_PIf)) {
+        m_sun_season = std::clamp(m_sun_season, -M_2_PIf, M_2_PIf);
+    }
+    if (ImGui::Button(_world->m_play ? "Pause" : "Play")) {
+        _world->m_play = !_world->m_play;
+    }
+    ImGui::End();
+}

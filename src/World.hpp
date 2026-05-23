@@ -35,7 +35,7 @@ public:
     static constexpr size_t getMaxChunkNumber(size_t render_distance) { return 0.75f * M_PIf * render_distance * render_distance * render_distance; }
 
 private:
-    uint m_render_distance{12};
+    uint m_render_distance{4};
     GenType m_gentype{GenType::DEBUG_};
     ChunkStorage m_chunks{getMaxChunkNumber(m_render_distance)};
     MathHelpers::VecSet<int, 3> m_chunks_frontier{};

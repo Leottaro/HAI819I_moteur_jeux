@@ -37,5 +37,5 @@ public:
     void renderChunks(ShaderProgram& _chunk_shader, const Camera& camera);
     // void renderDebugBoxes(ShaderProgram& _line_shader, ECSManager* _ecs_manager) const;
 
-    // void updateInterface(Window& _window, World* _world);
+    void updateInterface(World* _world);
 };

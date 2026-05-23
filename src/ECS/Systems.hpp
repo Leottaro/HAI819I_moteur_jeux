@@ -296,7 +296,8 @@ public:
     }
     inline void toggleControlType(ComponentManager& cm) {
         if (m_controlled_entity.has_value()) {
-            cm.getComponent<ECS::Controllable>(m_controlled_entity.value()).type = ECS::ControlType((int(m_controlled_entity.value()) + 1) % ECS::NB_CONTROL_TYPES);
+            ECS::ControlType& control_type = cm.getComponent<ECS::Controllable>(m_controlled_entity.value()).type;
+            control_type = static_cast<ECS::ControlType>((static_cast<int>(control_type) + 1) % ECS::NB_CONTROL_TYPES);
         }
     }
 

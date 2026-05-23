@@ -85,14 +85,12 @@ private:
 
 public:
     glm::vec3 m_cam_pos;
-
     float m_fovy{M_PI_2f};
     glm::vec2 m_near_far{1.e-1f, 1.e8f};
-
-    float m_free_cam_speed = 16.f;
     float m_rotation_speed{0.5f};
+    float m_free_cam_speed = 16.f;
     float m_zoom_rate{0.05f};
-    float m_elasticity{1.f / 3.f};
+    float m_elasticity{0.5f};
 
 private:
     inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Controllable& controllable) {
@@ -162,7 +160,7 @@ public:
     inline const Frustum& getFrustum() const { return m_frustum; }
 
     void update(Window& _window, ECSManager& _ecs_manager, float _deltaTime) {
-        ECS::ControllingSystem controlling = _ecs_manager.getSystem<ECS::ControllingSystem>();
+        ECS::ControllingSystem& controlling = _ecs_manager.getSystem<ECS::ControllingSystem>();
         bool has_entity = controlling.getControlledEntity().has_value();
 
         if (!m_disable_mouse_actions) {
@@ -193,59 +191,72 @@ public:
         }
     }
 
-    // void updateInterface(ECS::ComponentManager& cm, Window& _window) {
-    //     m_disable_mouse_actions = false;
-    //     if (ImGui::Begin("Camera Interface")) {
-    //         m_disable_mouse_actions = ImGui::IsWindowHovered() || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
+    void updateInterface(ECSManager& _ecs_manager) {
+        m_disable_mouse_actions = false;
+        ECS::ControlType fallback_type = ECS::ControlType::FreeCam;
+        float fallback_distance = 0.f;
 
-    //         // Camera Type Selection
-    //         int current_type = static_cast<int>(m_control_type);
-    //         if (ImGui::Combo("Camera Type", &current_type, CONTROL_TYPES_STR)) {
-    //             changeControlType(cm, ControlType(current_type));
-    //         }
+        ECS::ControllingSystem& controlling = _ecs_manager.getSystem<ECS::ControllingSystem>();
+        bool has_entity = controlling.getControlledEntity().has_value();
+        ECS::ControlType& control_type = has_entity ? _ecs_manager.getComponent<ECS::Controllable>(controlling.getControlledEntity().value()).type
+                                                    : fallback_type;
+        float& distance_to_center = has_entity ? _ecs_manager.getComponent<ECS::Controllable>(controlling.getControlledEntity().value()).distance_to_center
+                                               : fallback_distance;
 
-    //         ImGui::Separator();
-    //         ImGui::BeginDisabled(m_control_type == ControlType::FreeCam);
-    //         ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
-    //         ImGui::Separator();
-    //         ImGui::EndDisabled();
+        if (!ImGui::Begin("Camera Interface")) {
+            ImGui::End();
+            return;
+        }
+        m_disable_mouse_actions = ImGui::IsWindowHovered() || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
 
-    //         // Orientation Controls
-    //         glm::vec2 angles_degree = glm::degrees(m_cam_orientation);
-    //         bool pitch_changed = ImGui::DragFloat("Pitch", &angles_degree[0], 1.f, -89.943f, 89.943f, "%.3f°");
-    //         bool yaw_changed = ImGui::DragFloat("Yaw", &angles_degree[1], -1.f, -180.f, 180.f, "%.3f°");
-    //         if (pitch_changed || yaw_changed) {
-    //             m_cam_orientation = glm::radians(angles_degree);
-    //             Transformation::clampOrientation(m_cam_orientation);
-    //             Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-    //         }
+        // Camera Type Selection
+        ImGui::BeginDisabled(!has_entity);
+        int control_type_int = static_cast<int>(control_type);
+        if (ImGui::Combo("Camera Type", &control_type_int, ECS::CONTROL_TYPES_STR)) {
+            control_type = static_cast<ECS::ControlType>(control_type_int);
+        }
+        ImGui::EndDisabled();
 
-    //         ImGui::Separator();
+        ImGui::Separator();
+        ImGui::BeginDisabled(control_type == ECS::ControlType::FreeCam);
+        ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
+        ImGui::Separator();
+        ImGui::EndDisabled();
 
-    //         // FOV Control
-    //         float fovy_degree = glm::degrees(m_fovy);
-    //         bool fovy_changed = ImGui::DragFloat("FOV", &fovy_degree, 0.1f, 1.f, 179.f, "%.3f°");
-    //         if (fovy_changed) {
-    //             m_fovy = glm::radians(fovy_degree);
-    //         }
+        // Orientation Controls
+        glm::vec2 angles_degree = glm::degrees(m_cam_orientation);
+        bool pitch_changed = ImGui::DragFloat("Pitch", &angles_degree[0], 1.f, -89.943f, 89.943f, "%.3f°");
+        bool yaw_changed = ImGui::DragFloat("Yaw", &angles_degree[1], -1.f, -180.f, 180.f, "%.3f°");
+        if (pitch_changed || yaw_changed) {
+            m_cam_orientation = glm::radians(angles_degree);
+            Transformation::clampOrientation(m_cam_orientation);
+            Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
+        }
 
-    //         ImGui::Separator();
+        ImGui::Separator();
 
-    //         // Speed Controls
-    //         ImGui::DragFloat("Rotation Speed", &_window.m_rotation_speed, 1.e-4f, 0.f, 1.e2f);
-    //         ImGui::BeginDisabled(m_control_type != ControlType::FreeCam);
-    //         ImGui::DragFloat("Translation Speed", &m_free_cam_speed, 1.e-2f, 0.f, 1.e2f);
-    //         ImGui::EndDisabled();
+        // FOV Control
+        float fovy_degree = glm::degrees(m_fovy);
+        bool fovy_changed = ImGui::DragFloat("FOV", &fovy_degree, 0.1f, 1.f, 179.f, "%.3f°");
+        if (fovy_changed) {
+            m_fovy = glm::radians(fovy_degree);
+        }
+        ImGui::DragFloat2("nearFar", glm::value_ptr(m_near_far), 1.e-4f, 0.f, 1.f);
+        ImGui::DragFloat("rotationSpeed", &m_rotation_speed, 1.e-4f, 0.f, 1.e2f);
 
-    //         // Distance to center
-    //         if (m_controlled_entity.has_value()) {
-    //             ImGui::BeginDisabled(m_control_type != ControlType::ThirdPerson);
-    //             ImGui::DragFloat("Distance to Center", &cm.getComponent<ECS::Controllable>(m_controlled_entity.value()).distance_to_center, 0.1f, 1.e-4f, 1.e4f);
-    //             ImGui::DragFloat("Zoom Rate", &_window.m_zoom_rate, 1.e-4f, 0.f, 1.f);
-    //             ImGui::EndDisabled();
-    //         }
-    //     }
+        ImGui::Separator();
 
-    //     ImGui::End();
-    // }
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.e-4f, 0.f, 1.f);
+        ImGui::EndDisabled();
+
+        // Distance to center
+        ImGui::BeginDisabled(control_type != ECS::ControlType::ThirdPerson);
+        ImGui::DragFloat("Distance to Center", &distance_to_center, 0.1f, 1.e-4f, 1.e4f);
+        ImGui::DragFloat("Zoom Rate", &m_zoom_rate, 1.e-4f, 0.f, 1.f);
+        ImGui::DragFloat("elasticity", &m_elasticity, 1.e-4f, 0.f, 1.f);
+        ImGui::EndDisabled();
+
+        ImGui::End();
+    }
 };

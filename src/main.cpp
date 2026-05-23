@@ -12,7 +12,6 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include <mutex>
 #include <shared_mutex>
 #include <atomic>
 
@@ -141,7 +140,7 @@ int main(void) {
     // Setup key bindings
     GLenum polygon_mode{GL_FILL};
     bool display_debug{false};
-    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr);
+    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { std::lock_guard<std::mutex> lock(Window::glfw_mutex); glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE); }, nullptr);
     window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr);
     window.keyboard.bind(GLFW_KEY_Z, [&]() {
         if (polygon_mode == GL_FILL) {
@@ -231,11 +230,6 @@ int main(void) {
         // ---------------------------------------   OBJECTS RENDERING   --------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        // Imgui
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
         chunk_shader.use();
         albedo_atlas.bind(0);
         normal_atlas.bind(1);
@@ -263,7 +257,23 @@ int main(void) {
             ecs_manager.render(line_shader, camera.getView(), camera.getProjection());
         }
 
-        // ImGui Render
+        // ----------------------------------------------------------------------------------------------------
+        // ----------------------------------------   IMGUI RENDERING   ---------------------------------------
+        // ----------------------------------------------------------------------------------------------------
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        {
+            WriteLock camera_write(camera_lock);
+            WriteLock entities_write(entities_lock);
+            camera.updateInterface(ecs_manager);
+        }
+        {
+            WriteLock world_write(world_lock);
+            WriteLock renderer_write(renderer_lock);
+            world_renderer.updateInterface(world.get());
+        }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
