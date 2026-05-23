@@ -326,28 +326,28 @@ void ChunkRenderer::renderTranslucent() const {
 
 void ChunkRenderer::clearShaderData() {
     if (m_opaque_VAO) {
-        glDeleteVertexArrays(1, &m_opaque_VAO);
+        gl_global_context.addArrayToDelete(m_opaque_VAO);
         m_opaque_VAO = 0;
     }
     if (m_opaque_VBO) {
-        glDeleteBuffers(1, &m_opaque_VBO);
+        gl_global_context.addBufferToDelete(m_opaque_VBO);
         m_opaque_VBO = 0;
     }
     if (m_opaque_EBO) {
-        glDeleteBuffers(1, &m_opaque_EBO);
+        gl_global_context.addBufferToDelete(m_opaque_EBO);
         m_opaque_EBO = 0;
     }
 
     if (m_translucent_VAO) {
-        glDeleteVertexArrays(1, &m_translucent_VAO);
+        gl_global_context.addArrayToDelete(m_translucent_VAO);
         m_translucent_VAO = 0;
     }
     if (m_translucent_VBO) {
-        glDeleteBuffers(1, &m_translucent_VBO);
+        gl_global_context.addBufferToDelete(m_translucent_VBO);
         m_translucent_VBO = 0;
     }
     if (m_translucent_EBO) {
-        glDeleteBuffers(1, &m_translucent_EBO);
+        gl_global_context.addBufferToDelete(m_translucent_EBO);
         m_translucent_EBO = 0;
     }
 }

@@ -11,6 +11,7 @@
 // USUAL INCLUDESs
 #include "Block.hpp"
 #include "Helpers.hpp"
+#include "GLGlobalContext.hpp"
 #include <iostream>
 
 template <typename T>
@@ -293,11 +294,11 @@ public:
 
     inline void clearShaderData() {
         if (m_VAO) {
-            glDeleteVertexArrays(1, &m_VAO);
+            gl_global_context.addArrayToDelete(m_VAO);
             m_VAO = 0;
         }
         if (m_vertices_VBO) {
-            glDeleteBuffers(1, &m_vertices_VBO);
+            gl_global_context.addBufferToDelete(m_VAO);
             m_vertices_VBO = 0;
         }
     }

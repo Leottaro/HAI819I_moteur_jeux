@@ -35,6 +35,7 @@ static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__CO
 struct Positionnable {
     const World* current_world{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
+    glm::vec3 last_pos{0.f, 0.f, 0.f};
 };
 struct Collisionnable {
     std::vector<AABB<float>> hitboxes{};
@@ -60,7 +61,7 @@ struct Orientable {
     glm::vec2 orientation{0.f, 0.f};
 };
 struct Controllable {
-    ControlType type;
+    ControlType type{ControlType::ThirdPerson};
     glm::vec3 eye_pos{0.f};        // Only in first and third person
     float distance_to_center{5.f}; // Only in third person
 };

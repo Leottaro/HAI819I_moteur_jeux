@@ -87,18 +87,16 @@ bool World::removeChunk(const glm::ivec3& _chunk_pos) {
 }
 
 bool World::generate(const std::vector<glm::vec3>& _centers) {
-    bool chunk_in_pos = false;
+    bool res = false;
+
     for (const glm::vec3& pos : _centers) {
-        glm::ivec3 _chunk_pos = Chunk::posToChunkPos(pos);
-        if (findChunk(_chunk_pos) == nullptr) {
-            addChunk(_chunk_pos);
-            chunk_in_pos = true;
+        glm::ivec3 chunk_pos = Chunk::posToChunkPos(pos);
+        if (findChunk(chunk_pos) == nullptr) {
+            addChunk(chunk_pos);
+            res = true;
         }
     }
-    if (chunk_in_pos)
-        return true;
 
-    bool removed = false;
     m_chunks.forEach([&](Chunk& chunk) {
         bool should_remove = true;
         for (const glm::vec3& pos : _centers) {
@@ -109,11 +107,9 @@ bool World::generate(const std::vector<glm::vec3>& _centers) {
         }
         if (should_remove) {
             removeChunk(chunk.getPos());
-            removed = true;
+            res |= true;
         }
     });
-    if (removed)
-        return true;
 
     std::vector<std::map<float, glm::ivec3>> chunk_to_add(_centers.size());
     for (const glm::ivec3& chunk_pos : m_chunks_frontier) {
@@ -123,18 +119,17 @@ bool World::generate(const std::vector<glm::vec3>& _centers) {
         }
     }
 
-    bool res = false;
     for (uint i = 0; i < _centers.size(); i++) {
         if (!chunk_to_add[i].empty()) {
             addChunk(chunk_to_add[i].begin()->second);
-            res = true;
+            res |= true;
         }
     }
 
     return res;
 }
 
-void World::update(std::vector<glm::vec3> _centers) {
+void World::update(const std::vector<glm::vec3>& _centers) {
     if (!m_play)
         return;
     m_world_time++;

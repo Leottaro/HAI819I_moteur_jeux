@@ -124,19 +124,23 @@ public:
     // Update
     // -------------------------------------------------------------------------
 
-    inline void startControl(Window& _window, ECS::EntityId entity) {
-        getSystem<ECS::ControllingSystem>().startControl(cm, entity, _window);
-        _window.keyboard.bind(GLFW_KEY_C, [&]() { getSystem<ECS::ControllingSystem>().toggleControlType(cm); }, nullptr);
+    inline void startControl(ECS::EntityId entity) {
+        getSystem<ECS::ControllingSystem>().startControl(entity);
     }
     inline void stopControl(Window& _window) {
         getSystem<ECS::ControllingSystem>().stopControl();
     }
+    inline void changeControlType(ECS::ControlType _new_type) { getSystem<ECS::ControllingSystem>().changeControlType(cm, _new_type); }
+    inline void toggleControlType() { getSystem<ECS::ControllingSystem>().toggleControlType(cm); }
 
-    inline void update(float _dt) {
+    inline void update(Window& _window, float _dt) {
         // PositionSystem: delete every out of world entities
         std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm);
         for (ECS::EntityId entity : entities_to_destroy)
             destroyEntity(entity);
+
+        // ControllingSystem: Move the entity
+        getSystem<ECS::ControllingSystem>().update(cm, _window, _dt);
 
         // PhysicsSystem: integrate forces and update velocities.
         getSystem<ECS::PhysicsSystem>().update(cm, _dt);
@@ -145,7 +149,10 @@ public:
         getSystem<ECS::WorldCollisionSystem>().update(cm, _dt);
     }
 
-    inline void render(ShaderProgram& _line_shader) const {
+    void render(ShaderProgram& _line_shader, const glm::mat4& _view, const glm::mat4& _projection) const {
+        _line_shader.use();
+        _line_shader.set("view", _view);
+        _line_shader.set("projection", _projection);
         getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
     }
 };

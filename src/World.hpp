@@ -24,15 +24,20 @@ enum class Gamerules : size_t {
     NB_GAMERULES
 };
 
-constexpr size_t CHUNK_BATCH_SIZE{128 * 1024 * 1024}; // 128MiB
+constexpr size_t CHUNK_BATCH_SIZE{32 * 1024 * 1024}; // 128MiB
 using ChunkStorage = ContiguousStorage<Chunk, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 using ChunkRendererStorage = ContiguousStorage<ChunkRenderer, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 
 class WorldRenderer;
 class World {
-    int m_render_distance{4};
+public:
+    // Volume of a sphere of radius m_render_distance
+    static constexpr size_t getMaxChunkNumber(size_t render_distance) { return 0.75f * M_PIf * render_distance * render_distance * render_distance; }
+
+private:
+    uint m_render_distance{12};
     GenType m_gentype{GenType::DEBUG_};
-    ChunkStorage m_chunks{};
+    ChunkStorage m_chunks{getMaxChunkNumber(m_render_distance)};
     MathHelpers::VecSet<int, 3> m_chunks_frontier{};
 
     bool m_play{true};
@@ -51,6 +56,7 @@ public:
     World() {}
 
     // Chunk functions
+
     inline bool isChunkFrontier(const glm::ivec3& _chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
     inline const Chunk* findChunk(const glm::ivec3& _chunk_pos) const { return m_chunks.at(_chunk_pos); }
     const Block* findBlock(const glm::ivec3& _block_pos) const;
@@ -76,8 +82,13 @@ public:
     // inline ECS::EntityId addTestEntity(const glm::vec3& _pos) { return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}}); }
 
     // Update
-    void update(std::vector<glm::vec3> _centers);
-    inline void clear() { m_chunks.clear(); }
+    void update(const std::vector<glm::vec3>& _centers);
+    inline void clear() {
+        m_chunks.clear();
+        m_chunks_frontier.clear();
+        m_added_chunks.clear();
+        m_removed_chunks.clear();
+    }
 
     // inline void updateEntities(Window& _window, float _dt) { m_ecs_manager.update(_window, _dt); }
     // inline void clearEntities() {

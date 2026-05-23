@@ -30,6 +30,7 @@ public:
     WorldRenderer() {}
     WorldRenderer(World* _world, const Camera& camera) { setWorld(_world, camera); }
 
+    void clear();
     void setWorld(World* _world, const Camera& camera); // need world write
     void updateWorld(World* _world);                    // need world read
 

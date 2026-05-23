@@ -3,6 +3,12 @@
 // IMGUI
 #include <imgui.h>
 
+void WorldRenderer::clear() {
+    m_added_chunks.clear();
+    m_removed_chunks.clear();
+    m_render_chunks.clear();
+}
+
 void WorldRenderer::setWorld(World* _world, const Camera& camera) {
     if (_world == nullptr)
         return;
@@ -12,6 +18,7 @@ void WorldRenderer::setWorld(World* _world, const Camera& camera) {
 
     // glm::vec3 cam_pos = _ecs_manager.getSystem<ECS::ControllableSystem>().getCamPos();
     m_render_chunks.clear();
+    m_render_chunks.reserve(World::getMaxChunkNumber(_world->m_render_distance));
     _world->m_chunks.forEach([&](Chunk& chunk) {
         m_render_chunks.emplace(chunk.getPos(), &chunk, camera.getCamPos());
     });

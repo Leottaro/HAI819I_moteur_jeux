@@ -85,24 +85,32 @@ private:
 
 public:
     glm::vec3 m_cam_pos;
-    float m_free_cam_speed = 16.f;
+
     float m_fovy{M_PI_2f};
     glm::vec2 m_near_far{1.e-1f, 1.e8f};
 
+    float m_free_cam_speed = 16.f;
+    float m_rotation_speed{0.5f};
+    float m_zoom_rate{0.05f};
+    float m_elasticity{1.f / 3.f};
+
 private:
-    inline void applyPosConstraint(ECS::Positionnable& positionnable, ECS::Controllable& controllable) {
+    inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Controllable& controllable) {
+        glm::vec3 should_pos;
         switch (controllable.type) {
         case ECS::ControlType::FreeCam:
             break;
         case ECS::ControlType::FirstPerson:
-            m_cam_pos = positionnable.pos + controllable.eye_pos;
+            should_pos = positionnable.pos + controllable.eye_pos;
+            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
             break;
         case ECS::ControlType::ThirdPerson:
             // update target pos
-            m_cam_pos = positionnable.pos + controllable.eye_pos - controllable.distance_to_center * m_front;
+            should_pos = positionnable.pos + controllable.eye_pos - controllable.distance_to_center * m_front;
+            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
 
             // re update angle
-            m_front = positionnable.pos + controllable.eye_pos - m_cam_pos;
+            m_front = positionnable.pos + controllable.eye_pos - should_pos;
             m_cam_orientation = Transformation::EuclidianToEuler(m_front);
             Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
             break;
@@ -132,25 +140,8 @@ private:
         m_cam_pos += _deltaTime * m_free_cam_speed * (motion.x * MathHelpers::VEC_UP + motion.y * m_right + motion.z * flat_front);
     }
 
-    inline void updateEntityKeyboardInput(ECS::Movable& movable, ECS::Groundable& groundable, ECS::Orientable& orientable, Window& _window, float _deltaTime) {
-        glm::vec2 motion = glm::vec2(
-            _window.keyboard.isHeld(GLFW_KEY_D) - _window.keyboard.isHeld(GLFW_KEY_A),
-            _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
-        if (motion.x != 0.f || motion.y != 0.f)
-            motion = glm::normalize(motion);
-        glm::vec3 front = Transformation::EulerToEuclidian(orientable.orientation);
-        glm::vec3 right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
-        glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, right);
-
-        movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.x * right + motion.y * flat_front);
-        if (_window.keyboard.isHeld(GLFW_KEY_SPACE) && groundable.on_ground) {
-            movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
-            groundable.on_ground = false;
-        }
-    }
-
     inline void updateMouseInput(Window& _window, float _deltaTime) {
-        float rotation_speed = _deltaTime * _window.m_rotation_speed;
+        float rotation_speed = _deltaTime * m_rotation_speed;
         if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_cam_orientation.x -= rotation_speed * _window.getCursorVel().y;
             m_cam_orientation.y -= rotation_speed * _window.getCursorVel().x;
@@ -185,18 +176,17 @@ public:
         }
 
         ECS::EntityId entity = controlling.getControlledEntity().value();
-        ECS::Positionnable& positionnable = _ecs_manager.getComponent<ECS::Positionnable>(entity);
+        const ECS::Positionnable& positionnable = _ecs_manager.getComponent<ECS::Positionnable>(entity);
         ECS::Orientable& orientable = _ecs_manager.getComponent<ECS::Orientable>(entity);
-        ECS::Controllable& controllable = _ecs_manager.getComponent<ECS::Controllable>(entity);
-        ECS::Movable& movable = _ecs_manager.getComponent<ECS::Movable>(entity);
-        ECS::Groundable& groundable = _ecs_manager.getComponent<ECS::Groundable>(entity);
+        const ECS::Controllable& controllable = _ecs_manager.getComponent<ECS::Controllable>(entity);
         if (controllable.type != ECS::ControlType::FreeCam) {
             orientable.orientation = m_cam_orientation;
-            updateEntityKeyboardInput(movable, groundable, orientable, _window, _deltaTime);
             applyPosConstraint(positionnable, controllable);
             updateRenderingData(_window.getAspectRatio());
         } else {
             updateFreeKeyboardInput(_window, _deltaTime);
+            updateRenderingData(_window.getAspectRatio());
+
             glm::vec3 front, right, real_up;
             Transformation::getViewVectors(orientable.orientation, front, right, real_up);
             updateFreeFrustum(_window.getAspectRatio(), positionnable.pos, front, real_up);

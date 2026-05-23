@@ -146,8 +146,6 @@ public:
         }
     }
 
-    float m_rotation_speed{0.5f};
-    float m_zoom_rate{0.05f};
     KeyboardHandler keyboard;
 
     inline const std::string& getTitle() const { return m_title; }

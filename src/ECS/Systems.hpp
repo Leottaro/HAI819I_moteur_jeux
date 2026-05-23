@@ -27,7 +27,7 @@ public:
     std::vector<ECS::EntityId> getOutOfBoundEntities(ComponentManager& cm) const {
         std::vector<ECS::EntityId> entities;
         for (ECS::EntityId entity : m_entities) {
-            ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
+            const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
             if (positionnable.current_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr)
                 entities.push_back(entity);
         }
@@ -43,11 +43,11 @@ public:
 
     void update(ComponentManager& cm, float _deltaTime) {
         for (ECS::EntityId entity : m_entities) {
-            ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
+            const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
             ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
-            ECS::Collisionnable& collisionable = cm.getComponent<ECS::Collisionnable>(entity);
+            const ECS::Collisionnable& collisionable = cm.getComponent<ECS::Collisionnable>(entity);
             ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
-            ECS::PhysicsStats& stats = cm.getComponent<ECS::PhysicsStats>(entity);
+            const ECS::PhysicsStats& stats = cm.getComponent<ECS::PhysicsStats>(entity);
 
             glm::vec3 acceleration{0.f};
             if (groundable.on_ground) {
@@ -108,7 +108,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
         float restitution{1.f};
     };
     // Return true if it detected a collision
-    bool detectCollision(float _deltaTime, CollisionsInfos& res, ECS::Positionnable& _positionnable, ECS::Collisionnable& _collisionnable, ECS::Movable& _movable) {
+    bool detectCollision(float _deltaTime, CollisionsInfos& res, const ECS::Positionnable& _positionnable, const ECS::Collisionnable& _collisionnable, const ECS::Movable& _movable) {
         res.t = std::numeric_limits<float>::max();
 
         std::vector<const Block*> to_explore;
@@ -190,9 +190,10 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
 
     void updateEntity(ComponentManager& cm, float _deltaTime, ECS::EntityId _entity) {
         ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(_entity);
-        ECS::Collisionnable& collisionable = cm.getComponent<ECS::Collisionnable>(_entity);
+        const ECS::Collisionnable& collisionable = cm.getComponent<ECS::Collisionnable>(_entity);
         ECS::Movable& movable = cm.getComponent<ECS::Movable>(_entity);
         ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(_entity);
+        positionnable.last_pos = positionnable.pos;
 
         // Chunk collision detection
         CollisionsInfos collision;
@@ -248,7 +249,7 @@ public:
 class ECS::HitBoxDisplaySystem : public SystemBase<ECS::Positionnable, ECS::Collisionnable, ECS::CollisionDisplay> {
 public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {
-        ECS::Collisionnable& collisionnable = cm.getComponent<ECS::Collisionnable>(entity);
+        const ECS::Collisionnable& collisionnable = cm.getComponent<ECS::Collisionnable>(entity);
         ECS::CollisionDisplay& collision_display = cm.getComponent<ECS::CollisionDisplay>(entity);
         collision_display.boxes.resize(collisionnable.hitboxes.size());
         for (size_t i = 0; i < collisionnable.hitboxes.size(); i++) {
@@ -285,7 +286,7 @@ public:
         }
     }
 
-    inline void startControl(ComponentManager& cm, ECS::EntityId _entity, Window& _window) { m_controlled_entity = _entity; }
+    inline void startControl(ECS::EntityId _entity) { m_controlled_entity = _entity; }
     inline void stopControl() { m_controlled_entity.reset(); }
 
     inline void changeControlType(ComponentManager& cm, ECS::ControlType _new_type) {
@@ -300,6 +301,31 @@ public:
     }
 
     inline std::optional<ECS::EntityId> getControlledEntity() const { return m_controlled_entity; }
+
+    inline void update(ComponentManager& cm, Window& _window, float _deltaTime) {
+        if (!m_controlled_entity.has_value())
+            return;
+
+        ECS::EntityId entity = m_controlled_entity.value();
+        ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
+        ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
+        const ECS::Orientable& orientable = cm.getComponent<ECS::Orientable>(entity);
+
+        glm::vec2 motion = glm::vec2(
+            _window.keyboard.isHeld(GLFW_KEY_D) - _window.keyboard.isHeld(GLFW_KEY_A),
+            _window.keyboard.isHeld(GLFW_KEY_W) - _window.keyboard.isHeld(GLFW_KEY_S));
+        if (motion.x != 0.f || motion.y != 0.f)
+            motion = glm::normalize(motion);
+        glm::vec3 front = Transformation::EulerToEuclidian(orientable.orientation);
+        glm::vec3 right = glm::normalize(glm::cross(front, MathHelpers::VEC_UP));
+        glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, right);
+
+        movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.x * right + motion.y * flat_front);
+        if (_window.keyboard.isHeld(GLFW_KEY_SPACE) && groundable.on_ground) {
+            movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
+            groundable.on_ground = false;
+        }
+    }
 };
 
 // -------------------------------------------------------------------------

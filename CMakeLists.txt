@@ -45,6 +45,7 @@ set(APP_SOURCES
 
     src/Window.hpp
 
+    src/GLGlobalContext.hpp
     src/ShaderProgram.hpp
     src/ShaderProgram.cpp
 
