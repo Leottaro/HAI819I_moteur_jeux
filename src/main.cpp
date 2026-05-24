@@ -29,12 +29,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
-    glEnable(GL_DEPTH_TEST);                            // Enable depth test
-    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
-    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -64,7 +64,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -125,6 +125,7 @@ void worldThread() {
 
 int main(void) {
     globalInit(window);
+    window.toggleMouseCapture();
 
     world = std::make_unique<World>();
     world_renderer.setWorld(world.get(), camera);
@@ -148,12 +149,7 @@ int main(void) {
             glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE);
         },
         nullptr);
-    window.keyboard.bind(
-        GLFW_KEY_ESCAPE,
-        [&]() {
-            window.toggleMouseCapture();
-        },
-        nullptr);
+    window.keyboard.bind(GLFW_KEY_ESCAPE, [&]() { window.toggleMouseCapture(); }, nullptr);
     window.keyboard.bind(GLFW_KEY_F11, [&]() { window.setFullscreen(!window.getFullscreen()); }, nullptr);
     window.keyboard.bind(GLFW_KEY_Z, [&]() {
         if (polygon_mode == GL_FILL) {
@@ -203,7 +199,7 @@ int main(void) {
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
 
-    {  // Pre start actions
+    { // Pre start actions
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
         controlled_pos.reserve(controlled_entities.size());

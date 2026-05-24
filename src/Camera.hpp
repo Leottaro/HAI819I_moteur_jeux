@@ -5,9 +5,9 @@
 #include "ECS/ECS.hpp"
 
 class Camera {
-   public:
+public:
     struct Frustum {
-       private:
+    private:
         glm::vec4 m_left;
         glm::vec4 m_right;
 
@@ -30,7 +30,7 @@ class Camera {
                              plane.z >= 0 ? aabb.max.z : aabb.min.z);
         }
 
-       public:
+    public:
         Frustum() {};
 
         inline void updatePlanes(const glm::mat4& view_projection_transpose) {
@@ -72,7 +72,7 @@ class Camera {
         }
     };
 
-   private:
+private:
     bool m_disable_mouse_actions{false};
 
     glm::vec2 m_cam_orientation{0.};
@@ -83,7 +83,7 @@ class Camera {
     glm::mat4 m_projection{0.};
     Frustum m_frustum;
 
-   public:
+public:
     glm::vec3 m_cam_pos;
     float m_fovy{M_PI_2f};
     glm::vec2 m_near_far{1.e-1f, 1.e8f};
@@ -92,28 +92,29 @@ class Camera {
     float m_zoom_rate{0.05f};
     float m_elasticity{0.5f};
 
-   private:
+private:
     inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Orientable& orientable, const ECS::Controllable& controllable) {
         glm::vec3 should_pos;
         switch (controllable.type) {
-            case ECS::ControlType::FreeCam:
-                break;
-            case ECS::ControlType::FirstPerson:
-                // En FPS pas de mouvement elastique sinon préparer sac à vomi
-                m_cam_pos = positionnable.pos + orientable.eye_pos;
-                break;
-            case ECS::ControlType::ThirdPerson:
-                // update target pos
-                should_pos = positionnable.pos + orientable.eye_pos - controllable.distance_to_center * m_front;
-                m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
+        case ECS::ControlType::FreeCam:
+        case ECS::ControlType::FreeCamFrustum:
+            break;
+        case ECS::ControlType::FirstPerson:
+            // En FPS pas de mouvement elastique sinon préparer sac à vomi
+            m_cam_pos = positionnable.pos + orientable.eye_pos;
+            break;
+        case ECS::ControlType::ThirdPerson:
+            // update target pos
+            should_pos = positionnable.pos + orientable.eye_pos - controllable.distance_to_center * m_front;
+            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
 
-                // re update angle
-                m_front = positionnable.pos + orientable.eye_pos - should_pos;
-                m_cam_orientation = Transformation::EuclidianToEuler(m_front);
-                Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-                break;
-            case ECS::ControlType::__COUNT:
-                break;
+            // re update angle
+            m_front = positionnable.pos + orientable.eye_pos - should_pos;
+            m_cam_orientation = Transformation::EuclidianToEuler(m_front);
+            Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
+            break;
+        case ECS::ControlType::__COUNT:
+            break;
         }
     }
 
@@ -143,7 +144,7 @@ class Camera {
 
     inline void updateMouseInput(Window& _window, float _deltaTime) {
         float rotation_speed = _deltaTime * m_rotation_speed;
-        if (_window.getMouseCapture() || glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        if (_window.getMouseCapture()) {
             m_cam_orientation.x -= rotation_speed * _window.getCursorVel().y;
             m_cam_orientation.y -= rotation_speed * _window.getCursorVel().x;
             Transformation::clampOrientation(m_cam_orientation);
@@ -151,7 +152,7 @@ class Camera {
         }
     }
 
-   public:
+public:
     Camera() {
         Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
         updateRenderingData(16.f / 9.f);
@@ -180,23 +181,24 @@ class Camera {
         const ECS::Positionnable& positionnable = _ecs_manager.getComponent<ECS::Positionnable>(entity);
         ECS::Orientable& orientable = _ecs_manager.getComponent<ECS::Orientable>(entity);
         const ECS::Controllable& controllable = _ecs_manager.getComponent<ECS::Controllable>(entity);
-        if (controllable.type != ECS::ControlType::FreeCam) {
+        if (controllable.type == ECS::ControlType::FreeCam || controllable.type == ECS::ControlType::FreeCamFrustum) {
+            updateFreeKeyboardInput(_window, _deltaTime);
+            updateRenderingData(_window.getAspectRatio());
+            if (controllable.type != ECS::ControlType::FreeCam) {
+                glm::vec3 front, right, real_up;
+                Transformation::getViewVectors(orientable.orientation, front, right, real_up);
+                updateFreeFrustum(_window.getAspectRatio(), positionnable.pos, front, real_up);
+            }
+        } else {
             orientable.orientation = m_cam_orientation;
             applyPosConstraint(positionnable, orientable, controllable);
             updateRenderingData(_window.getAspectRatio());
-        } else {
-            updateFreeKeyboardInput(_window, _deltaTime);
-            updateRenderingData(_window.getAspectRatio());
-
-            glm::vec3 front, right, real_up;
-            Transformation::getViewVectors(orientable.orientation, front, right, real_up);
-            updateFreeFrustum(_window.getAspectRatio(), positionnable.pos, front, real_up);
         }
     }
 
     void updateInterface(ECSManager& _ecs_manager) {
         m_disable_mouse_actions = false;
-        ECS::ControlType fallback_type{ECS::ControlType::FreeCam};
+        ECS::ControlType fallback_type{ECS::ControlType::FreeCamFrustum};
         float fallback_distance{0.f};
         glm::vec3 fallback_pos{0.f};
 
@@ -225,11 +227,11 @@ class Camera {
 
         ImGui::Separator();
 
-        ImGui::BeginDisabled(control_type == ECS::ControlType::FreeCam);
+        ImGui::BeginDisabled(control_type == ECS::ControlType::FreeCam || control_type == ECS::ControlType::FreeCamFrustum);
         ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
         ImGui::EndDisabled();
 
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam && control_type != ECS::ControlType::FreeCamFrustum);
         if (ImGui::Button("Snap entity to Pos")) {
             entity_pos = m_cam_pos;
         }
@@ -259,7 +261,7 @@ class Camera {
 
         ImGui::Separator();
 
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam && control_type != ECS::ControlType::FreeCamFrustum);
         ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.e-4f, 0.f, 1.e8f);
         ImGui::EndDisabled();
 

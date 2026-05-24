@@ -23,10 +23,11 @@ constexpr glm::vec3 G{0.f, -100.f / 3.f, 0.f};
 enum class ControlType {
     FirstPerson = 0,
     ThirdPerson,
+    FreeCamFrustum,
     FreeCam,
     __COUNT
 };
-static constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0";
+static constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0FreeCamFrustum\0";
 static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
 
 // -------------------------------------------------------------------------
