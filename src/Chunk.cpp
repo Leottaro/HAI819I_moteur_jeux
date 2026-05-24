@@ -106,7 +106,7 @@ void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     std::vector<glm::u8vec3> surface_blocks;
     size_t block_i = 0;
-    constexpr uint32_t MOUTAINT_HEIGHT = 20.f;
+    constexpr uint32_t MOUTAINT_HEIGHT = 60.f;
     switch (_type) {
     case GenType::DEBUG_:
         for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
@@ -178,7 +178,6 @@ void Chunk::generate(GenType _type) {
                 }
             }
         }
-        // std::cout << "taille de la surface : " << surface_blocks.size() << " !!!\n";
         for (const glm::u8vec3& surface_pos : surface_blocks) {
             if (rand() >= TREE_CHANCE)
                 continue;

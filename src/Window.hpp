@@ -12,14 +12,17 @@
 // #define GLM_ENABLE_EXPERIMENTAL
 // #include <glm/gtx/string_cast.hpp>
 
+// TODO: ca degage !
+#include <iostream>
+
 // USUAL INCLUDES
 #include <mutex>
 #include <string>
 
 struct KeyState {
-    bool pressed = false;  // true only on the frame it was pressed
-    bool held = false;     // true if key is held down
-    bool released = false; // true only on the frame it was released
+    bool pressed = false;   // true only on the frame it was pressed
+    bool held = false;      // true if key is held down
+    bool released = false;  // true only on the frame it was released
 };
 struct KeyCallbacks {
     std::function<void()> on_press{nullptr};
@@ -30,7 +33,7 @@ class KeyboardHandler {
     std::unordered_map<int, KeyState> m_keys;
     std::unordered_map<int, KeyCallbacks> m_callbacks;
 
-public:
+   public:
     KeyboardHandler() {}
 
     // Register callbacks for a key (any can be null)
@@ -80,7 +83,8 @@ struct Window {
         return static_cast<Window*>(glfwGetWindowUserPointer(w));
     }
 
-private:
+   private:
+    bool m_mouse_captured{false};
     std::string m_title{"Minecraft clown"};
     GLFWwindow* m_window{nullptr};
     glm::ivec2 m_pos{0, 0};
@@ -118,7 +122,10 @@ private:
 
     inline void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         // cout << "mouse button:" << button << " action:" << action << " mods:" << mods << endl;
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (m_mouse_captured) {
+            std::cout << "souris capturée !!!\n";
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
             glfwSetInputMode(window, GLFW_CURSOR, action == GLFW_PRESS ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
         }
     }
@@ -141,7 +148,7 @@ private:
         keyboard.handle(key, scancode, action, mods);
     }
 
-public:
+   public:
     Window() {}
     Window(Window&&) = delete;
     Window(const Window&) = delete;
@@ -165,6 +172,12 @@ public:
     inline const glm::vec2& getCursorPos() const { return m_cursor_pos; }
     inline const glm::vec2& getCursorVel() const { return m_cursor_vel; }
     inline const glm::vec2& getScroll() const { return m_scroll; }
+
+    inline const bool getMouseCapture() const { return m_mouse_captured; }
+
+    inline void toggleMouseCapture() {
+        m_mouse_captured = !m_mouse_captured;
+    }
 
     void setPos(const glm::uvec2& _pos) {
         std::lock_guard<std::mutex> lock(glfw_mutex);
@@ -197,9 +210,9 @@ public:
         glfwWindowHint(GLFW_SAMPLES, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // To make MacOS happy; should not be needed
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE); // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
+        glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE);  // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
         glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
         m_window = glfwCreateWindow(m_size.x, m_size.y, m_title.c_str(), NULL, NULL);
@@ -217,6 +230,6 @@ public:
         glfwSetCursorPosCallback(m_window, _cursorPosCallback);
         glfwSetScrollCallback(m_window, _scrollCallback);
         glfwSetInputMode(m_window, GLFW_STICKY_KEYS, GL_TRUE);
-        glfwSwapInterval(1); // VSync
+        glfwSwapInterval(1);  // VSync
     }
 };

@@ -5,9 +5,9 @@
 #include "ECS/ECS.hpp"
 
 class Camera {
-public:
+   public:
     struct Frustum {
-    private:
+       private:
         glm::vec4 m_left;
         glm::vec4 m_right;
 
@@ -30,7 +30,7 @@ public:
                              plane.z >= 0 ? aabb.max.z : aabb.min.z);
         }
 
-    public:
+       public:
         Frustum() {};
 
         inline void updatePlanes(const glm::mat4& view_projection_transpose) {
@@ -72,7 +72,7 @@ public:
         }
     };
 
-private:
+   private:
     bool m_disable_mouse_actions{false};
 
     glm::vec2 m_cam_orientation{0.};
@@ -83,7 +83,7 @@ private:
     glm::mat4 m_projection{0.};
     Frustum m_frustum;
 
-public:
+   public:
     glm::vec3 m_cam_pos;
     float m_fovy{M_PI_2f};
     glm::vec2 m_near_far{1.e-1f, 1.e8f};
@@ -92,30 +92,33 @@ public:
     float m_zoom_rate{0.05f};
     float m_elasticity{0.5f};
 
-private:
+   private:
     inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Orientable& orientable, const ECS::Controllable& controllable) {
         glm::vec3 should_pos;
         switch (controllable.type) {
-        case ECS::ControlType::FreeCam:
-            break;
-        case ECS::ControlType::FirstPerson:
-            should_pos = positionnable.pos + orientable.eye_pos;
-            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
-            break;
-        case ECS::ControlType::ThirdPerson:
-            // update target pos
-            should_pos = positionnable.pos + orientable.eye_pos - controllable.distance_to_center * m_front;
-            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
+            case ECS::ControlType::FreeCam:
+                break;
+            case ECS::ControlType::FirstPerson:
+                // En FPS pas de mouvement elastique sinon préparer sac à vomi
+                m_cam_pos = positionnable.pos + orientable.eye_pos;
+                break;
+            case ECS::ControlType::ThirdPerson:
+                // update target pos
+                should_pos = positionnable.pos + orientable.eye_pos - controllable.distance_to_center * m_front;
+                m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
 
-            // re update angle
-            m_front = positionnable.pos + orientable.eye_pos - should_pos;
-            m_cam_orientation = Transformation::EuclidianToEuler(m_front);
-            Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
-            break;
-        case ECS::ControlType::__COUNT:
-            break;
+                // re update angle
+                m_front = positionnable.pos + orientable.eye_pos - should_pos;
+                m_cam_orientation = Transformation::EuclidianToEuler(m_front);
+                Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
+                break;
+            case ECS::ControlType::__COUNT:
+                break;
         }
     }
+
+    inline void toggleMouseAction() { m_disable_mouse_actions = !m_disable_mouse_actions; }
+
     inline void updateRenderingData(float _aspect_ratio) {
         m_projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
         m_view = glm::lookAt(m_cam_pos, m_cam_pos + m_front, m_real_up);
@@ -140,7 +143,7 @@ private:
 
     inline void updateMouseInput(Window& _window, float _deltaTime) {
         float rotation_speed = _deltaTime * m_rotation_speed;
-        if (glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        if (_window.getMouseCapture() || glfwGetMouseButton(_window.getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_cam_orientation.x -= rotation_speed * _window.getCursorVel().y;
             m_cam_orientation.y -= rotation_speed * _window.getCursorVel().x;
             Transformation::clampOrientation(m_cam_orientation);
@@ -148,7 +151,7 @@ private:
         }
     }
 
-public:
+   public:
     Camera() {
         Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
         updateRenderingData(16.f / 9.f);

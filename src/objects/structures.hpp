@@ -54,7 +54,7 @@ constexpr std::array<BlockPos, 67> TREE_DATA = {{
     {BlockType::OakLeaves, {-2, 4, 2}},
     {BlockType::OakLeaves, {-1, 4, 2}},
     {BlockType::OakLeaves, {0, 4, 2}},
-    {BlockType::OakLeaves, {1, 4, 2}},    
+    {BlockType::OakLeaves, {1, 4, 2}},
 
     {BlockType::OakLeaves, {1, 3, 0}},
     {BlockType::OakLeaves, {0, 3, 1}},
@@ -79,10 +79,9 @@ constexpr std::array<BlockPos, 67> TREE_DATA = {{
     {BlockType::OakLeaves, {-2, 3, 2}},
     {BlockType::OakLeaves, {-1, 3, 2}},
     {BlockType::OakLeaves, {0, 3, 2}},
-    {BlockType::OakLeaves, {1, 3, 2}},    
+    {BlockType::OakLeaves, {1, 3, 2}},
 
 }};
 
-
-//TODO : c'est nul de faire avec de la chance
+// TODO : c'est nul de faire avec de la chance
 constexpr float TREE_CHANCE = 0.001f * RAND_MAX;
