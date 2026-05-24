@@ -99,7 +99,7 @@ void worldThread() {
         current_time = glfwGetTime();
         delta_time = current_time - last_frame;
         if (delta_time < WORLD_FRAME_TIME) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::duration<float>(0.5f * (WORLD_FRAME_TIME - delta_time)));
             continue;
         }
         last_frame = current_time;

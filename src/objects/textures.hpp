@@ -22,8 +22,6 @@ enum class Textures : uint64_t {
     NUMBER_OF_TEXTURES
 };
 
-
-
 constexpr uint32_t ATLAS_DIMS = ceil(sqrt(static_cast<float>(Textures::NUMBER_OF_TEXTURES) - 1));
 
 constexpr uint64_t TEXTURE_NUMBER = static_cast<size_t>(Textures::NUMBER_OF_TEXTURES);

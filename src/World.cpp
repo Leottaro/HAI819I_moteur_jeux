@@ -97,19 +97,21 @@ bool World::generate(const std::vector<glm::vec3>& _centers) {
         }
     }
 
-    m_chunks.forEach([&](Chunk& chunk) {
+    std::vector<glm::ivec3> chunks_to_remove;
+    uint render_distance = m_render_distance;
+    m_chunks.forEach([&chunks_to_remove, _centers, render_distance](Chunk& chunk) {
         bool should_remove = true;
         for (const glm::vec3& pos : _centers) {
-            if (Chunk::chunkDistance(chunk.getPos(), pos) <= m_render_distance) {
+            if (Chunk::chunkDistance(chunk.getPos(), pos) <= render_distance) {
                 should_remove = false;
                 break;
             }
         }
-        if (should_remove) {
-            removeChunk(chunk.getPos());
-            res |= true;
-        }
+        if (should_remove)
+            chunks_to_remove.push_back(chunk.getPos());
     });
+    for (const glm::ivec3& chunk_pos : chunks_to_remove)
+        removeChunk(chunk_pos);
 
     std::vector<std::map<float, glm::ivec3>> chunk_to_add(_centers.size());
     for (const glm::ivec3& chunk_pos : m_chunks_frontier) {

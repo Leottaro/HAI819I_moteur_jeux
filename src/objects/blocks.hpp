@@ -37,7 +37,7 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "Oak Leaves",
 }};
 
-using Te = Textures;  // Pour pas que les lignes en dessous fassent 3.5km
+using Te = Textures; // Pour pas que les lignes en dessous fassent 3.5km
 
 // si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
 // clang-format off
@@ -58,6 +58,7 @@ constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DA
 enum class BlockTransparency : size_t {
     SOLID = 0,
     TRANSPARENT,
+    SEMI_TRANSPARENT,
     TRANSLUCENT
 };
 struct BlockTypeData {
@@ -66,7 +67,7 @@ struct BlockTypeData {
     float static_friction;          // Describes the friction when standing on it
     float fluid_density;            // Describes the block's density when in it
     bool has_hitbox;                // Describes if the block has an hitbox
-    BlockTransparency transparence; // Describes the block's transparence // TODO: dans l'atlas map ?
+    BlockTransparency transparence; // Describes the block's transparence
 };
 
 constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
@@ -79,8 +80,8 @@ constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
     {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // RedstoneLamp
     {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // DiamondOre
     {1.f / 2.f, 0.75f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSLUCENT}, // SlimeBlock
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // OakLog
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSPARENT}    // OakLog
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Oak Log
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SEMI_TRANSPARENT}    // Oak leaves
 }};
 
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<size_t>(type)]; }

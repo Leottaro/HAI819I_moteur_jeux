@@ -281,7 +281,7 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                 glm::vec3 block_center = glm::vec3(m_chunk->m_pos + glm::ivec3(local_pos)) + glm::vec3(0.5f);
                 for (int face_i = 0; face_i < 6; face_i++) {
                     const Block* neighbour = block.m_neighbours[face_i];
-                    if (neighbour != nullptr && (neighbour->getTransparence() == BlockTransparency::SOLID || block.getType() == neighbour->getType()))
+                    if (neighbour != nullptr && (neighbour->getTransparence() == BlockTransparency::SOLID || (block.getType() == neighbour->getType() && block.getTransparence() != BlockTransparency::SEMI_TRANSPARENT)))
                         continue;
                     const Block::FaceData& face = Block::FACE_DATA[face_i];
 

@@ -209,7 +209,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
             //           << "\t\told pos: " << glm::to_string(positionnable.pos) << std::endl
             //           << "\t\told vel: " << glm::to_string(movable.vel) << std::endl;
 
-            bounce(0.f, collision.friction, collision.restitution, collision.normal, movable.vel);
+            bounce(0.1f, collision.friction, collision.restitution, collision.normal, movable.vel);
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && movable.vel.y <= -0.05f * ECS::G.y) {
                 groundable.on_ground = true;
                 collision.pos.y += 1.e-2f;
