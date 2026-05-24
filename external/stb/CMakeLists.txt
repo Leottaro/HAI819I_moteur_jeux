@@ -14,5 +14,5 @@ add_library(stb
 )
 
 # Include directories
-set(IMGUI_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${IMGUI_INCLUDE_DIRS})
+set(STB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${STB_INCLUDE_DIRS})

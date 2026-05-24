@@ -4,8 +4,8 @@
 #include <GL/glew.h>
 
 // GLM
-#include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <glm/glm.hpp>
 
 // GLFW
 #include <GLFW/glfw3.h>
@@ -15,13 +15,15 @@
 #include <string>
 
 class ShaderProgram {
-private:
+   private:
     GLuint m_id = 0;
 
-    std::string file2String(const std::string& filename);            // Loads the content of an ASCII file in a standard C++ string
-    void loadShader(GLenum type, const std::string& shaderFilename); // Loads and compile a shader, before attaching it to a program
+    std::string m_vertex_path, m_fragment_path;
 
-public:
+    std::string file2String(const std::string& filename);             // Loads the content of an ASCII file in a standard C++ string
+    void loadShader(GLenum type, const std::string& shaderFilename);  // Loads and compile a shader, before attaching it to a program
+
+   public:
     ShaderProgram();
     ShaderProgram(const std::string& vertexShaderFilename, const std::string& fragmentShaderFilename);
     virtual ~ShaderProgram();
@@ -34,6 +36,16 @@ public:
     inline void link() { glLinkProgram(m_id); }
     inline void use() { glUseProgram(m_id); }
     inline static void stop() { glUseProgram(0); }
+
+    inline void load() {
+        if (m_id != 0)
+            glDeleteProgram(m_id);
+        m_id = glCreateProgram();
+        loadShader(GL_VERTEX_SHADER, m_vertex_path);
+        loadShader(GL_FRAGMENT_SHADER, m_fragment_path);
+        link();
+        use();
+    }
 
     // UNIFORMS
     inline GLuint getLocation(const std::string& name) {

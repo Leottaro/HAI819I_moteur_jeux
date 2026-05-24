@@ -33,8 +33,8 @@ void WorldRenderer::updateWorld(World* _world) {
     _world->m_removed_chunks.clear();
     _world->m_added_chunks.clear();
 
-    float angle = (_world->m_world_time / DAY_LENGTH) * 2.f * M_PIf;
-    float t = (sin(angle) + 1.0f) * 0.5f;
+    float angle = (static_cast<float>(_world->m_world_time % DAY_LENGTH ) / DAY_LENGTH) * 2.f * M_PIf;
+    float t = sin(angle) * 0.5f * 0.5f;
     m_sky_color = glm::mix(SKY_NIGHT, SKY_DAY, t);
     m_sun_color = glm::mix(SUN_NOON, SUN_DUSK, t);
     m_last_time = _world->m_world_time;

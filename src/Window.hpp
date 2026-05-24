@@ -75,6 +75,52 @@ public:
     inline bool isHeld(int key) const { return getState(key).pressed || getState(key).held; }
 };
 
+// class MouseHandler {
+//     std::unordered_map<int, KeyState> m_keys;
+//     std::unordered_map<int, KeyCallbacks> m_callbacks;
+
+//    public:
+//     MouseHandler() {}
+
+//     // Register callbacks for a key (any can be null)
+//     inline void bind(int key, std::function<void()> on_press = nullptr, std::function<void()> on_release = nullptr) {
+//         m_callbacks[key] = {std::move(on_press), std::move(on_release)};
+//     }
+//     inline void unbind(int key) {
+//         m_callbacks.erase(key);
+//     }
+
+//     // Called from Window::keyCallback
+//     void handle(int key, int scancode, int action, int mods) {
+//         auto& state = m_keys[key];
+
+//         bool new_pressed = !state.pressed && !state.held && (action == GLFW_PRESS);
+//         bool new_held = (action == GLFW_REPEAT) || ((state.pressed || state.held) && (action == GLFW_PRESS));
+//         bool new_released = (state.held || state.pressed) && (action == GLFW_RELEASE);
+//         state.pressed = new_pressed;
+//         state.held = new_held;
+//         state.released = new_released;
+
+//         auto it = m_callbacks.find(key);
+//         if (it != m_callbacks.end()) {
+//             KeyCallbacks& callbacks = it->second;
+//             if (action == GLFW_PRESS && callbacks.on_press)
+//                 callbacks.on_press();
+//             if (action == GLFW_RELEASE && callbacks.on_release)
+//                 callbacks.on_release();
+//         }
+//     }
+
+//     // Poll state manually (useful for per-frame movement logic)
+//     inline const KeyState& getState(int key) const {
+//         static const KeyState empty{};
+//         auto it = m_keys.find(key);
+//         return it != m_keys.end() ? it->second : empty;
+//     }
+
+//     inline bool isHeld(int key) const { return getState(key).pressed || getState(key).held; }
+// };
+
 struct Window {
     inline static std::mutex glfw_mutex;
 

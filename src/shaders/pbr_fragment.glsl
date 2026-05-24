@@ -84,8 +84,11 @@ void main() {
   // reflectance equation
   vec3 Lo = vec3(0.);
   for(int i = 0; i <= nb_lights; i++) {
+    const bool sun_light = i == nb_lights;
     // calculate per-light radiance
-    vec3 L = i == nb_lights ? sun_direction : lightPositions[i] - f_worldpos;
+    vec3 L = sun_light ? sun_direction : lightPositions[i] - f_worldpos;
+    if(sun_light && sun_direction.y < 0)
+      continue;
     float distance = length(L);
     L /= distance;
 
@@ -117,4 +120,5 @@ void main() {
 
   out_color.xyz = out_color.xyz / (out_color.xyz + vec3(1.0));
   out_color.xyz = pow(out_color.xyz, vec3(1.0 / 2.2));
+  // out_color.xyz = vec3(1., 0., 0.); // Test de massacrage de shader pour le reload
 }

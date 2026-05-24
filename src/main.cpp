@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <FileWatch.hpp>
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -29,12 +30,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
-    glEnable(GL_DEPTH_TEST);                           // Enable depth test
-    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
-    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
+    glEnable(GL_DEPTH_TEST);                            // Enable depth test
+    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
+    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -64,7 +65,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -76,6 +77,10 @@ std::unique_ptr<World> world;
 WorldRenderer world_renderer;
 ECSManager ecs_manager;
 GLGlobalContext gl_global_context;
+
+// Create and compile our GLSL program from the shaders
+ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
+ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
 
 // https://stackoverflow.com/questions/244316/reader-writer-locks-in-c
 typedef std::shared_mutex Lock;
@@ -90,6 +95,7 @@ Lock world_lock;
 Lock renderer_lock;
 Lock entities_lock;
 Lock pos_lock;
+// Lock shader_lock;
 
 constexpr size_t WORLD_TPS = 10;
 constexpr float WORLD_FRAME_TIME = 1.0f / WORLD_TPS;
@@ -123,6 +129,12 @@ void worldThread() {
     }
 }
 
+void shaderReloadCallback() {
+    // WriteLock shader_write(shader_lock);
+    line_shader.load();
+    chunk_shader.load();
+}
+
 int main(void) {
     globalInit(window);
     window.toggleMouseCapture();
@@ -132,10 +144,10 @@ int main(void) {
     // world_renderer.reserve(world.get());
 
     // Create player entities
-    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 48.f, 26.5f)});
+    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 100.f, 26.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
     ecs_manager.startControl(truc);
-    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 48.f, 26.5f)});
+    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 100.f, 26.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
     // ecs_manager.startControl(truc2);
 
@@ -178,12 +190,46 @@ int main(void) {
             world_renderer.clear();
             world->clear();
             world->update(controlled_pos);
+
+            shaderReloadCallback();
+            // line_shader.load();
+            // chunk_shader.load();
+        },
+        nullptr);
+    window.keyboard.bind(
+        GLFW_KEY_Q,  // Attention en AZERTY GLFW_KEY_Q = A et vice versa vive les QWERTY !!!
+        [&]() {
+            constexpr glm::vec3 pos_offset(1, 1, 1);
+            const glm::ivec3 block_pos = camera.getCamPos() + pos_offset * camera.getFront();
+            Block* block = world->findBlock(block_pos);
+            block->getType() = BlockType::DiamondOre;
         },
         nullptr);
 
-    // Create and compile our GLSL program from the shaders
-    ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
-    ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
+    shaderReloadCallback();
+
+    std::atomic<bool> shader_reload_requested{false};
+
+    filewatch::FileWatch<std::string> watcher(
+        "src/shaders/",
+        [&shader_reload_requested](const std::string& path, const filewatch::Event change_type) {
+            static std::string last_path;
+            static filewatch::Event last_change_type{};
+            static auto last_event_time = std::chrono::steady_clock::time_point::min();
+
+            const auto now = std::chrono::steady_clock::now();
+            const auto within_debounce = (now - last_event_time) < std::chrono::milliseconds(150);
+            if (within_debounce && path == last_path && change_type == last_change_type) {
+                return;
+            }
+
+            last_path = path;
+            last_change_type = change_type;
+            last_event_time = now;
+
+            std::cout << "Shader modifies: " << path << ". Reloading shaders... \n";
+            shader_reload_requested.store(true, std::memory_order_release);
+        });
 
     auto [albedo_atlas, normal_atlas, specular_atlas] = Texture::generateAtlasses();
 
@@ -199,7 +245,7 @@ int main(void) {
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
 
-    { // Pre start actions
+    {  // Pre start actions
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
         controlled_pos.reserve(controlled_entities.size());
@@ -228,6 +274,11 @@ int main(void) {
             glfwSwapBuffers(window.getWindow());
             glfwPollEvents();
         }
+
+        if (shader_reload_requested.exchange(false, std::memory_order_acq_rel)) {
+            shaderReloadCallback();
+        }
+
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
 
@@ -257,7 +308,6 @@ int main(void) {
         // ---------------------------------------   OBJECTS RENDERING   --------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        chunk_shader.use();
         albedo_atlas.bind(0);
         normal_atlas.bind(1);
         specular_atlas.bind(2);
@@ -276,16 +326,19 @@ int main(void) {
         {
             ReadLock camera_read(camera_lock);
             WriteLock renderer_write(renderer_lock);
+            // WriteLock shader_write(shader_lock);
             world_renderer.renderChunks(chunk_shader, camera);
         }
         if (display_debug) {
             ReadLock camera_read(camera_lock);
             ReadLock renderer_read(renderer_lock);
+            // WriteLock shader_write(shader_lock);
             world_renderer.renderDebugBoxes(line_shader, camera);
         }
         {
             ReadLock camera_read(camera_lock);
             ReadLock entities_read(entities_lock);
+            // WriteLock shader_write(shader_lock);
             ecs_manager.render(line_shader, camera.getView(), camera.getProjection());
         }
 

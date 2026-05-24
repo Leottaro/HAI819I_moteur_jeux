@@ -86,6 +86,12 @@ include_directories(${OPENGL_INCLUDE_DIRS})
 target_link_libraries(${APP_TARGET_DEBUG} OpenGL::GL)
 target_link_libraries(${APP_TARGET_OPT} OpenGL::GL)
 
+# filewatch
+add_subdirectory(external/filewatch)
+include_directories(external/filewatch)
+target_link_libraries(${APP_TARGET_DEBUG} filewatch)
+target_link_libraries(${APP_TARGET_OPT} filewatch)
+
 # glew
 add_subdirectory(external/glew/build/cmake)
 include_directories(external/glew/include)
