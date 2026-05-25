@@ -22,6 +22,7 @@ enum class BlockType : uint8_t {
     PierreDeLit,  // On ne plagie toujours pas minecraft !
     HoneyBlock,
     Ice,
+    Water,
     __NUMBER_OF_TYPES
 };
 constexpr uint8_t BLOCK_TYPES_N = static_cast<uint8_t>(BlockType::__NUMBER_OF_TYPES);
@@ -38,9 +39,10 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "Slime Block",
     "Oak Log",
     "Oak Leaves",
-    "Pierre de Lit",
     "Honey Block",
-    "Ice"
+    "Ice",
+    "Water",
+    "Pierre de Lit",
 }};
 
 using Te = Textures;  // Pour pas que les lignes en dessous fassent 3.5km
@@ -59,9 +61,10 @@ constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DA
     {{TEX(Te::slime_block),      TEX(Te::slime_block),      TEX(Te::slime_block),        TEX(Te::slime_block),      TEX(Te::slime_block),     TEX(Te::slime_block)}},     // SlimeBlock
     {{TEX(Te::oak_log_side),     TEX(Te::oak_log_side),     TEX(Te::oak_log_side),       TEX(Te::oak_log_side),     TEX(Te::oak_log_side),    TEX(Te::oak_log_top)}},     // OakLog
     {{TEX(Te::oak_leaves),       TEX(Te::oak_leaves),       TEX(Te::oak_leaves),         TEX(Te::oak_leaves),       TEX(Te::oak_leaves),      TEX(Te::oak_leaves)}},      // OakLeaves
-    {{TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),      TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),   TEX(Te::pierre_de_lit)}},   // PierreDeLit
     {{TEX(Te::honey_block_side), TEX(Te::honey_block_side), TEX(Te::honey_block_bottom), TEX(Te::honey_block_side), TEX(Te::honey_block_side),TEX(Te::honey_block_top)}}, // Honey Block
     {{TEX(Te::ice),              TEX(Te::ice),              TEX(Te::ice),                TEX(Te::ice),              TEX(Te::ice),             TEX(Te::ice)}},             // Ice
+    {{TEX(Te::water),            TEX(Te::water),            TEX(Te::water),              TEX(Te::water),            TEX(Te::water),           TEX(Te::water)}},           // Water
+    {{TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),      TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),   TEX(Te::pierre_de_lit)}},   // PierreDeLit
 }};
 
 enum class BlockTransparency : uint8_t {
@@ -91,9 +94,10 @@ constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
     {0.5f, 0.75f, 0.333f, 0.f, true, BlockTransparency::TRANSLUCENT},   // SlimeBlock
     {0.5f, 0.f, 0.333f, 0.f, true, BlockTransparency::SOLID},           // Oak Log
     {0.5f, 0.f, 0.333f, 0.f, true, BlockTransparency::SEMI_TRANSPARENT},// Oak leaves
-    {0.5f, 0.f, 0.333f, 0.f, true, BlockTransparency::SOLID},           // Pierre de Lit
     {0.5f, 0.25f, 0.333f, 0.f, true, BlockTransparency::TRANSLUCENT},   // Honey Block
-    {0.001f, 0.f, 0.001f, 0.f, true, BlockTransparency::TRANSLUCENT},   // Ice
+    {0.2f, 0.f, 0.05f, 0.f, true, BlockTransparency::TRANSLUCENT},      // Ice
+    {0.2f, 0.f, 0.05f, 1000.f, false, BlockTransparency::TRANSLUCENT},      // Water
+    {0.5f, 0.f, 0.333f, 0.f, true, BlockTransparency::SOLID},           // Pierre de Lit
 }};
 
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<uint8_t>(type)]; }

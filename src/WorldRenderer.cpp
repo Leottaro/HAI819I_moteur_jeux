@@ -156,17 +156,22 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
         std::string_view new_seed_str(new_seed);
         std::cout << "current string : " << new_seed << "\n";
 
-        // Trying to parse string to int
-        auto [ptr, ec] = std::from_chars(
-            new_seed_str.data(),
-            new_seed_str.data() + new_seed_str.size(),
-            new_seed_val);
+        if (new_seed_str.length() == 0)
+            new_seed_val = rand();
 
-        // If not possible, hashing string to int
-        if (ec != std::errc() || ptr != new_seed_str.data() + new_seed_str.size()) {
-            // https://stackoverflow.com/questions/16075271/hashing-a-string-to-an-integer-in-c
-            std::cout << new_seed_str << " is not a number, hashing...\n";
-            new_seed_val = std::hash<std::string_view>{}(new_seed_str);
+        else {
+            // Trying to parse string to int
+            auto [ptr, ec] = std::from_chars(
+                new_seed_str.data(),
+                new_seed_str.data() + new_seed_str.size(),
+                new_seed_val);
+
+            // If not possible, hashing string to int
+            if (ec != std::errc() || ptr != new_seed_str.data() + new_seed_str.size()) {
+                // https://stackoverflow.com/questions/16075271/hashing-a-string-to-an-integer-in-c
+                std::cout << new_seed_str << " is not a number, hashing...\n";
+                new_seed_val = std::hash<std::string_view>{}(new_seed_str);
+            }
         }
 
         std::cout << new_seed_val << std::endl;

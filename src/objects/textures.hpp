@@ -23,6 +23,7 @@ enum class Textures : uint8_t {
     honey_block_side,
     honey_block_bottom,
     ice,
+    water,
     pierre_de_lit, // Changement de nom parce qu'on plagie pas minecraft ici !
     NUMBER_OF_TEXTURES
 };
@@ -48,6 +49,7 @@ constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{
     "honey_block_side",
     "honey_block_bottom",
     "ice",
+    "water",
     "pierre_de_lit"
 }};
 
