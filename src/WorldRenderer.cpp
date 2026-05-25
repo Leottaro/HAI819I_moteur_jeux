@@ -169,9 +169,10 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
             new_seed_val = std::hash<std::string_view>{}(new_seed_str);
         }
 
-        std::cout << new_seed_val << '\n';
+        std::cout << new_seed_val << std::endl;
         clear();
         _world->clear();
+        _world->setWorldSeed(new_seed_val);
         _world->generate(world_gen_pos);
     }
 

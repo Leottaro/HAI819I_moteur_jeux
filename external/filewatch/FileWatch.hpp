@@ -276,7 +276,7 @@ namespace filewatch {
 
 		FolderInfo  _directory;
 
-		const std::uint32_t _listen_filters = IN_MODIFY | IN_CREATE | IN_DELETE;
+            const std::uint32_t _listen_filters = IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
 
 		const static std::size_t event_size = (sizeof(struct inotify_event));
 #endif // __unix__
@@ -615,6 +615,7 @@ namespace filewatch {
 		void monitor_directory() 
 		{
 			std::vector<char> buffer(_buffer_size);
+                  std::unordered_map<std::uint32_t, UnderpinningString> pending_renames;
 
 			_running.set_value();
 			while (_destory == false) 
@@ -640,6 +641,24 @@ namespace filewatch {
 								{
 									parsed_information.emplace_back(StringType{ changed_file }, Event::removed);
 								}
+                                                else if (event->mask & IN_MOVED_FROM)
+                                                {
+                                                      pending_renames[event->cookie] = changed_file;
+                                                      parsed_information.emplace_back(StringType{ changed_file }, Event::removed);
+                                                }
+                                                else if (event->mask & IN_MOVED_TO)
+                                                {
+                                                      const auto old_name = pending_renames.find(event->cookie);
+                                                      if (old_name != pending_renames.end())
+                                                      {
+                                                            parsed_information.emplace_back(StringType{ changed_file }, Event::added);
+                                                            pending_renames.erase(old_name);
+                                                      }
+                                                      else
+                                                      {
+                                                            parsed_information.emplace_back(StringType{ changed_file }, Event::added);
+                                                      }
+                                                }
 								else if (event->mask & IN_MODIFY) 
 								{
 									parsed_information.emplace_back(StringType{ changed_file }, Event::modified);

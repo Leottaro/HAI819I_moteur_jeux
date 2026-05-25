@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include "Camera.hpp"
 #include "Chunk.hpp"
@@ -32,12 +33,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
-    glEnable(GL_DEPTH_TEST);                           // Enable depth test
-    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
-    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
+    glEnable(GL_DEPTH_TEST);                            // Enable depth test
+    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
+    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -67,7 +68,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -84,6 +85,10 @@ GLGlobalContext gl_global_context;
 ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
 ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
 ShaderProgram chunk_shadow_shader("src/shaders/chunk_shadow_vertex.glsl", "src/shaders/chunk_shadow_fragment.glsl");
+
+RGBATexture albedo_atlas;
+RGBATexture normal_atlas;
+RGBATexture specular_atlas;
 
 // https://stackoverflow.com/questions/244316/reader-writer-locks-in-c
 typedef std::shared_mutex Lock;
@@ -148,6 +153,29 @@ void shaderReloadCallback() {
     chunk_shadow_shader.load();
 }
 
+void textureReloadCallback() {
+    auto atlasses = RGBATexture::generateAtlasses();
+    albedo_atlas = std::move(atlasses[0]);
+    normal_atlas = std::move(atlasses[1]);
+    specular_atlas = std::move(atlasses[2]);
+
+    albedo_atlas.savePNG("build/albedo_atlas");
+    normal_atlas.savePNG("build/normal_atlas");
+    specular_atlas.savePNG("build/specular_atlas");
+    albedo_atlas.initShaderData();
+    normal_atlas.initShaderData();
+    specular_atlas.initShaderData();
+}
+
+template <class OnChange>
+auto makeTextureWatcher(const std::string& path, OnChange&& onChange) {
+    return filewatch::FileWatch<std::string>(
+        path,
+        [onChange = std::forward<OnChange>(onChange)](const std::string& changed_path, const filewatch::Event change_type) {
+            onChange(changed_path, change_type);
+        });
+}
+
 int main(void) {
     globalInit(window);
     window.toggleMouseCapture();
@@ -167,7 +195,7 @@ int main(void) {
     GLenum polygon_mode{GL_FILL};
     bool display_debug{false};
     window.keyboard.bind(
-        GLFW_KEY_BACKSPACE,
+        GLFW_KEY_K,
         [&]() {
             std::lock_guard<std::mutex> lock(Window::glfw_mutex);
             glfwSetWindowShouldClose(window.getWindow(), GLFW_TRUE);
@@ -213,7 +241,7 @@ int main(void) {
     shaderReloadCallback();
 
     std::atomic<bool> shader_reload_requested{false};
-    filewatch::FileWatch<std::string> watcher(
+    filewatch::FileWatch<std::string> shaderWatcher(
         "src/shaders/",
         [&shader_reload_requested](const std::string& path, const filewatch::Event change_type) {
             static std::string last_path;
@@ -230,25 +258,40 @@ int main(void) {
             last_change_type = change_type;
             last_event_time = now;
 
-            std::cout << "Shader modifies: " << path << ". Reloading shaders... \n";
+            std::cout << "Shader modified: " << path << ". Reloading shaders... \n";
             shader_reload_requested.store(true, std::memory_order_release);
         });
 
-    auto atlasses = RGBATexture::generateAtlasses();
-    RGBATexture& albedo_atlas = atlasses[0];
-    RGBATexture& normal_atlas = atlasses[1];
-    RGBATexture& specular_atlas = atlasses[2];
-    albedo_atlas.savePNG("build/albedo_atlas");
-    normal_atlas.savePNG("build/normal_atlas");
-    specular_atlas.savePNG("build/specular_atlas");
-    albedo_atlas.initShaderData();
-    normal_atlas.initShaderData();
-    specular_atlas.initShaderData();
+    textureReloadCallback();
+
+    std::atomic<bool> texture_reload_requested{false};
+    auto texture_change_handler = [&texture_reload_requested](const std::string& path, const filewatch::Event change_type) {
+        static std::string last_path;
+        static filewatch::Event last_change_type{};
+        static auto last_event_time = std::chrono::steady_clock::time_point::min();
+
+        const auto now = std::chrono::steady_clock::now();
+        const auto within_debounce = (now - last_event_time) < std::chrono::milliseconds(150);
+        if (within_debounce && path == last_path && change_type == last_change_type) {
+            return;
+        }
+
+        last_path = path;
+        last_change_type = change_type;
+        last_event_time = now;
+
+        std::cout << "Texture modifie: " << path << ". Reloading textures... \n";
+        texture_reload_requested.store(true, std::memory_order_release);
+    };
+
+    auto albedoWatcher = makeTextureWatcher("ressources/textures/albedos", texture_change_handler);
+    auto normalWatcher = makeTextureWatcher("ressources/textures/normals", texture_change_handler);
+    auto specularWatcher = makeTextureWatcher("ressources/textures/speculars", texture_change_handler);
 
     ShadowMap sun_shadowmap{2048, 2048};
     sun_shadowmap.initShaderData();
 
-    { // Pre start actions
+    {  // Pre start actions
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
         controlled_pos.reserve(controlled_entities.size());
@@ -280,6 +323,10 @@ int main(void) {
 
         if (shader_reload_requested.exchange(false, std::memory_order_acq_rel)) {
             shaderReloadCallback();
+        }
+
+        if (texture_reload_requested.exchange(false, std::memory_order_acq_rel)) {
+            textureReloadCallback();
         }
 
         delta_time = currentFrame - last_frame;
@@ -325,7 +372,7 @@ int main(void) {
         // ----------------------------------------------------------------------------------------------------
 
         glCullFace(GL_FRONT);
-        { // TODO: pour chaque light
+        {  // TODO: pour chaque light
             glm::mat4 VP;
             {
                 ReadLock renderer_read(renderer_lock);
