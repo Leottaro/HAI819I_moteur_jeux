@@ -62,7 +62,7 @@ public:
                     for (under_block_pos.z = min_block.z; under_block_pos.z <= max_block.z; under_block_pos.z++) {
                         for (under_block_pos.x = min_block.x; under_block_pos.x <= max_block.x; under_block_pos.x++) {
                             const Block* block = _world->findBlock(under_block_pos);
-                            groundable.on_ground = groundable.on_ground || (block != nullptr && block->getType() != BlockType::Air);
+                            groundable.on_ground = groundable.on_ground || (block != nullptr && block->hasHitbox());
                             max_static_friction = block != nullptr ? std::max(max_static_friction, block->getStaticFriction()) : max_static_friction;
                         }
                     }
@@ -150,36 +150,40 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
 
                 float t;
                 glm::vec3 normal(0.);
-                if (block->hasHitbox() && block_aabb.intersectAABB(_positionnable.pos + hitbox, _deltaTime * _movable.vel, t, normal)) {
-                    if (t < res.t) {
-                        res.t = t;
-                        res.normal = normal;
-                        res.pos = _positionnable.pos + t * _deltaTime * _movable.vel;
-                        while (block_aabb.intersectAABB(res.pos + hitbox, dist)) {
-                            res.pos += dist;
-                        }
+                if (!block->hasHitbox() || !block_aabb.intersectAABB(_positionnable.pos + hitbox, _deltaTime * _movable.vel, t, normal) || t >= res.t)
+                    continue;
 
-                        glm::vec3 block_center = glm::vec3(block->getPos()) + glm::vec3(0.5f);
-                        glm::ivec3 min_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.min, block_center, normal));
-                        glm::ivec3 max_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.max, block_center, normal));
+                res.t = t;
+                res.normal = normal;
+                res.pos = _positionnable.pos + t * _deltaTime * _movable.vel;
 
-                        glm::ivec3 collision_block;
-                        res.friction = 0.f;
-                        res.restitution = 1.f;
-                        for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
-                            for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
-                                for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
-                                    const Block* block = _world->findBlock(collision_block);
-                                    if (block == nullptr || block->getType() == BlockType::Air)
-                                        continue;
-                                    res.friction = std::max(res.friction, block->getFriction());
-                                    res.restitution = std::min(res.restitution, block->getRestitution());
-                                }
-                            }
+                AABB<float> test(block_aabb);
+                test.min -= 1.e-2f;
+                test.max += 1.e-2f;
+                while (test.intersectAABB(res.pos + hitbox, dist)) {
+                    res.pos += dist;
+                }
+
+                glm::vec3 block_center = glm::vec3(block->getPos()) + glm::vec3(0.5f);
+                glm::ivec3 min_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.min, block_center, normal));
+                glm::ivec3 max_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.max, block_center, normal));
+
+                glm::ivec3 collision_block;
+                res.friction = 0.f;
+                res.restitution = 1.f;
+                for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
+                    for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
+                        for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
+                            const Block* block = _world->findBlock(collision_block);
+                            if (block == nullptr || !block->hasHitbox())
+                                continue;
+                            res.friction = std::max(res.friction, block->getFriction());
+                            res.restitution = std::min(res.restitution, block->getRestitution());
                         }
                     }
-                    // std::cout << "\t\t\tintersection: " << "t=" << res.t << "\tnormal=" << glm::to_string(res.normal) << "\tpos=" << glm::to_string(res.pos) << std::endl;
                 }
+
+                // std::cout << "\t\t\tintersection: " << "t=" << res.t << "\tnormal=" << glm::to_string(res.normal) << "\tpos=" << glm::to_string(res.pos) << std::endl;
             }
 
             if (clip) {
@@ -198,6 +202,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
         const ECS::Collisionnable& collisionable = cm.getComponent<ECS::Collisionnable>(_entity);
         ECS::Movable& movable = cm.getComponent<ECS::Movable>(_entity);
         ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(_entity);
+        bool is_controllable = cm.hasComponent<ECS::Controllable>(_entity);
 
         // Chunk collision detection
         CollisionsInfos collision;
@@ -205,15 +210,19 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
         //           << std::endl
         //           << std::endl
         //           << "Starting detection: dt=" << _deltaTime << std::endl;
-        while (detectCollision(_world, _deltaTime, collision, positionnable, collisionable, movable)) {
+        while ((std::abs(movable.vel.x) > 1.e-4f || std::abs(movable.vel.y) > 1.e-4f || std::abs(movable.vel.z) > 1.e-4f) && detectCollision(_world, _deltaTime, collision, positionnable, collisionable, movable)) {
             // std::cout << "\tCOLLISION: " << std::endl
-            //           << "\t\t" << size_t(collision.block->getType()) << " at " << glm::to_string(collision.block->getPos()) << std::endl
+            //           << "\t\tat " << glm::to_string(collision.pos) << std::endl
             //           << "\t\tt: " << collision.t << std::endl
             //           << "\t\tnormal: " << glm::to_string(collision.normal) << std::endl
             //           << "\t\told pos: " << glm::to_string(positionnable.pos) << std::endl
             //           << "\t\told vel: " << glm::to_string(movable.vel) << std::endl;
 
-            bounce(0.1f, collision.friction, collision.restitution, collision.normal, movable.vel);
+            if (!is_controllable || collision.normal == glm::vec3(0.f, 1.f, 0.f))
+                bounce(0.1f, collision.friction, collision.restitution, collision.normal, movable.vel);
+            else
+                bounce(0.f, 0.f, 0.f, collision.normal, movable.vel);
+
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && movable.vel.y <= -0.05f * ECS::G.y) {
                 groundable.on_ground = true;
                 collision.pos.y += 1.e-2f;

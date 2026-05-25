@@ -19,7 +19,7 @@ enum class BlockType : uint8_t {
     SlimeBlock,
     OakLog,
     OakLeaves,
-    PierreDeLit,  // On ne plagie toujours pas minecraft !
+    PierreDeLit, // On ne plagie toujours pas minecraft !
     __NUMBER_OF_TYPES
 };
 constexpr uint8_t BLOCK_TYPES_N = static_cast<uint8_t>(BlockType::__NUMBER_OF_TYPES);
@@ -39,7 +39,7 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "Pierre de Lit",
 }};
 
-using Te = Textures;  // Pour pas que les lignes en dessous fassent 3.5km
+using Te = Textures; // Pour pas que les lignes en dessous fassent 3.5km
 
 // si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
 // clang-format off
