@@ -32,18 +32,19 @@ void WorldRenderer::updateWorld(World* _world) {
 
     _world->m_removed_chunks.clear();
     _world->m_added_chunks.clear();
+    m_last_time = _world->m_world_time;
+    m_last_render_distance = _world->m_render_distance;
 
-    float angle = (static_cast<float>(_world->m_world_time % DAY_LENGTH ) / DAY_LENGTH) * 2.f * M_PIf;
+    float angle = (static_cast<float>(_world->m_world_time % DAY_LENGTH) / DAY_LENGTH) * 2.f * M_PIf;
     float t = sin(angle) * 0.5f * 0.5f;
     m_sky_color = glm::mix(SKY_NIGHT, SKY_DAY, t);
     m_sun_color = glm::mix(SUN_NOON, SUN_DUSK, t);
-    m_last_time = _world->m_world_time;
+
+    glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR);
+    m_sun_direction = glm::normalize(glm::vec3(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y)));
 }
 
 void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& camera) {
-    glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR); // angle du soleil (nord<->sud, est<->ouest)
-    glm::vec3 sun_direction(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y));
-
     const Camera::Frustum& frustum = camera.getFrustum();
     const glm::vec3& cam_pos = camera.getCamPos();
 
@@ -86,16 +87,6 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
               [](auto& a, auto& b) { return a.first > b.first; });
 
     // --- PASS 3: draw (sequential pointer chasing, unavoidable) ---
-    _chunk_shader.use();
-    _chunk_shader.set("view", camera.getView());
-    _chunk_shader.set("projection", camera.getProjection());
-    _chunk_shader.set("camera_pos", cam_pos);
-    _chunk_shader.set("sun_direction", sun_direction);
-    _chunk_shader.set("sun_color", m_sun_color);
-    _chunk_shader.set("albedo_atlas", 0);
-    _chunk_shader.set("normal_atlas", 1);
-    _chunk_shader.set("specular_atlas", 2);
-
     for (auto [_, chunk_renderer] : draw_list) {
         if (chunk_renderer->getOpaqueTriangles() > 0) {
             _chunk_shader.set("chunk_pos", chunk_renderer->getPos());
@@ -113,12 +104,7 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
 }
-void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader, const Camera& camera) const {
-    _line_shader.use();
-    _line_shader.set("view", camera.getView());
-    _line_shader.set("projection", camera.getProjection());
-    _line_shader.set("color", glm::vec3(1.f));
-
+void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader) const {
     AABB<float> chunk_hitbox(glm::vec3(0), glm::vec3(Chunk::CHUNK_SIZE));
     AABBRenderer box(chunk_hitbox);
     m_render_chunks.forEach([&_line_shader, &box](const ChunkRenderer& chunk_renderer) {
@@ -158,8 +144,8 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
     ImGui::Spacing();
 
     ImGui::DragScalar("World Time", ImGuiDataType_U64, &_world->m_world_time, 10.0f, 0, &DAY_LENGTH);
-    if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_2_PIf, M_2_PIf)) {
-        m_sun_season = std::clamp(m_sun_season, -M_2_PIf, M_2_PIf);
+    if (ImGui::DragFloat("World Season", &m_sun_season, 0.01f, -M_PI_2f, M_PI_2f)) {
+        m_sun_season = std::clamp(m_sun_season, -M_PI_2f, M_PI_2f);
     }
     if (ImGui::Button(_world->m_play ? "Pause" : "Play")) {
         _world->m_play = !_world->m_play;

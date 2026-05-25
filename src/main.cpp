@@ -6,11 +6,13 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+// FILEWATCH
+#include <FileWatch.hpp>
+
 // USUAL INCLUDES
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <FileWatch.hpp>
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -30,12 +32,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
-    glEnable(GL_DEPTH_TEST);                            // Enable depth test
-    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
-    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -65,7 +67,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -81,6 +83,7 @@ GLGlobalContext gl_global_context;
 // Create and compile our GLSL program from the shaders
 ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
 ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
+ShaderProgram chunk_shadow_shader("src/shaders/chunk_shadow_vertex.glsl", "src/shaders/chunk_shadow_fragment.glsl");
 
 // https://stackoverflow.com/questions/244316/reader-writer-locks-in-c
 typedef std::shared_mutex Lock;
@@ -95,7 +98,6 @@ Lock world_lock;
 Lock renderer_lock;
 Lock entities_lock;
 Lock pos_lock;
-// Lock shader_lock;
 
 constexpr size_t WORLD_TPS = 10;
 constexpr float WORLD_FRAME_TIME = 1.0f / WORLD_TPS;
@@ -125,14 +127,13 @@ void worldThread() {
             WriteLock renderer_write(renderer_lock);
             world_renderer.updateWorld(world.get());
         }
-        // world_renderer.updateInterface(window);
     }
 }
 
 void shaderReloadCallback() {
-    // WriteLock shader_write(shader_lock);
     line_shader.load();
     chunk_shader.load();
+    chunk_shadow_shader.load();
 }
 
 int main(void) {
@@ -144,12 +145,11 @@ int main(void) {
     // world_renderer.reserve(world.get());
 
     // Create player entities
-    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 100.f, 26.5f)});
+    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(16.5f, 100.f, 16.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
     ecs_manager.startControl(truc);
-    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 100.f, 26.5f)});
+    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(16.5f, 100.f, 16.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
-    // ecs_manager.startControl(truc2);
 
     // Setup key bindings
     GLenum polygon_mode{GL_FILL};
@@ -192,12 +192,10 @@ int main(void) {
             world->update(controlled_pos);
 
             shaderReloadCallback();
-            // line_shader.load();
-            // chunk_shader.load();
         },
         nullptr);
     window.keyboard.bind(
-        GLFW_KEY_Q,  // Attention en AZERTY GLFW_KEY_Q = A et vice versa vive les QWERTY !!!
+        GLFW_KEY_Q,
         [&]() {
             constexpr glm::vec3 pos_offset(1, 1, 1);
             const glm::ivec3 block_pos = camera.getCamPos() + pos_offset * camera.getFront();
@@ -206,10 +204,12 @@ int main(void) {
         },
         nullptr);
 
+    bool save_shadowmap = false;
+    window.keyboard.bind(GLFW_KEY_P, [&save_shadowmap]() { save_shadowmap = true; }, nullptr);
+
     shaderReloadCallback();
 
     std::atomic<bool> shader_reload_requested{false};
-
     filewatch::FileWatch<std::string> watcher(
         "src/shaders/",
         [&shader_reload_requested](const std::string& path, const filewatch::Event change_type) {
@@ -231,21 +231,21 @@ int main(void) {
             shader_reload_requested.store(true, std::memory_order_release);
         });
 
-    auto [albedo_atlas, normal_atlas, specular_atlas] = Texture::generateAtlasses();
-
+    auto atlasses = RGBATexture::generateAtlasses();
+    RGBATexture& albedo_atlas = atlasses[0];
+    RGBATexture& normal_atlas = atlasses[1];
+    RGBATexture& specular_atlas = atlasses[2];
     albedo_atlas.savePNG("build/albedo_atlas");
     normal_atlas.savePNG("build/normal_atlas");
     specular_atlas.savePNG("build/specular_atlas");
-
-    // Test de l'atlas vide, qui est utilisé comme base pour l'atlas courant
-    Texture atlas_vide(128, 128);
-    atlas_vide.savePNG("build/test_atlas");
-
     albedo_atlas.initShaderData();
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
 
-    {  // Pre start actions
+    ShadowMap sun_shadowmap{2048, 2048};
+    sun_shadowmap.initShaderData();
+
+    { // Pre start actions
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
         controlled_pos.reserve(controlled_entities.size());
@@ -282,6 +282,14 @@ int main(void) {
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
 
+        glm::vec3 cam_pos;
+        {
+            ReadLock window_read(window_lock);
+            WriteLock camera_write(camera_lock);
+            ReadLock entities_read(entities_lock);
+            camera.update(window, ecs_manager, delta_time);
+            cam_pos = camera.getCamPos();
+        }
         {
             WriteLock window_write(window_lock);
             ReadLock world_read(world_lock);
@@ -305,12 +313,43 @@ int main(void) {
         }
 
         // ----------------------------------------------------------------------------------------------------
-        // ---------------------------------------   OBJECTS RENDERING   --------------------------------------
+        // --------------------------------------   SHADOWMAP RENDERING   -------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        albedo_atlas.bind(0);
-        normal_atlas.bind(1);
-        specular_atlas.bind(2);
+        glCullFace(GL_FRONT);
+        { // TODO: pour chaque light
+            glm::mat4 VP;
+            {
+                ReadLock renderer_read(renderer_lock);
+                VP = world_renderer.sunVP(cam_pos);
+                sun_shadowmap.bind(VP);
+            }
+
+            // TODO: pour chaque objets
+            {
+                ReadLock renderer_read(renderer_lock);
+                chunk_shadow_shader.use();
+                chunk_shadow_shader.set("VP", VP);
+                chunk_shadow_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
+                world_renderer.renderChunkShadows(chunk_shadow_shader);
+            }
+
+            if (save_shadowmap) {
+                save_shadowmap = false;
+                sun_shadowmap.savePNG("sun_shadowmap");
+            }
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glCullFace(GL_BACK);
+        {
+            ReadLock window_read(window_lock);
+            glViewport(0, 0, window.getSize().x, window.getSize().y);
+        }
+
+        // ----------------------------------------------------------------------------------------------------
+        // ----------------------------------------   FINAL RENDERING   ---------------------------------------
+        // ----------------------------------------------------------------------------------------------------
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         {
@@ -318,28 +357,39 @@ int main(void) {
             glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 1.f);
         }
         {
-            ReadLock window_read(window_lock);
-            WriteLock camera_write(camera_lock);
-            ReadLock entities_read(entities_lock);
-            camera.update(window, ecs_manager, delta_time);
-        }
-        {
             ReadLock camera_read(camera_lock);
             WriteLock renderer_write(renderer_lock);
-            // WriteLock shader_write(shader_lock);
+            chunk_shader.use();
+            chunk_shader.set("view", camera.getView());
+            chunk_shader.set("projection", camera.getProjection());
+            chunk_shader.set("camera_pos", cam_pos);
+            chunk_shader.set("sun_direction", world_renderer.getSunDirection());
+            chunk_shader.set("sun_color", world_renderer.getSunColor());
+            chunk_shader.set("sun_shadowmap", sun_shadowmap.getGpuSlot());
+            chunk_shader.set("sun_VP", sun_shadowmap.getVP());
+            chunk_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
+            chunk_shader.set("normal_atlas", normal_atlas.getGpuSlot());
+            chunk_shader.set("specular_atlas", specular_atlas.getGpuSlot());
             world_renderer.renderChunks(chunk_shader, camera);
         }
-        if (display_debug) {
-            ReadLock camera_read(camera_lock);
-            ReadLock renderer_read(renderer_lock);
-            // WriteLock shader_write(shader_lock);
-            world_renderer.renderDebugBoxes(line_shader, camera);
-        }
+
+        // Line rendering
         {
             ReadLock camera_read(camera_lock);
+            line_shader.use();
+            line_shader.set("view", camera.getView());
+            line_shader.set("projection", camera.getProjection());
+            line_shader.set("color", glm::vec3(1.f));
+        }
+
+        if (display_debug) {
+            ReadLock renderer_read(renderer_lock);
+            line_shader.set("color", glm::vec3(1.f));
+            world_renderer.renderDebugBoxes(line_shader);
+        }
+        {
             ReadLock entities_read(entities_lock);
-            // WriteLock shader_write(shader_lock);
-            ecs_manager.render(line_shader, camera.getView(), camera.getProjection());
+            ecs_manager.render(line_shader);
         }
 
         // ----------------------------------------------------------------------------------------------------

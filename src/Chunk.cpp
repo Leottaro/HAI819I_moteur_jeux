@@ -106,7 +106,7 @@ void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     std::vector<glm::u8vec3> surface_blocks;
     size_t block_i = 0;
-    constexpr uint32_t MOUTAINT_HEIGHT = 60.f;
+    constexpr uint32_t MOUTAINT_HEIGHT = 10.f;
     switch (_type) {
     case GenType::DEBUG_:
         for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
@@ -158,7 +158,7 @@ void Chunk::generate(GenType _type) {
             for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
                 for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
                     glm::vec3 world_float = glm::vec3(world_pos) / Chunk::CHUNK_SIZE;
-                    const float perlin_height = stb_perlin_noise3_seed(world_float.x, 0.f, world_float.z, 0.f, 0.f, 0.000000000f, m_world->getWorldSeed());
+                    const float perlin_height = stb_perlin_noise3_seed(world_float.x, 0.f, world_float.z, 0.f, 0.f, 0., m_world->getWorldSeed());
                     const int ground_height = static_cast<int>((perlin_height + 1) * MOUTAINT_HEIGHT);
                     // std::cout << world_pos << "/" << ground_height << "\n";
                     Block& block = m_blocks[block_i++];

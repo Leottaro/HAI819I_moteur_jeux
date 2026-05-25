@@ -5,8 +5,8 @@ layout(location = 1) in ivec3 v_normal;
 layout(location = 2) in ivec3 v_tangent;
 layout(location = 3) in ivec3 v_bitangent;
 layout(location = 4) in vec2 v_uv;
-
 uniform ivec3 chunk_pos;
+
 uniform mat4 projection, view;
 
 // out vec3 f_position;
