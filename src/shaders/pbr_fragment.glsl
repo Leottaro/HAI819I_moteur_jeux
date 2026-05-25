@@ -26,15 +26,27 @@ in mat3 f_TBN;
 
 out vec4 out_color;
 
-bool isFragIlluminated(vec4 _fragpos_light_space, sampler2D _shadowmap) {
-  vec3 projectionCoords = _fragpos_light_space.xyz / _fragpos_light_space.w;
-  projectionCoords = projectionCoords * 0.5f + 0.5f;
-  if (projectionCoords.x < 0.f || 1.f < projectionCoords.x ||
-      projectionCoords.y < 0.f || 1.f < projectionCoords.y)
-    return false;
-  float current_depth = projectionCoords.z;
-  float illuminated_depth = texture(_shadowmap, projectionCoords.xy).r;
-  return current_depth <= illuminated_depth;
+const int pcf_filter_size = 1;
+const float one_over_nshadows = 1. / ((2 * pcf_filter_size + 1) * (2 * pcf_filter_size + 1));
+float getShadowFactor(vec4 _fragpos_light_space, sampler2D _shadowmap) {
+  vec3 proj_coords = _fragpos_light_space.xyz / _fragpos_light_space.w;
+  proj_coords = proj_coords * 0.5f + 0.5f;
+  if (proj_coords.x < 0.f || 1.f < proj_coords.x ||
+      proj_coords.y < 0.f || 1.f < proj_coords.y)
+    return 0.f;
+  float current_depth = proj_coords.z;
+
+  float shadow = 1.f;
+  vec2 texel_size = 1.0 / textureSize(_shadowmap, 0);
+  for (int y = -pcf_filter_size; y <= pcf_filter_size; y++) {
+    for (int x = -pcf_filter_size; x <= pcf_filter_size; x++) {
+      vec2 offset = vec2(x, y) * texel_size;
+      float closest_depth = texture(_shadowmap, proj_coords.xy + offset).r;
+      shadow -= current_depth > closest_depth ? one_over_nshadows : 0.;
+    }
+  }
+
+  return shadow;
 }
 
 // PBR
@@ -102,11 +114,13 @@ void main() {
   vec3 Lo = vec3(0.);
   for (int i = 0; i <= nb_lights; i++) {
     // calculate the frag illumination
+    float shadow = 1.f;
     if (i == nb_lights) {
       vec4 fragPosInLightSpace = sun_VP * vec4(f_worldpos, 1.);
-      if (!isFragIlluminated(fragPosInLightSpace, sun_shadowmap))
-        continue;
+      shadow = getShadowFactor(fragPosInLightSpace, sun_shadowmap);
     }
+    if (shadow == 0.f)
+      continue;
 
     // calculate per-light radiance
     vec3 L = i == nb_lights ? sun_direction : lightPositions[i] - f_worldpos;
@@ -132,7 +146,7 @@ void main() {
 
     // add to outgoing radiance Lo
     float NdotL = max(dot(N, L), 0.0);
-    Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+    Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow;
   }
 
   vec3 ambient_light = vec3(0.03) * albedo * ao;

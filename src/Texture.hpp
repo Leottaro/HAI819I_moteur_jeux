@@ -52,8 +52,8 @@ public:
     static constexpr std::array<Texture, 3> generateAtlasses() {
         std::array<Texture, 3> atlasses{Texture(ATLAS_SIZE, ATLAS_SIZE), Texture(ATLAS_SIZE, ATLAS_SIZE), Texture(ATLAS_SIZE, ATLAS_SIZE)};
 
-        size_t x = 0;
-        size_t y = 0;
+        int x = 0;
+        int y = 0;
         for (const std::string_view c : texture_names) {
             if (c == "air")
                 continue;
@@ -63,8 +63,8 @@ public:
                 y++;
             }
 
-            const size_t x_pos = x * TEXTURE_SIZE;
-            const size_t y_pos = y * TEXTURE_SIZE;
+            const int x_pos = x * TEXTURE_SIZE;
+            const int y_pos = y * TEXTURE_SIZE;
 
             std::string name(c);
 
@@ -140,10 +140,10 @@ public:
     inline void saveBMP(const std::string& filePath) const { stbi_write_bmp((filePath + ".bmp").c_str(), m_width, m_height, NB_CHANNELS, reinterpret_cast<const uint8_t*>(m_data.data())); }
     inline void saveTGA(const std::string& filePath) const { stbi_write_tga((filePath + ".tga").c_str(), m_width, m_height, NB_CHANNELS, reinterpret_cast<const uint8_t*>(m_data.data())); }
 
-    inline void applyTexture(const Texture& tex_in, size_t pos_x, size_t pos_y) {
+    inline void applyTexture(const Texture& tex_in, int pos_x, int pos_y) {
         const int in_w = tex_in.getWidth();
         const int in_h = tex_in.getHeight();
-        assert(pos_x + in_w < m_width && pos_y + in_h < m_height);
+        assert(pos_x + in_w <= m_width && pos_y + in_h <= m_height);
         for (int y = 0; y < in_h; y++) {
             for (int x = 0; x < in_w; x++) {
                 setPixel(pos_x + x, pos_y + y, tex_in.getPixel(x, y));

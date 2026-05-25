@@ -149,11 +149,7 @@ public:
         getSystem<ECS::WorldCollisionSystem>().update(cm, _dt);
     }
 
-    void render(ShaderProgram& _line_shader, const glm::mat4& _view, const glm::mat4& _projection) const {
-        _line_shader.use();
-        _line_shader.set("view", _view);
-        _line_shader.set("projection", _projection);
-
+    void render(ShaderProgram& _line_shader) const {
         getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
         getSystem<ECS::OrientationDisplaySystem>().render(cm, _line_shader);
     }

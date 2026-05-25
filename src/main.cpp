@@ -277,25 +277,35 @@ int main(void) {
         // --------------------------------------   SHADOWMAP RENDERING   -------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        if (save_shadowmap) {
-            save_shadowmap = false;
-
-            glCullFace(GL_FRONT);
-            // TODO: pour chaque light
+        glCullFace(GL_FRONT);
+        { // TODO: pour chaque light
             glm::mat4 VP;
             {
                 ReadLock renderer_read(renderer_lock);
                 VP = world_renderer.sunVP(cam_pos);
                 sun_shadowmap.bind(VP);
+            }
 
+            // TODO: pour chaque objets
+            {
+                ReadLock renderer_read(renderer_lock);
                 chunk_shadowmap_shader.use();
                 chunk_shadowmap_shader.set("VP", VP);
                 chunk_shadowmap_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
                 world_renderer.renderChunkShadows(chunk_shadowmap_shader);
             }
-            glCullFace(GL_BACK);
 
-            sun_shadowmap.savePNG("sun_shadowmap");
+            if (save_shadowmap) {
+                save_shadowmap = false;
+                sun_shadowmap.savePNG("sun_shadowmap");
+            }
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glCullFace(GL_BACK);
+        {
+            ReadLock window_read(window_lock);
+            glViewport(0, 0, window.getSize().x, window.getSize().y);
         }
 
         // ----------------------------------------------------------------------------------------------------
@@ -308,23 +318,39 @@ int main(void) {
             glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 1.f);
         }
         {
-            ReadLock window_read(window_lock);
-            glViewport(0, 0, window.getSize().x, window.getSize().y);
-        }
-        {
             ReadLock camera_read(camera_lock);
             WriteLock renderer_write(renderer_lock);
-            world_renderer.renderChunks(chunk_shader, camera, albedo_atlas, normal_atlas, specular_atlas, sun_shadowmap);
+            chunk_shader.use();
+            chunk_shader.set("view", camera.getView());
+            chunk_shader.set("projection", camera.getProjection());
+            chunk_shader.set("camera_pos", cam_pos);
+            chunk_shader.set("sun_direction", world_renderer.getSunDirection());
+            chunk_shader.set("sun_color", world_renderer.getSunColor());
+            chunk_shader.set("sun_shadowmap", sun_shadowmap.getGpuSlot());
+            chunk_shader.set("sun_VP", sun_shadowmap.getVP());
+            chunk_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
+            chunk_shader.set("normal_atlas", normal_atlas.getGpuSlot());
+            chunk_shader.set("specular_atlas", specular_atlas.getGpuSlot());
+            world_renderer.renderChunks(chunk_shader, camera);
         }
-        if (display_debug) {
-            ReadLock camera_read(camera_lock);
-            ReadLock renderer_read(renderer_lock);
-            world_renderer.renderDebugBoxes(line_shader, camera);
-        }
+
+        // Line rendering
         {
             ReadLock camera_read(camera_lock);
+            line_shader.use();
+            line_shader.set("view", camera.getView());
+            line_shader.set("projection", camera.getProjection());
+            line_shader.set("color", glm::vec3(1.f));
+        }
+
+        if (display_debug) {
+            ReadLock renderer_read(renderer_lock);
+            line_shader.set("color", glm::vec3(1.f));
+            world_renderer.renderDebugBoxes(line_shader);
+        }
+        {
             ReadLock entities_read(entities_lock);
-            ecs_manager.render(line_shader, camera.getView(), camera.getProjection());
+            ecs_manager.render(line_shader);
         }
 
         // ----------------------------------------------------------------------------------------------------
