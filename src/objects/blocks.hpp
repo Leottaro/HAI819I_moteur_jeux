@@ -22,7 +22,7 @@ enum class BlockType : uint8_t {
     PierreDeLit,  // On ne plagie toujours pas minecraft !
     __NUMBER_OF_TYPES
 };
-constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::__NUMBER_OF_TYPES);
+constexpr uint8_t BLOCK_TYPES_N = static_cast<uint8_t>(BlockType::__NUMBER_OF_TYPES);
 
 constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "air",
@@ -88,4 +88,4 @@ constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
     {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // Pierre de Lit
 }};
 
-constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<size_t>(type)]; }
+constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<uint8_t>(type)]; }

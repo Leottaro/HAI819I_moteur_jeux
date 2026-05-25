@@ -25,7 +25,7 @@ enum class Textures : uint8_t {
 
 constexpr uint32_t ATLAS_DIMS = ceil(sqrt(static_cast<float>(Textures::NUMBER_OF_TEXTURES) - 1));
 
-constexpr uint64_t TEXTURE_NUMBER = static_cast<size_t>(Textures::NUMBER_OF_TEXTURES);
+constexpr uint8_t TEXTURE_NUMBER = static_cast<uint8_t>(Textures::NUMBER_OF_TEXTURES);
 constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{
     "air",
     "stone",

@@ -133,24 +133,32 @@ public:
     inline void changeControlType(ECS::ControlType _new_type) { getSystem<ECS::ControllingSystem>().changeControlType(cm, _new_type); }
     inline void toggleControlType() { getSystem<ECS::ControllingSystem>().toggleControlType(cm); }
 
-    inline void update(Window& _window, float _dt) {
+    inline void update(Window& _window, const World* _world, float _dt) {
         // PositionSystem: delete every out of world entities
-        std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm);
+        std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm, _world);
         for (ECS::EntityId entity : entities_to_destroy)
             destroyEntity(entity);
 
         // ControllingSystem: Move the entity
-        getSystem<ECS::ControllingSystem>().update(cm, _window, _dt);
+        getSystem<ECS::ControllingSystem>().update(cm, _window, _world, _dt);
 
         // PhysicsSystem: integrate forces and update velocities.
-        getSystem<ECS::PhysicsSystem>().update(cm, _dt);
+        getSystem<ECS::PhysicsSystem>().update(cm, _world, _dt);
 
         // WorldCollisionSystem: sweep-and-slide.
-        getSystem<ECS::WorldCollisionSystem>().update(cm, _dt);
+        getSystem<ECS::WorldCollisionSystem>().update(cm, _world, _dt);
+    }
+
+    inline void updateWorld(World* world) const {
+        getSystem<ECS::WorldInteractorSystem>().updateWorld(cm, world);
+    }
+    inline void clearWorldUpdates() {
+        getSystem<ECS::WorldInteractorSystem>().clearUpdates(cm);
     }
 
     void render(ShaderProgram& _line_shader) const {
         getSystem<ECS::HitBoxDisplaySystem>().render(cm, _line_shader);
         getSystem<ECS::OrientationDisplaySystem>().render(cm, _line_shader);
+        getSystem<ECS::ControllingSystem>().render(cm, _line_shader);
     }
 };

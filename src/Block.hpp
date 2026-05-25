@@ -6,6 +6,8 @@
 
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
+class Chunk;
+
 class Block {
 public:
     static constexpr glm::ivec3 posToBlockPos(const glm::vec3& _pos) {
@@ -38,7 +40,7 @@ public:
     };
 
     static constexpr std::array<glm::vec2, 4> getUV(BlockType block_type, int face_i) {
-        size_t type_idx = static_cast<size_t>(block_type) - 1;
+        uint8_t type_idx = static_cast<uint8_t>(block_type) - 1;
         const auto& uv = UV_TABLE_DATA[type_idx][face_i];
         const float atlas_dims = static_cast<float>(ATLAS_DIMS);
         return {
@@ -98,6 +100,7 @@ public:
 
         return *this;
     }
+
     ~Block() = default;
 
     Block() : m_type(BlockType::Air) {}
@@ -107,6 +110,7 @@ public:
     inline BlockType& getType() { return m_type; }
     inline const glm::ivec3& getPos() const { return m_pos; }
     inline glm::ivec3& getPos() { return m_pos; }
+    inline Block shallowCopy() const { return Block(m_type, m_pos); }
 
     constexpr float getFriction() const { return getBlockTypeData(m_type).friction; }
     constexpr float getRestitution() const { return getBlockTypeData(m_type).restitution; }
@@ -114,4 +118,6 @@ public:
     constexpr float getDensity() const { return getBlockTypeData(m_type).fluid_density; }
     constexpr bool hasHitbox() const { return getBlockTypeData(m_type).has_hitbox; }
     constexpr BlockTransparency getTransparence() const { return getBlockTypeData(m_type).transparence; }
+
+    friend Chunk;
 };

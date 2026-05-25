@@ -28,19 +28,19 @@ static constexpr const char* GenTypeNames[] = {
     "Overworld"};
 
 class Chunk {
-   public:
-    static constexpr uint8_t CHUNK_SIZE = 32;  // The size of a cubic chunk
+public:
+    static constexpr uint8_t CHUNK_SIZE = 32; // The size of a cubic chunk
     static constexpr size_t NB_BLOCKS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
     static constexpr size_t MAX_VERTICES = NB_BLOCKS * 6 * 4;
     static constexpr size_t MAX_TRIANGLES = NB_BLOCKS * 6 * 2;
 
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
-        glm::ivec3(0, 0, -CHUNK_SIZE),  // Front (-Z)
-        glm::ivec3(-CHUNK_SIZE, 0, 0),  // Left  (-X)
-        glm::ivec3(0, -CHUNK_SIZE, 0),  // Bottom(-Y)
-        glm::ivec3(0, 0, CHUNK_SIZE),   // Back  (+Z)
-        glm::ivec3(CHUNK_SIZE, 0, 0),   // Right (+X)
-        glm::ivec3(0, CHUNK_SIZE, 0),   // Top   (+Y)
+        glm::ivec3(0, 0, -CHUNK_SIZE), // Front (-Z)
+        glm::ivec3(-CHUNK_SIZE, 0, 0), // Left  (-X)
+        glm::ivec3(0, -CHUNK_SIZE, 0), // Bottom(-Y)
+        glm::ivec3(0, 0, CHUNK_SIZE),  // Back  (+Z)
+        glm::ivec3(CHUNK_SIZE, 0, 0),  // Right (+X)
+        glm::ivec3(0, CHUNK_SIZE, 0),  // Top   (+Y)
     };
 
     static constexpr glm::ivec3 posToChunkPos(const glm::vec3& _pos) {
@@ -58,22 +58,23 @@ class Chunk {
         float dist = std::sqrt(std::pow(_a.x - _b.x - 16, 2) + std::pow(_a.y - _b.y - 16, 2) + std::pow(_a.z - _b.z - 16, 2));
         return dist / CHUNK_SIZE;
     }
-   private:
+
+private:
     World* m_world{nullptr};
     glm::ivec3 m_pos;
     std::array<Block, NB_BLOCKS> m_blocks{initBlocks()};
     AABB<float> m_aabb;
     // std::optional<GreyMap> m_heightmap;
-    bool* m_should_rebuild_mesh{nullptr};  // For the ChunkRenderer
+    bool* m_should_rebuild_mesh{nullptr}; // For the ChunkRenderer
 
     inline static constexpr size_t posToBlockI(uint8_t x, uint8_t y, uint8_t z) { return (y * CHUNK_SIZE + x) * CHUNK_SIZE + z; }
     inline static constexpr size_t posToBlockI(const glm::u8vec3& _relative_pos) { return (_relative_pos.x * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.y; }
     static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
         -CHUNK_SIZE,              // Front (-Z)
-        -CHUNK_SIZE* CHUNK_SIZE,  // Left  (-X)
+        -CHUNK_SIZE * CHUNK_SIZE, // Left  (-X)
         -1,                       // Bottom(-Y)
         CHUNK_SIZE,               // Back  (+Z)
-        CHUNK_SIZE* CHUNK_SIZE,   // Right (+X)
+        CHUNK_SIZE * CHUNK_SIZE,  // Right (+X)
         1,                        // Top   (+Y)
     };
     static constexpr std::array<Block, NB_BLOCKS> initBlocks() {
@@ -104,7 +105,7 @@ class Chunk {
     inline Block& getBlock(const glm::ivec3& _block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
     void generate(GenType _type);
 
-   public:
+public:
     std::array<Chunk*, 6> m_neighbours{nullptr};
 
     Chunk(Chunk&& other) : m_world(other.m_world), m_pos(other.m_pos), m_blocks(other.m_blocks), m_aabb(other.m_aabb), /*m_heightmap(other.m_heightmap),*/ m_neighbours(other.m_neighbours) {
@@ -147,21 +148,34 @@ class Chunk {
     inline const Block& getBlock(const glm::ivec3& _block_pos) const { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
     Chunk* getChunk(const glm::vec3& _pos) const;
     Block* findBlock(const glm::ivec3& _block_pos) const;
-    void findSolidBlocks(const glm::vec3& _start, const glm::vec3& _end, std::vector<const Block*>& blocks) const;
+    std::vector<const Block*> findBlockLine(const glm::vec3& _start, const glm::vec3& _end) const;
 
     inline void setBlockType(const glm::ivec3& _block_pos, BlockType _type) {
         Block& block = getBlock(_block_pos);
         BlockType& block_type = block.getType();
+        if (block_type == BlockType::PierreDeLit) {
+            std::cout << "On ne casse pas de pierre de lit..." << std::endl;
+            return;
+        }
+        if (block_type == _type)
+            return;
+
         if (m_should_rebuild_mesh != nullptr) {
-            int translucent_diff = (getBlockTypeData(_type).transparence == BlockTransparency::TRANSLUCENT) - (getBlockTypeData(block_type).transparence == BlockTransparency::TRANSLUCENT);
-            if (translucent_diff != 0) {
-                *m_should_rebuild_mesh = true;
-            }
+            *m_should_rebuild_mesh = true;
+        }
+
+        if (getBlockTypeData(block_type).transparence == getBlockTypeData(_type).transparence) // On skip si ils ont la même transparence parce que pas besoin d'actualiser la mesh des potentiels chunks d'à côté
+            return;
+        for (uint axis = 0; axis < 3; axis++) {
+            uint face_axis = (axis + 1) % 3; // pour match l'ordre des faces
+            if (_block_pos[axis] == m_pos[axis] && m_neighbours[face_axis] != nullptr && m_neighbours[face_axis]->m_should_rebuild_mesh != nullptr)
+                *m_neighbours[face_axis]->m_should_rebuild_mesh = true;
+            if (_block_pos[axis] == m_pos[axis] + CHUNK_SIZE - 1 && m_neighbours[face_axis + 3] != nullptr && m_neighbours[face_axis + 3]->m_should_rebuild_mesh != nullptr)
+                *m_neighbours[face_axis + 3]->m_should_rebuild_mesh = true;
         }
         block_type = _type;
     }
 
-    // bool isVisible(const Camera &_camera); // Check if the chunk is in the frustum
     void updateBlockNeighbours(uint8_t _face_i);
 
     friend World;
@@ -217,7 +231,7 @@ class ChunkRenderer {
         }
     }
 
-   public:
+public:
     ChunkRenderer(ChunkRenderer&& other) : m_opaque_VAO(other.m_opaque_VAO), m_opaque_VBO(other.m_opaque_VBO), m_opaque_EBO(other.m_opaque_EBO), m_opaque_vertices(other.m_opaque_vertices), m_opaque_triangles(other.m_opaque_triangles), m_translucent_VAO(other.m_translucent_VAO), m_translucent_VBO(other.m_translucent_VBO), m_translucent_EBO(other.m_translucent_EBO), m_translucent_vertices(other.m_translucent_vertices), m_translucent_triangles(other.m_translucent_triangles) {
         other.setChunk(nullptr);
         other.m_opaque_VAO = other.m_opaque_VBO = other.m_opaque_EBO = other.m_opaque_vertices = other.m_opaque_triangles = other.m_translucent_VAO = other.m_translucent_VBO = other.m_translucent_EBO = other.m_translucent_vertices = 0;
@@ -266,8 +280,7 @@ class ChunkRenderer {
     inline size_t getOpaqueTriangles() const { return m_opaque_triangles; }
     inline size_t getTranslucentTriangles() const { return m_translucent_triangles; }
 
-    void
-    initShaderData();
+    void initShaderData();
     void updateShaderData(const glm::vec3& _cam_pos);
     void renderOpaque() const;
     void renderTranslucent() const;

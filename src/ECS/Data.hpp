@@ -16,8 +16,9 @@
 
 namespace ECS {
 using ComponentId = std::uint8_t;
-using EntityId = std::uint16_t;
-constexpr EntityId MAX_ENTITIES = 65535;
+using EntityId = std::uint32_t;
+constexpr EntityId MAX_ENTITIES = 1048576;
+constexpr uint64_t WORLD_INTERACTION_COOLDOWN = 100; // in ms
 constexpr glm::vec3 G{0.f, -100.f / 3.f, 0.f};
 
 enum class ControlType : uint8_t {
@@ -28,15 +29,13 @@ enum class ControlType : uint8_t {
     __COUNT
 };
 static constexpr const char* CONTROL_TYPES_STR = "FirstPerson\0ThirdPerson\0FreeCam\0FreeCamFrustum\0";
-static constexpr size_t NB_CONTROL_TYPES = static_cast<size_t>(ControlType::__COUNT);
+static constexpr uint8_t NB_CONTROL_TYPES = static_cast<uint8_t>(ControlType::__COUNT);
 
 // -------------------------------------------------------------------------
 // COMPONENTS
 // -------------------------------------------------------------------------
 struct Positionnable {
-    const World* current_world{nullptr};
     glm::vec3 pos{0.f, 0.f, 0.f};
-    glm::vec3 last_pos{0.f, 0.f, 0.f};
 };
 struct Collisionnable {
     std::vector<AABB<float>> hitboxes{};
@@ -64,8 +63,13 @@ struct Orientable {
     glm::vec3 eye_pos{0.f};
 };
 struct Controllable {
+    BlockType block_in_hand{BlockType::Stone};
     ControlType type{ControlType::ThirdPerson};
     float distance_to_center{5.f}; // Only in third person
+};
+struct WorldInteraction {
+    uint64_t last_interaction_time{};
+    std::vector<Block> blocks_to_change{}; // Will set this block in its position in the world.
 };
 
 // L'ensemble des composants, tout le reste est dérivé automatiquement
@@ -78,7 +82,8 @@ using ComponentList = std::tuple<
     CollisionDisplay,
     Orientable,
     OrientationDisplay,
-    Controllable>;
+    Controllable,
+    WorldInteraction>;
 
 // Le nombre total de composants
 constexpr std::size_t NB_COMPONENTS = std::tuple_size_v<ComponentList>;
@@ -146,7 +151,7 @@ struct __EntityTypeInputs;
 
 template <>
 struct __EntityTypeComponents<TestEntity> {
-    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, OrientationDisplay, Controllable>;
+    using type = std::tuple<Positionnable, Collisionnable, Movable, Groundable, PhysicsStats, CollisionDisplay, Orientable, OrientationDisplay, Controllable, WorldInteraction>;
 };
 template <>
 struct __EntityTypeInputs<TestEntity> {
@@ -177,13 +182,15 @@ class WorldCollisionSystem;
 class HitBoxDisplaySystem;
 class OrientationDisplaySystem;
 class ControllingSystem;
+class WorldInteractorSystem;
 using SystemList = std::tuple<
     PositionSystem,
     PhysicsSystem,
     WorldCollisionSystem,
     HitBoxDisplaySystem,
     OrientationDisplaySystem,
-    ControllingSystem>;
+    ControllingSystem,
+    WorldInteractorSystem>;
 
 using SystemId = std::uint8_t;
 constexpr std::size_t NB_SYSTEMS = std::tuple_size_v<SystemList>;

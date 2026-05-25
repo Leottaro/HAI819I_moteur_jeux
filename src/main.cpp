@@ -32,12 +32,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
-    glEnable(GL_DEPTH_TEST);                            // Enable depth test
-    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
-    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -67,7 +67,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -120,7 +120,19 @@ void worldThread() {
 
         {
             WriteLock world_write(world_lock);
-            world->update(pos_copy);
+            ReadLock renderer_read(renderer_lock);
+            ReadLock entities_read(entities_lock);
+            ecs_manager.updateWorld(world.get());
+        }
+
+        {
+            WriteLock entities_write(entities_lock);
+            ecs_manager.clearWorldUpdates();
+        }
+
+        {
+            WriteLock world_write(world_lock);
+            world->selfUpdate(pos_copy);
         }
 
         {
@@ -145,10 +157,10 @@ int main(void) {
     // world_renderer.reserve(world.get());
 
     // Create player entities
-    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(16.5f, 100.f, 16.5f)});
+    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
     ecs_manager.startControl(truc);
-    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(16.5f, 100.f, 16.5f)});
+    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
 
     // Setup key bindings
@@ -189,18 +201,9 @@ int main(void) {
 
             world_renderer.clear();
             world->clear();
-            world->update(controlled_pos);
+            world->selfUpdate(controlled_pos);
 
             shaderReloadCallback();
-        },
-        nullptr);
-    window.keyboard.bind(
-        GLFW_KEY_Q,
-        [&]() {
-            constexpr glm::vec3 pos_offset(1, 1, 1);
-            const glm::ivec3 block_pos = camera.getCamPos() + pos_offset * camera.getFront();
-            Block* block = world->findBlock(block_pos);
-            block->getType() = BlockType::DiamondOre;
         },
         nullptr);
 
@@ -245,7 +248,7 @@ int main(void) {
     ShadowMap sun_shadowmap{2048, 2048};
     sun_shadowmap.initShaderData();
 
-    {  // Pre start actions
+    { // Pre start actions
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
         controlled_pos.reserve(controlled_entities.size());
@@ -253,7 +256,7 @@ int main(void) {
             controlled_pos.push_back(ecs_manager.getComponent<ECS::Positionnable>(entity).pos);
         }
 
-        world->update(controlled_pos);
+        world->selfUpdate(controlled_pos);
         camera.update(window, ecs_manager, 1.f);
     }
 
@@ -282,15 +285,15 @@ int main(void) {
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
 
-        glm::vec3 cam_pos;
-        glm::mat4 cam_proj, cam_view;
-        Camera::Frustum cam_frustum;
         {
             WriteLock window_write(window_lock);
             ReadLock world_read(world_lock);
             WriteLock entities_write(entities_lock);
-            ecs_manager.update(window, delta_time);
+            ecs_manager.update(window, world.get(), delta_time);
         }
+        glm::vec3 cam_pos;
+        glm::mat4 cam_proj, cam_view;
+        Camera::Frustum cam_frustum;
         {
             ReadLock window_read(window_lock);
             WriteLock camera_write(camera_lock);
@@ -322,7 +325,7 @@ int main(void) {
         // ----------------------------------------------------------------------------------------------------
 
         glCullFace(GL_FRONT);
-        {  // TODO: pour chaque light
+        { // TODO: pour chaque light
             glm::mat4 VP;
             {
                 ReadLock renderer_read(renderer_lock);
@@ -349,7 +352,7 @@ int main(void) {
         glCullFace(GL_BACK);
         {
             ReadLock window_read(window_lock);
-            glViewport(0, 0, window.getSize().x, window.getSize().y);
+            glViewport(0, 0, window.getEffectiveSize().x, window.getEffectiveSize().y);
         }
 
         // ----------------------------------------------------------------------------------------------------

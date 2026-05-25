@@ -14,12 +14,9 @@ const Block* World::findBlock(const glm::ivec3& _block_pos) const {
                             : nullptr;
 }
 
-std::vector<const Block*> World::findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end) const {
-    const Chunk* start_chunk = findChunk(Chunk::blockPosToChunkPos(start));
-    std::vector<const Block*> res;
-    if (start_chunk != nullptr)
-        start_chunk->findSolidBlocks(start, end, res);
-    return res;
+std::vector<const Block*> World::findBlockLine(const glm::vec3& start, const glm::vec3& end) const {
+    const Chunk* start_chunk = findChunk(Chunk::posToChunkPos(start));
+    return start_chunk != nullptr ? start_chunk->findBlockLine(start, end) : std::vector<const Block*>{};
 }
 
 Chunk* World::addChunk(const glm::ivec3& _chunk_pos) {
@@ -131,7 +128,7 @@ bool World::generate(const std::vector<glm::vec3>& _centers) {
     return res;
 }
 
-void World::update(const std::vector<glm::vec3>& _centers) {
+void World::selfUpdate(const std::vector<glm::vec3>& _centers) {
     if (!m_play)
         return;
     m_world_time++;

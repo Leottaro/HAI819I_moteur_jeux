@@ -35,7 +35,7 @@ public:
     static constexpr size_t getMaxChunkNumber(size_t render_distance) { return 0.75f * M_PIf * render_distance * render_distance * render_distance; }
 
 private:
-    uint m_render_distance{8};
+    uint m_render_distance{16};
     int m_world_seed = 0;
     GenType m_gentype{GenType::OVERWORLD};
     ChunkStorage m_chunks{};
@@ -66,7 +66,7 @@ public:
     inline bool isChunkFrontier(const glm::ivec3& _chunk_pos) const { return m_chunks_frontier.find(_chunk_pos) != m_chunks_frontier.end(); }
     inline const Chunk* findChunk(const glm::ivec3& _chunk_pos) const { return m_chunks.at(_chunk_pos); }
     const Block* findBlock(const glm::ivec3& _block_pos) const;
-    std::vector<const Block*> findSolidBlocks(const glm::ivec3& start, const glm::ivec3& end) const;
+    std::vector<const Block*> findBlockLine(const glm::vec3& start, const glm::vec3& end) const;
 
     inline void reserveChunks() { m_chunks.reserve(World::getMaxChunkNumber(m_render_distance)); }
     inline Chunk* findChunk(const glm::ivec3& _chunk_pos) { return m_chunks.at(_chunk_pos); }
@@ -89,7 +89,7 @@ public:
     // inline ECS::EntityId addTestEntity(const glm::vec3& _pos) { return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}}); }
 
     // Update
-    void update(const std::vector<glm::vec3>& _centers);
+    void selfUpdate(const std::vector<glm::vec3>& _centers);
     inline void clear() {
         m_chunks.clear();
         m_chunks_frontier.clear();
