@@ -22,8 +22,6 @@
 #include "objects/textures.hpp"
 #include "src/Helpers.hpp"
 
-class ShadowMap;
-
 inline GLuint gpu_slot{0};
 
 template <uint8_t __NB_CHANNELS, GLint __GL_FORMAT>
@@ -168,8 +166,6 @@ public:
             m_texture_id = 0;
         }
     }
-
-    friend ShadowMap;
 };
 
 using GrayScaleTexture = Texture<1, GL_R>;
@@ -199,22 +195,25 @@ public:
 
     inline bool initShaderData() {
         glGenFramebuffers(1, &m_FBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 
         // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
         m_texture_gpu_slot = gpu_slot++;
         glActiveTexture(GL_TEXTURE0 + m_texture_gpu_slot);
         glGenTextures(1, &m_texture_i);
         glBindTexture(GL_TEXTURE_2D, m_texture_i);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
+        constexpr float bordercolor[] = {0.f, 0.f, 0.f, 0.f};
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, bordercolor);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_texture_i, 0);
-        glDrawBuffer(GL_NONE); // TODO: No color buffer is drawn to.
-        glReadBuffer(GL_NONE); // TODO: No color buffer is drawn to.
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -224,6 +223,8 @@ public:
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             return false;
         }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
     inline void bind(const glm::mat4& _VP) {
         m_VP = _VP;

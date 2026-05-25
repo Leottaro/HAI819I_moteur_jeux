@@ -283,12 +283,17 @@ int main(void) {
         last_frame = currentFrame;
 
         glm::vec3 cam_pos;
+        glm::mat4 cam_proj, cam_view;
+        Camera::Frustum cam_frustum;
         {
             ReadLock window_read(window_lock);
             WriteLock camera_write(camera_lock);
             ReadLock entities_read(entities_lock);
             camera.update(window, ecs_manager, delta_time);
             cam_pos = camera.getCamPos();
+            cam_proj = camera.getProjection();
+            cam_view = camera.getView();
+            cam_frustum = camera.getFrustum();
         }
         {
             WriteLock window_write(window_lock);
@@ -357,11 +362,10 @@ int main(void) {
             glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 1.f);
         }
         {
-            ReadLock camera_read(camera_lock);
             WriteLock renderer_write(renderer_lock);
             chunk_shader.use();
-            chunk_shader.set("view", camera.getView());
-            chunk_shader.set("projection", camera.getProjection());
+            chunk_shader.set("view", cam_view);
+            chunk_shader.set("projection", cam_proj);
             chunk_shader.set("camera_pos", cam_pos);
             chunk_shader.set("sun_direction", world_renderer.getSunDirection());
             chunk_shader.set("sun_color", world_renderer.getSunColor());
@@ -370,17 +374,14 @@ int main(void) {
             chunk_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
             chunk_shader.set("normal_atlas", normal_atlas.getGpuSlot());
             chunk_shader.set("specular_atlas", specular_atlas.getGpuSlot());
-            world_renderer.renderChunks(chunk_shader, camera);
+            world_renderer.renderChunks(chunk_shader, cam_frustum, cam_pos);
         }
 
         // Line rendering
-        {
-            ReadLock camera_read(camera_lock);
-            line_shader.use();
-            line_shader.set("view", camera.getView());
-            line_shader.set("projection", camera.getProjection());
-            line_shader.set("color", glm::vec3(1.f));
-        }
+        line_shader.use();
+        line_shader.set("view", cam_view);
+        line_shader.set("projection", cam_proj);
+        line_shader.set("color", glm::vec3(1.f));
 
         if (display_debug) {
             ReadLock renderer_read(renderer_lock);

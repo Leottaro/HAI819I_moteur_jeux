@@ -15,7 +15,7 @@
 class World;
 class ChunkRenderer;
 
-enum class GenType {
+enum class GenType : uint8_t {
     DEBUG_,
     SUPERFLAT,
     OVERWORLD,

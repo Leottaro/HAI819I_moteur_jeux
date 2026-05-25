@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <string_view>
 
-enum class Textures : uint64_t {
+enum class Textures : uint8_t {
     air = 0,
     stone,
     dirt,

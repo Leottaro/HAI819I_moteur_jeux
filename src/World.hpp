@@ -19,7 +19,7 @@ constexpr uint64_t TIME_SUNSET = DAY_LENGTH / 2;
 constexpr uint64_t TIME_MIDNIGHT = 3 * DAY_LENGTH / 4;
 constexpr double TIME_ANGLE_FACTOR = 2 * M_PIf32 / DAY_LENGTH;
 
-enum class Gamerules : size_t {
+enum class Gamerules : uint8_t {
     doDaylightCycle = 0,
     NB_GAMERULES
 };

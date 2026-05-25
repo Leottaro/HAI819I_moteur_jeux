@@ -7,7 +7,7 @@
 
 #include "src/objects/textures.hpp"
 
-enum class BlockType : size_t {
+enum class BlockType : uint8_t {
     Air = 0,
     Stone,
     Dirt,
@@ -55,7 +55,7 @@ constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DA
     {{TEX(Te::oak_leaves),      TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves)}},      // OakLeaves
 }};
 
-enum class BlockTransparency : size_t {
+enum class BlockTransparency : uint8_t {
     SOLID = 0,
     TRANSPARENT,
     SEMI_TRANSPARENT,

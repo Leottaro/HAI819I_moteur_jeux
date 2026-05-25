@@ -44,7 +44,7 @@ public:
     void setWorld(World* _world, const Camera& camera); // need world write
     void updateWorld(World* _world);                    // need world read
 
-    void renderChunks(ShaderProgram& _chunk_shader, const Camera& camera);
+    void renderChunks(ShaderProgram& _chunk_shader, const Camera::Frustum& _frustum, const glm::vec3& _cam_pos);
     void renderDebugBoxes(ShaderProgram& _line_shader) const;
 
     void updateInterface(World* _world, const std::vector<glm::vec3>& world_gen_pos);
@@ -52,8 +52,7 @@ public:
     inline const glm::vec3& getSunDirection() const { return m_sun_direction; }
     inline const glm::vec3& getSunColor() const { return m_sun_color; }
     inline glm::mat4 sunVP(const glm::vec3& _cam_pos) const {
-        // float frustum_half_size = m_last_render_distance * Chunk::CHUNK_SIZE;
-        float frustum_half_size = 12.f;
+        float frustum_half_size = m_last_render_distance * Chunk::CHUNK_SIZE;
         glm::vec3 light_pos = _cam_pos - (-m_sun_direction) * frustum_half_size;
         glm::mat4 view = glm::lookAt(light_pos, _cam_pos, glm::vec3(1.f, 0.f, 0.f));
         glm::mat4 proj = glm::ortho(-frustum_half_size, frustum_half_size, -frustum_half_size, frustum_half_size, 0.1f, 2.f * frustum_half_size);

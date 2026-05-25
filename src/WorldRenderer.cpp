@@ -44,21 +44,18 @@ void WorldRenderer::updateWorld(World* _world) {
     m_sun_direction = glm::normalize(glm::vec3(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y)));
 }
 
-void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& camera) {
-    const Camera::Frustum& frustum = camera.getFrustum();
-    const glm::vec3& cam_pos = camera.getCamPos();
-
+void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Frustum& _frustum, const glm::vec3& _cam_pos) {
     for (const glm::ivec3& chunk_pos : m_removed_chunks)
         m_render_chunks.remove(chunk_pos);
     for (Chunk* chunk : m_added_chunks)
-        m_render_chunks.emplace(chunk->getPos(), chunk, cam_pos);
+        m_render_chunks.emplace(chunk->getPos(), chunk, _cam_pos);
     m_removed_chunks.clear();
     m_added_chunks.clear();
 
-    glm::ivec3 cam_chunk = Chunk::posToChunkPos(cam_pos);
+    glm::ivec3 cam_chunk = Chunk::posToChunkPos(_cam_pos);
     bool rebuild_all = cam_chunk != m_last_cam_chunk;
 
-    m_render_chunks.forEach([rebuild_all, cam_pos, cam_chunk](ChunkRenderer& chunk_renderer) {
+    m_render_chunks.forEach([rebuild_all, _cam_pos, cam_chunk](ChunkRenderer& chunk_renderer) {
         if (rebuild_all)
             chunk_renderer.shouldRebuildMesh() = true;
 
@@ -67,7 +64,7 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
             cam_chunk.x == chunk_renderer.getPos().x ||
             cam_chunk.y == chunk_renderer.getPos().y ||
             cam_chunk.z == chunk_renderer.getPos().z) {
-            chunk_renderer.updateShaderData(cam_pos);
+            chunk_renderer.updateShaderData(_cam_pos);
         }
     });
     m_last_cam_chunk = cam_chunk;
@@ -75,11 +72,11 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
     std::vector<std::pair<float, const ChunkRenderer*>> draw_list;
     draw_list.reserve(m_render_chunks.size());
 
-    m_render_chunks.forEach([&draw_list, frustum, cam_pos](const ChunkRenderer& chunk_renderer) {
+    m_render_chunks.forEach([&draw_list, _frustum, _cam_pos](const ChunkRenderer& chunk_renderer) {
         if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0) // on skip les chunks sans triangles
-            && frustum.isVisible(chunk_renderer.getAABB())                                            // On skip les chunk hors du frustum
+            && _frustum.isVisible(chunk_renderer.getAABB())                                           // On skip les chunk hors du frustum
         ) {
-            float dist = glm::distance(cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
+            float dist = glm::distance(_cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
             draw_list.push_back({dist, &chunk_renderer});
         }
     });
@@ -135,8 +132,9 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
         _world->generate(world_gen_pos);
     }
 
-    if (ImGui::InputScalar("Render distance", ImGuiDataType_U32, &_world->m_render_distance)) {
-        _world->m_render_distance = std::max(_world->m_render_distance, 1U);
+    uint render_distance = _world->m_render_distance;
+    if (ImGui::InputScalar("Render distance", ImGuiDataType_U32, &render_distance)) {
+        _world->m_render_distance = std::max(render_distance, 1U);
     }
 
     ImGui::Spacing();
