@@ -207,7 +207,7 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-        constexpr float bordercolor[] = {0.f, 0.f, 0.f, 0.f};
+        constexpr float bordercolor[] = {1.f, 1.f, 1.f, 1.f};
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, bordercolor);
 
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);

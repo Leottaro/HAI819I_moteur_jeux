@@ -53,10 +53,9 @@ public:
             (_block_pos.z < 0 && _block_pos.z % CHUNK_SIZE != 0 ? _block_pos.z / CHUNK_SIZE - 1 : _block_pos.z / CHUNK_SIZE) * CHUNK_SIZE);
     }
 
-    // TODO : Virer le sqrt là où c'est possible parce que c'est le mal
-    static constexpr float chunkDistance(const glm::vec3& _a, const glm::vec3& _b) {
-        float dist = std::sqrt(std::pow(_a.x - _b.x - 16, 2) + std::pow(_a.y - _b.y - 16, 2) + std::pow(_a.z - _b.z - 16, 2));
-        return dist / CHUNK_SIZE;
+    static constexpr float chunkSquaredDistance(const glm::ivec3& _chunk1, const glm::ivec3& _chunk2) {
+        float dist = std::pow(_chunk1.x - _chunk2.x, 2) + std::pow(_chunk1.y - _chunk2.y, 2) + std::pow(_chunk1.z - _chunk2.z, 2);
+        return dist / (CHUNK_SIZE * CHUNK_SIZE);
     }
 
 private:
@@ -108,7 +107,7 @@ private:
 public:
     std::array<Chunk*, 6> m_neighbours{nullptr};
 
-    Chunk(Chunk&& other) : m_world(other.m_world), m_pos(other.m_pos), m_blocks(other.m_blocks), m_aabb(other.m_aabb), /*m_heightmap(other.m_heightmap),*/ m_neighbours(other.m_neighbours) {
+    Chunk(Chunk&& other) : m_world(other.m_world), m_pos(other.m_pos), m_blocks(other.m_blocks), m_aabb(other.m_aabb), m_neighbours(other.m_neighbours) {
         for (uint i = 0; i < 6; i++)
             if (m_neighbours[i] != nullptr)
                 m_neighbours[i]->m_neighbours[OPPOSITE_FACE[i]] = this;

@@ -105,12 +105,14 @@ private:
 
     inline void sizeCallback(GLFWwindow* window, int width, int height) {
         // cout << "window size: " << width << ", " << height << endl;
-        glViewport(0, 0, width, height);
         if (m_fullscreen)
             return;
         m_size.x = width;
         m_size.y = height;
         m_aspect_ratio = double(m_size.x) / m_size.y;
+        if (!m_fullscreen) {
+            m_effective_size = m_size;
+        }
     }
 
     inline void posCallback(GLFWwindow* window, int width, int height) {

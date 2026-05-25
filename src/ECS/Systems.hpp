@@ -27,6 +27,8 @@ public:
     std::vector<ECS::EntityId> getOutOfBoundEntities(ComponentManager& cm, const World* _world) const {
         std::vector<ECS::EntityId> entities;
         for (ECS::EntityId entity : m_entities) {
+            if (cm.hasComponent<ECS::Controllable>(entity))
+                continue;
             const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
             if (_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr)
                 entities.push_back(entity);
@@ -73,10 +75,13 @@ public:
             } else {
                 glm::vec3 gravity = G * stats.weight; // g
                 acceleration += gravity;
-                float densite_fluide = _world->findBlock(positionnable.pos)->getDensity();
-                if (densite_fluide > 0.f) {
-                    acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume); // flottaison
-                    acceleration += densite_fluide * movable.vel * -stats.drag;                               // drag
+                const Block* block = _world->findBlock(positionnable.pos);
+                if (block != nullptr) {
+                    float densite_fluide = block->getDensity();
+                    if (densite_fluide > 0.f) {
+                        acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume); // flottaison
+                        acceleration += densite_fluide * movable.vel * -stats.drag;                               // drag
+                    }
                 }
             }
 
