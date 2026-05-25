@@ -132,10 +132,10 @@ int main(void) {
     // world_renderer.reserve(world.get());
 
     // Create player entities
-    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 48.f, 26.5f)});
+    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(16.5f, 100.f, 16.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
     ecs_manager.startControl(truc);
-    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(23.5f, 48.f, 26.5f)});
+    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({world.get(), glm::vec3(16.5f, 100.f, 16.5f)});
     ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
     // ecs_manager.startControl(truc2);
 
@@ -181,23 +181,35 @@ int main(void) {
         },
         nullptr);
 
+    bool save_shadowmap = false;
+    window.keyboard.bind(GLFW_KEY_P, [&save_shadowmap]() { save_shadowmap = true; }, nullptr);
+
     // Create and compile our GLSL program from the shaders
     ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
     ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
+    ShaderProgram chunk_shadowmap_shader("src/shaders/chunk_shadowmap_vertex.glsl", "src/shaders/chunk_shadowmap_fragment.glsl");
 
-    auto [albedo_atlas, normal_atlas, specular_atlas] = Texture::generateAtlasses();
+    // Test de l'atlas vide, qui est utilisé comme base pour l'atlas courant
+    GrayScaleTexture atlas_videGrayScale(128, 128);
+    atlas_videGrayScale.savePNG("build/test_atlasGrayScale");
+    RGBTexture atlas_videRGB(128, 128);
+    atlas_videRGB.savePNG("build/test_atlasRGB");
+    RGBATexture atlas_videRGBA(128, 128);
+    atlas_videRGBA.savePNG("build/test_atlasRGBA");
 
+    auto atlasses = RGBATexture::generateAtlasses();
+    RGBATexture& albedo_atlas = atlasses[0];
+    RGBATexture& normal_atlas = atlasses[1];
+    RGBATexture& specular_atlas = atlasses[2];
     albedo_atlas.savePNG("build/albedo_atlas");
     normal_atlas.savePNG("build/normal_atlas");
     specular_atlas.savePNG("build/specular_atlas");
-
-    // Test de l'atlas vide, qui est utilisé comme base pour l'atlas courant
-    Texture atlas_vide(128, 128);
-    atlas_vide.savePNG("build/test_atlas");
-
     albedo_atlas.initShaderData();
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
+
+    ShadowMap sun_shadowmap{2048, 2048};
+    sun_shadowmap.initShaderData();
 
     { // Pre start actions
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
@@ -231,6 +243,14 @@ int main(void) {
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
 
+        glm::vec3 cam_pos;
+        {
+            ReadLock window_read(window_lock);
+            WriteLock camera_write(camera_lock);
+            ReadLock entities_read(entities_lock);
+            camera.update(window, ecs_manager, delta_time);
+            cam_pos = camera.getCamPos();
+        }
         {
             WriteLock window_write(window_lock);
             ReadLock world_read(world_lock);
@@ -254,13 +274,33 @@ int main(void) {
         }
 
         // ----------------------------------------------------------------------------------------------------
-        // ---------------------------------------   OBJECTS RENDERING   --------------------------------------
+        // --------------------------------------   SHADOWMAP RENDERING   -------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        chunk_shader.use();
-        albedo_atlas.bind(0);
-        normal_atlas.bind(1);
-        specular_atlas.bind(2);
+        if (save_shadowmap) {
+            save_shadowmap = false;
+
+            glCullFace(GL_FRONT);
+            // TODO: pour chaque light
+            glm::mat4 VP;
+            {
+                ReadLock renderer_read(renderer_lock);
+                VP = world_renderer.sunVP(cam_pos);
+                sun_shadowmap.bind(VP);
+
+                chunk_shadowmap_shader.use();
+                chunk_shadowmap_shader.set("VP", VP);
+                chunk_shadowmap_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
+                world_renderer.renderChunkShadows(chunk_shadowmap_shader);
+            }
+            glCullFace(GL_BACK);
+
+            sun_shadowmap.savePNG("sun_shadowmap");
+        }
+
+        // ----------------------------------------------------------------------------------------------------
+        // ----------------------------------------   FINAL RENDERING   ---------------------------------------
+        // ----------------------------------------------------------------------------------------------------
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         {
@@ -269,14 +309,12 @@ int main(void) {
         }
         {
             ReadLock window_read(window_lock);
-            WriteLock camera_write(camera_lock);
-            ReadLock entities_read(entities_lock);
-            camera.update(window, ecs_manager, delta_time);
+            glViewport(0, 0, window.getSize().x, window.getSize().y);
         }
         {
             ReadLock camera_read(camera_lock);
             WriteLock renderer_write(renderer_lock);
-            world_renderer.renderChunks(chunk_shader, camera);
+            world_renderer.renderChunks(chunk_shader, camera, albedo_atlas, normal_atlas, specular_atlas, sun_shadowmap);
         }
         if (display_debug) {
             ReadLock camera_read(camera_lock);

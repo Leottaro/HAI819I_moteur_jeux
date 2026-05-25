@@ -32,18 +32,19 @@ void WorldRenderer::updateWorld(World* _world) {
 
     _world->m_removed_chunks.clear();
     _world->m_added_chunks.clear();
+    m_last_time = _world->m_world_time;
+    m_last_render_distance = _world->m_render_distance;
 
-    float angle = (_world->m_world_time / DAY_LENGTH) * 2.f * M_PIf;
+    float angle = (m_last_time / DAY_LENGTH) * 2.f * M_PIf;
     float t = (sin(angle) + 1.0f) * 0.5f;
     m_sky_color = glm::mix(SKY_NIGHT, SKY_DAY, t);
     m_sun_color = glm::mix(SUN_NOON, SUN_DUSK, t);
-    m_last_time = _world->m_world_time;
+
+    glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR);
+    m_sun_direction = glm::normalize(glm::vec3(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y)));
 }
 
-void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& camera) {
-    glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR); // angle du soleil (nord<->sud, est<->ouest)
-    glm::vec3 sun_direction(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y));
-
+void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& camera, const RGBATexture& albedo_atlas, const RGBATexture& normal_atlas, const RGBATexture& specular_atlas, const ShadowMap& _sun_shadowmap) {
     const Camera::Frustum& frustum = camera.getFrustum();
     const glm::vec3& cam_pos = camera.getCamPos();
 
@@ -90,11 +91,13 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera& cam
     _chunk_shader.set("view", camera.getView());
     _chunk_shader.set("projection", camera.getProjection());
     _chunk_shader.set("camera_pos", cam_pos);
-    _chunk_shader.set("sun_direction", sun_direction);
+    _chunk_shader.set("sun_direction", m_sun_direction);
     _chunk_shader.set("sun_color", m_sun_color);
-    _chunk_shader.set("albedo_atlas", 0);
-    _chunk_shader.set("normal_atlas", 1);
-    _chunk_shader.set("specular_atlas", 2);
+    _chunk_shader.set("sun_shadowmap", _sun_shadowmap.getGpuSlot());
+    _chunk_shader.set("sun_VP", _sun_shadowmap.getVP());
+    _chunk_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
+    _chunk_shader.set("normal_atlas", normal_atlas.getGpuSlot());
+    _chunk_shader.set("specular_atlas", specular_atlas.getGpuSlot());
 
     for (auto [_, chunk_renderer] : draw_list) {
         if (chunk_renderer->getOpaqueTriangles() > 0) {
