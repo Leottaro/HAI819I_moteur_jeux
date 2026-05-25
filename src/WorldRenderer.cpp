@@ -36,9 +36,11 @@ void WorldRenderer::updateWorld(World* _world) {
     m_last_render_distance = _world->m_render_distance;
 
     float angle = (static_cast<float>(_world->m_world_time % DAY_LENGTH) / DAY_LENGTH) * 2.f * M_PIf;
-    float t = sin(angle) * 0.5f * 0.5f;
+    float t = (sin(angle) + 1.f) * 0.5f;
+    float tbis = (sin(angle * 2.f + M_PI_4f) + 1.f) * 0.5f;
     m_sky_color = glm::mix(SKY_NIGHT, SKY_DAY, t);
-    m_sun_color = glm::mix(SUN_NOON, SUN_DUSK, t);
+    // std::cout << m_sky_color.x << "\n";
+    m_sun_color = glm::mix(SUN_NOON, SUN_DUSK, tbis);
 
     glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR);
     m_sun_direction = glm::normalize(glm::vec3(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y)));
@@ -53,17 +55,12 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Fru
     m_added_chunks.clear();
 
     glm::ivec3 cam_chunk = Chunk::posToChunkPos(_cam_pos);
-    bool rebuild_all = cam_chunk != m_last_cam_chunk;
 
-    m_render_chunks.forEach([rebuild_all, _cam_pos, cam_chunk](ChunkRenderer& chunk_renderer) {
-        if (rebuild_all)
-            chunk_renderer.shouldRebuildMesh() = true;
-
-        if (rebuild_all ||
-            chunk_renderer.shouldRebuildMesh() ||
-            cam_chunk.x == chunk_renderer.getPos().x ||
-            cam_chunk.y == chunk_renderer.getPos().y ||
-            cam_chunk.z == chunk_renderer.getPos().z) {
+    m_render_chunks.forEach([_cam_pos, cam_chunk](ChunkRenderer& chunk_renderer) {
+        if (chunk_renderer.shouldRebuildMesh() ||
+            (chunk_renderer.getTranslucentTriangles() > 1 && (cam_chunk.x == chunk_renderer.getPos().x ||
+                                                              cam_chunk.y == chunk_renderer.getPos().y ||
+                                                              cam_chunk.z == chunk_renderer.getPos().z))) {
             chunk_renderer.updateShaderData(_cam_pos);
         }
     });
@@ -73,8 +70,8 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Fru
     draw_list.reserve(m_render_chunks.size());
 
     m_render_chunks.forEach([&draw_list, _frustum, _cam_pos](const ChunkRenderer& chunk_renderer) {
-        if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0) // on skip les chunks sans triangles
-            && _frustum.isVisible(chunk_renderer.getAABB())                                           // On skip les chunk hors du frustum
+        if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0)  // on skip les chunks sans triangles
+            && _frustum.isVisible(chunk_renderer.getAABB())                                            // On skip les chunk hors du frustum
         ) {
             float dist = glm::distance(_cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
             draw_list.push_back({dist, &chunk_renderer});

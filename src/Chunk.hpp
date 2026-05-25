@@ -3,9 +3,9 @@
 // USUAL INCLUDES
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <vector>
-#include <memory>
 
 #include "AABB.hpp"
 #include "Block.hpp"
@@ -28,19 +28,19 @@ static constexpr const char* GenTypeNames[] = {
     "Overworld"};
 
 class Chunk {
-public:
-    static constexpr uint8_t CHUNK_SIZE = 32; // The size of a cubic chunk
+   public:
+    static constexpr uint8_t CHUNK_SIZE = 32;  // The size of a cubic chunk
     static constexpr size_t NB_BLOCKS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
     static constexpr size_t MAX_VERTICES = NB_BLOCKS * 6 * 4;
     static constexpr size_t MAX_TRIANGLES = NB_BLOCKS * 6 * 2;
 
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
-        glm::ivec3(0, 0, -CHUNK_SIZE), // Front (-Z)
-        glm::ivec3(-CHUNK_SIZE, 0, 0), // Left  (-X)
-        glm::ivec3(0, -CHUNK_SIZE, 0), // Bottom(-Y)
-        glm::ivec3(0, 0, CHUNK_SIZE),  // Back  (+Z)
-        glm::ivec3(CHUNK_SIZE, 0, 0),  // Right (+X)
-        glm::ivec3(0, CHUNK_SIZE, 0),  // Top   (+Y)
+        glm::ivec3(0, 0, -CHUNK_SIZE),  // Front (-Z)
+        glm::ivec3(-CHUNK_SIZE, 0, 0),  // Left  (-X)
+        glm::ivec3(0, -CHUNK_SIZE, 0),  // Bottom(-Y)
+        glm::ivec3(0, 0, CHUNK_SIZE),   // Back  (+Z)
+        glm::ivec3(CHUNK_SIZE, 0, 0),   // Right (+X)
+        glm::ivec3(0, CHUNK_SIZE, 0),   // Top   (+Y)
     };
 
     static constexpr glm::ivec3 posToChunkPos(const glm::vec3& _pos) {
@@ -52,40 +52,41 @@ public:
             (_block_pos.y < 0 && _block_pos.y % CHUNK_SIZE != 0 ? _block_pos.y / CHUNK_SIZE - 1 : _block_pos.y / CHUNK_SIZE) * CHUNK_SIZE,
             (_block_pos.z < 0 && _block_pos.z % CHUNK_SIZE != 0 ? _block_pos.z / CHUNK_SIZE - 1 : _block_pos.z / CHUNK_SIZE) * CHUNK_SIZE);
     }
+
+    // TODO : Virer le sqrt là où c'est possible parce que c'est le mal
     static constexpr float chunkDistance(const glm::vec3& _a, const glm::vec3& _b) {
         float dist = std::sqrt(std::pow(_a.x - _b.x - 16, 2) + std::pow(_a.y - _b.y - 16, 2) + std::pow(_a.z - _b.z - 16, 2));
         return dist / CHUNK_SIZE;
     }
-
-private:
+   private:
     World* m_world{nullptr};
     glm::ivec3 m_pos;
     std::array<Block, NB_BLOCKS> m_blocks{initBlocks()};
     AABB<float> m_aabb;
     // std::optional<GreyMap> m_heightmap;
-    bool* m_should_rebuild_mesh{nullptr}; // For the ChunkRenderer
+    bool* m_should_rebuild_mesh{nullptr};  // For the ChunkRenderer
 
-    inline static constexpr size_t posToBlockI(uint8_t x, uint8_t y, uint8_t z) { return (y * CHUNK_SIZE + z) * CHUNK_SIZE + x; }
-    inline static constexpr size_t posToBlockI(const glm::u8vec3& _relative_pos) { return (_relative_pos.y * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.x; }
+    inline static constexpr size_t posToBlockI(uint8_t x, uint8_t y, uint8_t z) { return (y * CHUNK_SIZE + x) * CHUNK_SIZE + z; }
+    inline static constexpr size_t posToBlockI(const glm::u8vec3& _relative_pos) { return (_relative_pos.x * CHUNK_SIZE + _relative_pos.z) * CHUNK_SIZE + _relative_pos.y; }
     static constexpr std::array<int, 6> BLOCK_NEIGHBOUR_I_OFFSET{
         -CHUNK_SIZE,              // Front (-Z)
-        -1,                       // Left  (-X)
-        -CHUNK_SIZE * CHUNK_SIZE, // Bottom(-Y)
+        -CHUNK_SIZE* CHUNK_SIZE,  // Left  (-X)
+        -1,                       // Bottom(-Y)
         CHUNK_SIZE,               // Back  (+Z)
-        1,                        // Right (+X)
-        CHUNK_SIZE * CHUNK_SIZE,  // Top   (+Y)
+        CHUNK_SIZE* CHUNK_SIZE,   // Right (+X)
+        1,                        // Top   (+Y)
     };
     static constexpr std::array<Block, NB_BLOCKS> initBlocks() {
         std::array<Block, NB_BLOCKS> blocks;
         std::array<bool, 3> neighbour_exists{false};
         glm::u8vec3 local_pos;
         int block_i = -1;
-        for (local_pos.y = 0; local_pos.y < CHUNK_SIZE; local_pos.y++) {
-            neighbour_exists[2] = local_pos.y > 0;
+        for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
+            neighbour_exists[1] = local_pos.x > 0;
             for (local_pos.z = 0; local_pos.z < CHUNK_SIZE; local_pos.z++) {
                 neighbour_exists[0] = local_pos.z > 0;
-                for (local_pos.x = 0; local_pos.x < CHUNK_SIZE; local_pos.x++) {
-                    neighbour_exists[1] = local_pos.x > 0;
+                for (local_pos.y = 0; local_pos.y < CHUNK_SIZE; local_pos.y++) {
+                    neighbour_exists[2] = local_pos.y > 0;
                     block_i++;
                     for (uint8_t _face_i = 0; _face_i < 3; _face_i++) {
                         if (neighbour_exists[_face_i]) {
@@ -103,7 +104,7 @@ private:
     inline Block& getBlock(const glm::ivec3& _block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
     void generate(GenType _type);
 
-public:
+   public:
     std::array<Chunk*, 6> m_neighbours{nullptr};
 
     Chunk(Chunk&& other) : m_world(other.m_world), m_pos(other.m_pos), m_blocks(other.m_blocks), m_aabb(other.m_aabb), /*m_heightmap(other.m_heightmap),*/ m_neighbours(other.m_neighbours) {
@@ -181,7 +182,7 @@ class ChunkRenderer {
     inline static std::array<MathHelpers::upvec3, Chunk::MAX_TRIANGLES> opaque_triangles{};
     inline static std::array<ChunkVertex, Chunk::MAX_VERTICES> translucent_vertices{};
     inline static std::array<MathHelpers::upvec3, Chunk::MAX_TRIANGLES> translucent_triangles{};
-    inline static std::array<float, Chunk::MAX_TRIANGLES / 2> translucent_quad_distances{};
+    inline static std::array<float, Chunk::MAX_TRIANGLES / 2> translucent_quad_distances2{};
 
     GLuint m_opaque_VAO{0};
     GLuint m_opaque_VBO{0};
@@ -216,9 +217,8 @@ class ChunkRenderer {
         }
     }
 
-public:
-    ChunkRenderer(ChunkRenderer&& other) : m_opaque_VAO(other.m_opaque_VAO), m_opaque_VBO(other.m_opaque_VBO), m_opaque_EBO(other.m_opaque_EBO), m_opaque_vertices(other.m_opaque_vertices), m_opaque_triangles(other.m_opaque_triangles),
-                                           m_translucent_VAO(other.m_translucent_VAO), m_translucent_VBO(other.m_translucent_VBO), m_translucent_EBO(other.m_translucent_EBO), m_translucent_vertices(other.m_translucent_vertices), m_translucent_triangles(other.m_translucent_triangles) {
+   public:
+    ChunkRenderer(ChunkRenderer&& other) : m_opaque_VAO(other.m_opaque_VAO), m_opaque_VBO(other.m_opaque_VBO), m_opaque_EBO(other.m_opaque_EBO), m_opaque_vertices(other.m_opaque_vertices), m_opaque_triangles(other.m_opaque_triangles), m_translucent_VAO(other.m_translucent_VAO), m_translucent_VBO(other.m_translucent_VBO), m_translucent_EBO(other.m_translucent_EBO), m_translucent_vertices(other.m_translucent_vertices), m_translucent_triangles(other.m_translucent_triangles) {
         other.setChunk(nullptr);
         other.m_opaque_VAO = other.m_opaque_VBO = other.m_opaque_EBO = other.m_opaque_vertices = other.m_opaque_triangles = other.m_translucent_VAO = other.m_translucent_VBO = other.m_translucent_EBO = other.m_translucent_vertices = 0;
     }

@@ -19,6 +19,7 @@ enum class BlockType : uint8_t {
     SlimeBlock,
     OakLog,
     OakLeaves,
+    PierreDeLit,  // On ne plagie toujours pas minecraft !
     __NUMBER_OF_TYPES
 };
 constexpr size_t BLOCK_TYPES_N = static_cast<size_t>(BlockType::__NUMBER_OF_TYPES);
@@ -35,9 +36,10 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "Slime Block",
     "Oak Log",
     "Oak Leaves",
+    "Pierre de Lit",
 }};
 
-using Te = Textures; // Pour pas que les lignes en dessous fassent 3.5km
+using Te = Textures;  // Pour pas que les lignes en dessous fassent 3.5km
 
 // si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
 // clang-format off
@@ -53,6 +55,7 @@ constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DA
     {{TEX(Te::slime_block),     TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block),   TEX(Te::slime_block)}},     // SlimeBlock
     {{TEX(Te::oak_log_side),    TEX(Te::oak_log_side),  TEX(Te::oak_log_side),  TEX(Te::oak_log_side),  TEX(Te::oak_log_side),  TEX(Te::oak_log_top)}},     // OakLog
     {{TEX(Te::oak_leaves),      TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves),    TEX(Te::oak_leaves)}},      // OakLeaves
+    {{TEX(Te::pierre_de_lit),   TEX(Te::pierre_de_lit), TEX(Te::pierre_de_lit), TEX(Te::pierre_de_lit), TEX(Te::pierre_de_lit), TEX(Te::pierre_de_lit)}},   // PierreDeLit
 }};
 
 enum class BlockTransparency : uint8_t {
@@ -71,17 +74,18 @@ struct BlockTypeData {
 };
 
 constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
-    {0.f, 0.f, 0.f, 1.f, false, BlockTransparency::TRANSPARENT},              // Air
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Stone
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Dirt
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Grass
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSPARENT},   // Glass
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // IronBlock
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // RedstoneLamp
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // DiamondOre
-    {1.f / 2.f, 0.75f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSLUCENT}, // SlimeBlock
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},         // Oak Log
-    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SEMI_TRANSPARENT}    // Oak leaves
+    {0.f, 0.f, 0.f, 1.f, false, BlockTransparency::TRANSPARENT},                // Air
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // Stone
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // Dirt
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // Grass
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSPARENT},     // Glass
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // IronBlock
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // RedstoneLamp
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // DiamondOre
+    {1.f / 2.f, 0.75f, 1.f / 3.f, 0.f, true, BlockTransparency::TRANSLUCENT},   // SlimeBlock
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // Oak Log
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SEMI_TRANSPARENT},// Oak leaves
+    {1.f / 2.f, 0.f, 1.f / 3.f, 0.f, true, BlockTransparency::SOLID},           // Pierre de Lit
 }};
 
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<size_t>(type)]; }

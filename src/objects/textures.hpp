@@ -19,6 +19,7 @@ enum class Textures : uint8_t {
     oak_log_side,
     oak_log_top,
     oak_leaves,
+    pierre_de_lit, // Changement de nom parce qu'on plagie pas minecraft ici !
     NUMBER_OF_TEXTURES
 };
 
@@ -39,6 +40,7 @@ constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{
     "oak_log_side",
     "oak_log_top",
     "oak_leaves",
+    "pierre_de_lit"
 }};
 
 constexpr uint8_t TEXTURE_SIZE = 16;

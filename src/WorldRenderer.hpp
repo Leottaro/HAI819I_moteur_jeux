@@ -4,11 +4,13 @@
 #include "Texture.hpp"
 
 // DISPLAY CONST
-constexpr glm::vec4 SKY_DAY(187.f / 255.f, 255.f / 255.f, 250.f / 255.f, 255.f / 255.f);
-constexpr glm::vec4 SKY_NIGHT(14.f / 255.f, 5.f / 255.f, 61.f / 255.f, 255.f / 255.f);
+constexpr glm::vec4 SKY_DAY(187.f / 255.f, 255.f / 255.f, 250.f / 255.f, 1.f);
+constexpr glm::vec4 SKY_NIGHT(14.f / 255.f, 5.f / 255.f, 61.f / 255.f, 1.f);
+// rgb(255, 167, 41)
+// rgb(255, 149, 0)
+constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 149.f / 255.f, 0.f / 255.f);
+// rgb(255, 209, 175)
 constexpr glm::vec3 SUN_NOON(209.f / 255.f, 209.f / 255.f, 175.f / 255.f);
-// constexpr glm::vec3 SUN_NOON(0.f / 255.f, 0.f / 255.f, 175.f / 255.f);
-constexpr glm::vec3 SUN_DUSK(255.f / 255.f, 167.f / 255.f, 41.f / 255.f);
 
 class WorldRenderer {
     // WORLD
