@@ -35,7 +35,7 @@ public:
     static constexpr size_t getMaxChunkNumber(size_t render_distance) { return 0.75f * M_PIf * render_distance * render_distance * render_distance; }
 
 private:
-    uint m_render_distance{1};
+    uint m_render_distance{8};
     int m_world_seed = 0;
     GenType m_gentype{GenType::OVERWORLD};
     ChunkStorage m_chunks{};

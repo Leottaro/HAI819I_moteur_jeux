@@ -351,7 +351,6 @@ public:
         for (size_t i = 0; i < BATCH_SIZE; i++)
             if (m_alive[indices.x]->at(i))
                 return true;
-        std::cout << "DELETEEEEE" << std::endl;
 
         // If no object is left at indices.x, remove this batch
         m_storage.erase(m_storage.begin() + indices.x);

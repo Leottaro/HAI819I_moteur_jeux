@@ -238,7 +238,7 @@ int main(void) {
     normal_atlas.initShaderData();
     specular_atlas.initShaderData();
 
-    ShadowMap sun_shadowmap{2048, 2048};
+    ShadowMap sun_shadowmap{4096, 4096};
     sun_shadowmap.initShaderData();
 
     { // Pre start actions
@@ -273,6 +273,7 @@ int main(void) {
 
         {
             WriteLock window_write(window_lock);
+            window.clearMovements();
             currentFrame = glfwGetTime();
             glfwSwapBuffers(window.getWindow());
             glfwPollEvents();
@@ -324,7 +325,7 @@ int main(void) {
         // --------------------------------------   SHADOWMAP RENDERING   -------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        glCullFace(GL_FRONT);
+        // glCullFace(GL_FRONT);
         { // TODO: pour chaque light
             glm::mat4 VP;
             {
@@ -349,7 +350,7 @@ int main(void) {
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glCullFace(GL_BACK);
+        // glCullFace(GL_BACK);
         {
             ReadLock window_read(window_lock);
             glViewport(0, 0, window.getEffectiveSize().x, window.getEffectiveSize().y);
@@ -415,9 +416,6 @@ int main(void) {
         }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        WriteLock window_write(window_lock);
-        window.clearMovements();
     } while (glfwWindowShouldClose(window.getWindow()) == GLFW_FALSE);
 
     kill_threads = true;

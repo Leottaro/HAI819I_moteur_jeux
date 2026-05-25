@@ -26,9 +26,10 @@ in mat3 f_TBN;
 
 out vec4 out_color;
 
+// https://renderdiagrams.org/2024/12/18/shadowmap-bias/
 const int pcf_filter_size = 1;
 const float one_over_nshadows = 1. / ((2 * pcf_filter_size + 1) * (2 * pcf_filter_size + 1));
-float getShadowFactor(vec4 _fragpos_light_space, sampler2D _shadowmap) {
+float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shadowmap) {
   vec3 proj_coords = _fragpos_light_space.xyz / _fragpos_light_space.w;
   proj_coords = proj_coords * 0.5f + 0.5f;
   if (proj_coords.x < 0.f || 1.f < proj_coords.x ||
@@ -36,13 +37,32 @@ float getShadowFactor(vec4 _fragpos_light_space, sampler2D _shadowmap) {
     return 1.f;
   float current_depth = proj_coords.z;
 
+  vec2 dUV_dx = dFdx(proj_coords.xy);
+  vec2 dUV_dy = dFdy(proj_coords.xy);
+  float dz_dx = dFdx(proj_coords.z);
+  float dz_dy = dFdy(proj_coords.z);
+
+  float det = dUV_dx.x * dUV_dy.y - dUV_dx.y * dUV_dy.x;
+  vec2 dz_dUV = vec2(0.0);
+  if (det != 0.0) {
+    float inv_det = 1.0 / det;
+    dz_dUV.x = (dUV_dy.y * dz_dx - dUV_dx.y * dz_dy) * inv_det;
+    dz_dUV.y = (-dUV_dy.x * dz_dx + dUV_dx.x * dz_dy) * inv_det;
+  }
+  float base_bias = 0.0005;
+
   float shadow = 1.f;
-  vec2 texel_size = 1.0 / textureSize(_shadowmap, 0);
+  vec2 map_size = vec2(textureSize(_shadowmap, 0));
+  vec2 texel_size = 1.0 / map_size;
+  vec2 frac_coords = fract(proj_coords.xy * map_size);
+
   for (int y = -pcf_filter_size; y <= pcf_filter_size; y++) {
     for (int x = -pcf_filter_size; x <= pcf_filter_size; x++) {
-      vec2 offset = vec2(x, y) * texel_size;
-      float closest_depth = texture(_shadowmap, proj_coords.xy + offset).r;
-      shadow -= current_depth > closest_depth ? one_over_nshadows : 0.;
+      vec2 tap_offset = vec2(x, y) * texel_size;
+      vec2 dist_to_center = (vec2(x, y) + vec2(0.5) - frac_coords) * texel_size;
+      float slope_bias = min(0.0, dot(dist_to_center, dz_dUV));
+      float closest_depth = texture(_shadowmap, proj_coords.xy + tap_offset).r;
+      shadow -= (current_depth + slope_bias - base_bias) > closest_depth ? one_over_nshadows : 0.0;
     }
   }
 
@@ -96,9 +116,9 @@ void main() {
 
   // PBR DATA
   vec4 pbr = texture(specular_atlas, f_uv).rgba;
-  float roughness = 1. - pbr.r;
+  float roughness = 1.f - pbr.b;
   float metallic = pbr.g;
-  vec3 F0 = vec3(pbr.b);
+  vec3 F0 = vec3(pbr.r);
   float ao = 1.;
   float emission = 0.;
   F0 = mix(F0, albedo, metallic); // vec3(0.04);
@@ -115,15 +135,6 @@ void main() {
   for (int i = 0; i <= nb_lights; i++) {
     const bool sun_light = i == nb_lights;
 
-    // calculate the frag illumination
-    float shadow = 1.f;
-    if (sun_light) {
-      vec4 fragpos_lightspace = sun_VP * vec4(f_worldpos, 1.);
-      shadow = getShadowFactor(fragpos_lightspace, sun_shadowmap);
-    }
-    if (shadow == 0.f)
-      continue;
-
     // calculate per-light radiance
     vec3 L = sun_light ? sun_direction : lightPositions[i] - f_worldpos;
     if (sun_light && sun_direction.y < 0)
@@ -131,6 +142,16 @@ void main() {
     float distance = length(L);
     L /= distance;
 
+    // calculate the shadow illumination
+    float shadow = 1.f;
+    if (sun_light) {
+      vec4 fragpos_lightspace = sun_VP * vec4(f_worldpos, 1.);
+      shadow = getShadowFactor(fragpos_lightspace, dot(N, L), sun_shadowmap);
+    }
+    if (shadow == 0.f)
+      continue;
+
+    // Half vector etc
     vec3 H = normalize(V + L);
     float attenuation = 1.0 / (distance * distance);
     vec3 radiance = (sun_light ? sun_color : lightColors[i]) * attenuation;
