@@ -34,6 +34,38 @@ public:
     static constexpr GLint GL_FORMAT = __GL_FORMAT;
     using color_t = std::conditional_t<NB_CHANNELS == 1, uint8_t, glm::vec<NB_CHANNELS, uint8_t, glm::packed_highp>>;
 
+    static constexpr void generateAtlasses(Texture& albedo_atlases, Texture& normal_atlases, Texture& specular_atlases) {
+        int x = 0, y = 0;
+        int width = 0, height = 0;
+        for (const std::string_view c : TEXTURE_NAMES) {
+            std::string name(c);
+            std::string path_albedo = "ressources/textures/albedos/" + name + ".png";
+            std::string path_normal = "ressources/textures/normals/" + name + ".png";
+            std::string path_specular = "ressources/textures/speculars/" + name + ".png";
+            Texture tex_albedo(path_albedo);
+            Texture tex_normal(path_normal);
+            Texture tex_specular(path_specular);
+
+            if (x == 0 && y == 0) {
+                width = tex_albedo.m_width;
+                height = tex_albedo.m_height;
+                albedo_atlases = Texture(ATLAS_DIMS * width, ATLAS_DIMS * height);
+                normal_atlases = Texture(ATLAS_DIMS * width, ATLAS_DIMS * height);
+                specular_atlases = Texture(ATLAS_DIMS * width, ATLAS_DIMS * height);
+            }
+
+            if (x == ATLAS_DIMS) {
+                x = 0;
+                y++;
+            }
+
+            albedo_atlases.applyTexture(tex_albedo, x * width, y * height);
+            normal_atlases.applyTexture(tex_normal, x * width, y * height);
+            specular_atlases.applyTexture(tex_specular, x * width, y * height);
+            x++;
+        }
+    }
+
 private:
     static constexpr std::pair<color_t, color_t> defaultColors() {
         if constexpr (NB_CHANNELS == 1) {
@@ -151,7 +183,7 @@ public:
 
         uint slot = 0;
         bool first = true;
-        for (const std::string_view c : texture_names) {
+        for (const std::string_view c : TEXTURE_NAMES) {
             std::string name(c);
             std::string path_albedo = "ressources/textures/albedos/" + name + ".png";
             std::string path_normal = "ressources/textures/normals/" + name + ".png";

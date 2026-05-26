@@ -44,6 +44,7 @@ struct Movable {
 };
 struct Groundable {
     bool on_ground{false};
+    bool wants_to_float{false};
     float air_control_speed{0.1f};
     float walk_speed{3.0f};
     float jump_force{10.0f};
@@ -51,7 +52,7 @@ struct Groundable {
 struct PhysicsStats {
     float weight{1500.f};
     float volume{1.f};
-    float drag{1.05f};
+    float drag{1.2f};
 };
 struct CollisionDisplay {
     std::vector<AABBRenderer> boxes{};

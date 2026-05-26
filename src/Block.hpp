@@ -6,8 +6,6 @@
 
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
-class Chunk;
-
 class Block {
 public:
     static constexpr glm::ivec3 posToBlockPos(const glm::vec3& _pos) {
@@ -38,10 +36,6 @@ public:
         glm::ivec3(1, 0, 0),  // Right (+X)
         glm::ivec3(0, 1, 0),  // Top   (+Y)
     };
-
-    static constexpr BlockTexture getTexture(BlockType block_type, int face_i) {
-        return TEXTURE_TABLE_DATA[static_cast<uint8_t>(block_type) - 1][face_i];
-    }
 
 private:
     BlockType m_type;
@@ -110,6 +104,5 @@ public:
     constexpr float getDensity() const { return getBlockTypeData(m_type).fluid_density; }
     constexpr bool hasHitbox() const { return getBlockTypeData(m_type).has_hitbox; }
     constexpr BlockTransparency getTransparence() const { return getBlockTypeData(m_type).transparence; }
-
-    friend Chunk;
+    constexpr BlockTexture getTexture(int face_i) const { return getBlockTypeTexture(m_type, face_i); }
 };

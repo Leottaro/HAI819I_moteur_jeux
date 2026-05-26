@@ -107,39 +107,35 @@ Lock pos_lock;
 constexpr size_t WORLD_TPS = 20;
 constexpr float WORLD_FRAME_TIME = 1.0f / WORLD_TPS;
 void worldThread() {
-    float current_time, delta_time, last_frame = glfwGetTime();
-    std::vector<glm::vec3> pos_copy;
+    float current_time, delta_time, world_time = glfwGetTime();
     while (!kill_threads) {
         current_time = glfwGetTime();
-        delta_time = current_time - last_frame;
+        delta_time = current_time - world_time;
         if (delta_time < WORLD_FRAME_TIME) {
             std::this_thread::sleep_for(std::chrono::duration<float>(0.5f * (WORLD_FRAME_TIME - delta_time)));
             continue;
         }
-        last_frame = current_time;
+        world_time += WORLD_FRAME_TIME;
 
+        std::vector<glm::vec3> pos_copy;
         {
             ReadLock pos_write(pos_lock);
             pos_copy = controlled_pos;
         }
-
         {
             WriteLock world_write(world_lock);
             ReadLock renderer_read(renderer_lock);
             ReadLock entities_read(entities_lock);
             ecs_manager.updateWorld(world.get());
         }
-
         {
             WriteLock entities_write(entities_lock);
             ecs_manager.clearWorldUpdates();
         }
-
         {
             WriteLock world_write(world_lock);
             world->selfUpdate(pos_copy);
         }
-
         {
             WriteLock renderer_write(renderer_lock);
             world_renderer.updateWorld(world.get());
@@ -173,6 +169,13 @@ int main(void) {
     world = std::make_unique<World>();
     world_renderer.setWorld(world.get(), camera);
     // world_renderer.reserve(world.get());
+
+    // Optionnel, pour showcase les features
+    RGBATexture albedo_atlas, normal_atlas, specular_atlas;
+    RGBATexture::generateAtlasses(albedo_atlas, normal_atlas, specular_atlas);
+    albedo_atlas.savePNG("build/albedo_atlas");
+    normal_atlas.savePNG("build/normal_atlas");
+    specular_atlas.savePNG("build/specular_atlas");
 
     // Setup key bindings
     GLenum polygon_mode{GL_FILL};

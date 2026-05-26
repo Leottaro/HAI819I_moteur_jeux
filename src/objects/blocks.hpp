@@ -27,7 +27,7 @@ enum class BlockType : uint8_t {
 };
 constexpr uint8_t BLOCK_TYPES_N = static_cast<uint8_t>(BlockType::__NUMBER_OF_TYPES);
 
-constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
+constexpr std::array<std::string_view, BLOCK_TYPES_N> BLOCK_NAMES = {{
     "air",
     "Pierre de Lit",
     "Stone",
@@ -44,6 +44,7 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "Ice",
     "Water",
 }};
+constexpr std::string_view getBlockTypeName(BlockType block_type) { return BLOCK_NAMES[static_cast<uint8_t>(block_type)]; }
 
 using Te = BlockTexture; // Pour pas que les lignes en dessous fassent 3.5km
 
@@ -66,6 +67,7 @@ constexpr std::array<std::array<Te, 6>, BLOCK_TYPES_N - 1> TEXTURE_TABLE_DATA = 
     {{Te::ice,              Te::ice,              Te::ice,                Te::ice,              Te::ice,             Te::ice}},             // Ice
     {{Te::water,            Te::water,            Te::water,              Te::water,            Te::water,           Te::water}},           // Water
 }};
+constexpr Te getBlockTypeTexture(BlockType block_type, uint8_t face_i) { return TEXTURE_TABLE_DATA[static_cast<uint8_t>(block_type)-1][face_i]; }
 
 enum class BlockTransparency : uint8_t {
     SOLID = 0,
@@ -99,5 +101,4 @@ constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
     {0.2f, 0.f, 0.1f, 0.f, true, BlockTransparency::TRANSLUCENT},      // Ice
     {0.2f, 0.f, 0.05f, 1250.f, false, BlockTransparency::TRANSLUCENT},      // Water
 }};
-
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<uint8_t>(type)]; }

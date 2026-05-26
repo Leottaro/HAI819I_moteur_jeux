@@ -79,8 +79,9 @@ public:
                 if (block != nullptr) {
                     float densite_fluide = block->getDensity();
                     if (densite_fluide > 0.f) {
-                        acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume); // flottaison
-                        acceleration += densite_fluide * movable.vel * -stats.drag;                               // drag
+                        float entity_density = (groundable.wants_to_float ? .75f : 1.f) * (stats.weight / stats.volume);
+                        acceleration += densite_fluide * -gravity * stats.volume / entity_density; // flottaison
+                        acceleration += densite_fluide * movable.vel * -stats.drag;                // drag
                     }
                 }
             }
@@ -376,9 +377,14 @@ public:
         glm::vec3 flat_front = glm::cross(MathHelpers::VEC_UP, right);
 
         movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.x * right + motion.y * flat_front);
-        if (_window.keyboard.isHeld(GLFW_KEY_SPACE) && groundable.on_ground) {
-            movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
-            groundable.on_ground = false;
+        if (_window.keyboard.isHeld(GLFW_KEY_SPACE)) {
+            groundable.wants_to_float = true;
+            if (groundable.on_ground) {
+                movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
+                groundable.on_ground = false;
+            }
+        } else {
+            groundable.wants_to_float = false;
         }
 
         if (_window.getScroll().y < 0) {
@@ -387,14 +393,14 @@ public:
             if (new_block >= BLOCK_TYPES_N)
                 new_block = 1;
             controllable.block_in_hand = static_cast<BlockType>(new_block);
-            std::cout << "nouveau bloc : " << block_names[new_block] << std::endl;
+            std::cout << "nouveau bloc : " << BLOCK_NAMES[new_block] << std::endl;
         } else if (_window.getScroll().y > 0) {
             uint8_t new_block = static_cast<uint8_t>(controllable.block_in_hand);
             new_block--;
             if (new_block == 0)
                 new_block = BLOCK_TYPES_N - 1;
             controllable.block_in_hand = static_cast<BlockType>(new_block);
-            std::cout << "nouveau bloc : " << block_names[new_block] << std::endl;
+            std::cout << "nouveau bloc : " << BLOCK_NAMES[new_block] << std::endl;
         }
 
         const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
