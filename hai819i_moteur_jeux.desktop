@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Hai819I Moteur Jeux
+Comment=Moteur de jeu
+Exec=/home/troutfario/gits/HAI819I_moteur_jeux/build/hai819i_moteur_jeux_opt
+TryExec=/home/troutfario/gits/HAI819I_moteur_jeux/build/hai819i_moteur_jeux_opt
+Icon=/home/troutfario/gits/HAI819I_moteur_jeux/ressources/textures/app_icon.png
+Terminal=false
+StartupNotify=false
+StartupWMClass=Hai819I_moteur_jeux
+Categories=Game;Graphics;

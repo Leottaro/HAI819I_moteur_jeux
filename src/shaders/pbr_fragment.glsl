@@ -32,11 +32,11 @@ const int pcf_filter_size = 2;
 const float one_over_nshadows = 1. / ((2 * pcf_filter_size + 1) * (2 * pcf_filter_size + 1));
 float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shadowmap) {
   vec3 proj_coords = _fragpos_light_space.xyz / _fragpos_light_space.w;
-  proj_coords = proj_coords * 0.5f + 0.5f;
-  if (proj_coords.x < 0.f || 1.f < proj_coords.x ||
-      proj_coords.y < 0.f || 1.f < proj_coords.y ||
-      proj_coords.z < 0.f || 1.f < proj_coords.z)
-    return 1.f;
+  proj_coords = proj_coords * 0.5 + 0.5;
+  if(proj_coords.x < 0. || 1. < proj_coords.x ||
+    proj_coords.y < 0. || 1. < proj_coords.y ||
+    proj_coords.z < 0. || 1. < proj_coords.z)
+    return 1.;
   float current_depth = proj_coords.z;
 
   vec2 dUV_dx = dFdx(proj_coords.xy);
@@ -46,20 +46,20 @@ float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shado
 
   float det = dUV_dx.x * dUV_dy.y - dUV_dx.y * dUV_dy.x;
   vec2 dz_dUV = vec2(0.0);
-  if (det != 0.0) {
+  if(det != 0.0) {
     float inv_det = 1.0 / det;
     dz_dUV.x = (dUV_dy.y * dz_dx - dUV_dx.y * dz_dy) * inv_det;
     dz_dUV.y = (-dUV_dy.x * dz_dx + dUV_dx.x * dz_dy) * inv_det;
   }
   float base_bias = 0.0005;
 
-  float shadow = 1.f;
+  float shadow = 1.;
   vec2 map_size = vec2(textureSize(_shadowmap, 0));
   vec2 texel_size = 1.0 / map_size;
   vec2 frac_coords = fract(proj_coords.xy * map_size);
 
-  for (int y = -pcf_filter_size; y <= pcf_filter_size; y++) {
-    for (int x = -pcf_filter_size; x <= pcf_filter_size; x++) {
+  for(int y = -pcf_filter_size; y <= pcf_filter_size; y++) {
+    for(int x = -pcf_filter_size; x <= pcf_filter_size; x++) {
       vec2 tap_offset = vec2(x, y) * texel_size;
       vec2 dist_to_center = (vec2(x, y) + vec2(0.5) - frac_coords) * texel_size;
       float slope_bias = min(0.0, dot(dist_to_center, dz_dUV));
@@ -112,16 +112,16 @@ void main() {
   vec4 f_albedo = texture(albedo_textures, vec3(f_uv, f_block_tex)).rgba;
   vec3 albedo = pow(f_albedo.xyz, vec3(2.2));
   float transparency = f_albedo.a;
-  if (transparency == 0.)
+  if(transparency == 0.)
     discard;
   out_color = vec4(0., 0., 0., transparency);
 
-  // PBR DATA
+// PBR DATA
   vec4 pbr = texture(specular_textures, vec3(f_uv, f_block_tex)).rgba;
-  float roughness = 1.f - pbr.b;
+  float roughness = 1.f - pbr.r;
   float metallic = pbr.g;
-  vec3 F0 = vec3(pbr.r);
-  float ao = 1.;
+  vec3 F0 = vec3(pbr.b);
+  float ao = pbr.a;
   float emission = 0.;
   F0 = mix(F0, albedo, metallic); // vec3(0.04);
 
@@ -134,23 +134,23 @@ void main() {
 
   // reflectance equation
   vec3 Lo = vec3(0.);
-  for (int i = 0; i <= nb_lights; i++) {
+  for(int i = 0; i <= nb_lights; i++) {
     const bool sun_light = i == nb_lights;
 
     // calculate per-light radiance
     vec3 L = sun_light ? sun_direction : lightPositions[i] - f_worldpos;
-    if (sun_light && sun_direction.y < 0)
+    if(sun_light && sun_direction.y < 0)
       continue;
     float distance = length(L);
     L /= distance;
 
     // calculate the shadow illumination
-    float shadow = 1.f;
-    if (sun_light) {
+    float shadow = 1.;
+    if(sun_light) {
       vec4 fragpos_lightspace = sun_VP * vec4(f_worldpos, 1.);
       shadow = getShadowFactor(fragpos_lightspace, dot(N, L), sun_shadowmap);
     }
-    if (shadow == 0.f)
+    if(shadow == 0.)
       continue;
 
     // Half vector etc

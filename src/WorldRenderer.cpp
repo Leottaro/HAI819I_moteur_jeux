@@ -39,11 +39,11 @@ void WorldRenderer::updateWorld(World* _world) {
     float t = (sin(angle) + 1.f) * 0.5f;
     float tbis = (sin(angle * 2.f + M_PI_4f) + 1.f) * 0.5f;
     m_sky_color = glm::mix(SKY_NIGHT, SKY_DAY, t);
-    // std::cout << m_sky_color.x << "\n";
     m_sun_color = glm::mix(SUN_NOON, SUN_DUSK, tbis);
 
     glm::vec2 sun_angle(m_sun_season, m_last_time * TIME_ANGLE_FACTOR);
-    m_sun_direction = glm::normalize(glm::vec3(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y)));
+    // https://en.wikipedia.org/wiki/N-vector
+    m_sun_direction = glm::vec3(sin(sun_angle.x), cos(sun_angle.x) * sin(sun_angle.y), cos(sun_angle.x) * cos(sun_angle.y));
 }
 
 void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Frustum& _frustum, const glm::vec3& _cam_pos) {
