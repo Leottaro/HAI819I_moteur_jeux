@@ -13,6 +13,7 @@
 #include <map>
 #include <bitset>
 #include <memory>
+#include <iostream>
 
 // -------------------------------------------------------------------------
 // MATH HELPERS
@@ -229,10 +230,12 @@ constexpr std::bitset<std::tuple_size_v<Tuple>> make_signature() {
 
 template <typename T, size_t BATCH_MAX_BYTES, typename Key, typename KeyLess = std::less<Key>>
 class ContiguousStorage {
+public:
     static_assert(sizeof(T) <= BATCH_MAX_BYTES);                      // We have to have the room for at least one chunk
     static_assert(alignof(T) <= alignof(std::max_align_t));           // If this fails, we need aligned_alloc
     static constexpr size_t BATCH_SIZE = BATCH_MAX_BYTES / sizeof(T); // nombre de T qui font au max BATCH_MAX_BYTES
 
+private:
     std::vector<std::unique_ptr<std::array<T, BATCH_SIZE>>> m_storage{};  // Ensemble de batch de T
     std::vector<std::unique_ptr<std::array<bool, BATCH_SIZE>>> m_alive{}; // Ensemble de batch de "en vie ?"
     std::map<Key, glm::uvec2, KeyLess> m_lookup_table{};                  // Key -> idx de batch et idx de T
@@ -344,12 +347,12 @@ public:
         m_lookup_table.erase(_chunk_pos);
         m_alive[indices.x]->at(indices.y) = false;
 
-        // Return the batch if an object is still alive
+        // Let the batch live if one of its objects is still alive
         for (size_t i = 0; i < BATCH_SIZE; i++)
             if (m_alive[indices.x]->at(i))
                 return true;
 
-        // If no object is left at indices.x, remove this array
+        // If no object is left at indices.x, remove this batch
         m_storage.erase(m_storage.begin() + indices.x);
         m_alive.erase(m_alive.begin() + indices.x);
 

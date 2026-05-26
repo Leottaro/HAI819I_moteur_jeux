@@ -24,9 +24,9 @@ enum class Gamerules : uint8_t {
     NB_GAMERULES
 };
 
-constexpr size_t CHUNK_BATCH_SIZE{32 * 1024 * 1024}; // 128MiB
+constexpr size_t CHUNK_BATCH_SIZE{16 * 1024 * 1024}; // 16MiB
 using ChunkStorage = ContiguousStorage<Chunk, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
-using ChunkRendererStorage = ContiguousStorage<ChunkRenderer, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
+using ChunkRendererStorage = ContiguousStorage<ChunkRenderer, ChunkStorage::BATCH_SIZE * sizeof(ChunkRenderer), glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 
 class WorldRenderer;
 class World {
@@ -35,7 +35,7 @@ public:
     static constexpr size_t getMaxChunkNumber(size_t render_distance) { return 0.75f * M_PIf * render_distance * render_distance * render_distance; }
 
 private:
-    uint m_render_distance{16};
+    uint m_render_distance{8};
     int m_world_seed = 0;
     GenType m_gentype{GenType::OVERWORLD};
     ChunkStorage m_chunks{};
@@ -46,7 +46,7 @@ private:
 
     std::list<Chunk*> m_added_chunks;
     std::list<glm::ivec3> m_removed_chunks;
-    bool generate(const std::vector<glm::vec3>& _centers);
+    void generate(const std::vector<glm::vec3>& _centers);
 
 public:
     World(World&&) = delete;

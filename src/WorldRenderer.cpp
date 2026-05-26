@@ -70,8 +70,8 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Fru
     draw_list.reserve(m_render_chunks.size());
 
     m_render_chunks.forEach([&draw_list, _frustum, _cam_pos](const ChunkRenderer& chunk_renderer) {
-        if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0)  // on skip les chunks sans triangles
-            && _frustum.isVisible(chunk_renderer.getAABB())                                            // On skip les chunk hors du frustum
+        if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0) // on skip les chunks sans triangles
+            && _frustum.isVisible(chunk_renderer.getAABB())                                           // On skip les chunk hors du frustum
         ) {
             float dist = glm::distance(_cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
             draw_list.push_back({dist, &chunk_renderer});

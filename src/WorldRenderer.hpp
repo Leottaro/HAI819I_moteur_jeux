@@ -54,7 +54,7 @@ public:
     inline const glm::vec3& getSunDirection() const { return m_sun_direction; }
     inline const glm::vec3& getSunColor() const { return m_sun_color; }
     inline glm::mat4 sunVP(const glm::vec3& _cam_pos) const {
-        float frustum_half_size = m_last_render_distance * Chunk::CHUNK_SIZE;
+        float frustum_half_size = 1 * Chunk::CHUNK_SIZE;
         glm::vec3 light_pos = _cam_pos - (-m_sun_direction) * frustum_half_size;
         glm::mat4 view = glm::lookAt(light_pos, _cam_pos, glm::vec3(1.f, 0.f, 0.f));
         glm::mat4 proj = glm::ortho(-frustum_half_size, frustum_half_size, -frustum_half_size, frustum_half_size, 0.1f, 2.f * frustum_half_size);

@@ -136,8 +136,9 @@ public:
     inline void update(Window& _window, const World* _world, float _dt) {
         // PositionSystem: delete every out of world entities
         std::vector<ECS::EntityId> entities_to_destroy = getSystem<ECS::PositionSystem>().getOutOfBoundEntities(cm, _world);
-        for (ECS::EntityId entity : entities_to_destroy)
+        for (ECS::EntityId entity : entities_to_destroy) {
             destroyEntity(entity);
+        }
 
         // ControllingSystem: Move the entity
         getSystem<ECS::ControllingSystem>().update(cm, _window, _world, _dt);

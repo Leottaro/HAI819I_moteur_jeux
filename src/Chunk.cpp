@@ -23,6 +23,7 @@ constexpr int ONE_IN_HUNDRED = RAND_MAX / 100;
 constexpr int ONE_IN_THOUSAND = RAND_MAX / 1000;
 
 // http://www.cse.yorku.ca/~amana/research/grid.pdf
+// Peut return nullptr à la fin du vecteur pour signifier qu'on a pas pu atteindre _end
 std::vector<const Block*> Chunk::findBlockLine(const glm::vec3& _start, const glm::vec3& _end) const {
     glm::vec3 dir = _end - _start;
     float d_length = glm::length(dir);
@@ -31,10 +32,9 @@ std::vector<const Block*> Chunk::findBlockLine(const glm::vec3& _start, const gl
     glm::ivec3 end_block_pos{Block::posToBlockPos(_end)};
     const Block* current_block = m_pos == blockPosToChunkPos(start_block_pos) ? &getBlock(start_block_pos) : m_world->findBlock(start_block_pos);
 
-    std::vector<const Block*> blocks;
-    if (d_length <= 0.f && current_block == nullptr)
+    std::vector<const Block*> blocks{current_block};
+    if (start_block_pos == end_block_pos || current_block == nullptr)
         return blocks;
-    blocks.push_back(current_block);
 
     // How far along the ray to cross one full voxel on each axis.
     // Infinity when the ray has no component on that axis (never crosses).
@@ -79,9 +79,9 @@ std::vector<const Block*> Chunk::findBlockLine(const glm::vec3& _start, const gl
             tmax.z += tdelta.z;
         }
 
+        blocks.push_back(current_block);
         if (current_block == nullptr)
             return blocks;
-        blocks.push_back(current_block);
 
     } while (current_block->getPos() != end_block_pos);
 
@@ -288,7 +288,12 @@ void ChunkRenderer::initShaderData() {
 
 void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
     m_should_rebuild_mesh = false;
-    m_opaque_vertices = m_opaque_triangles = m_translucent_vertices = m_translucent_triangles = 0;
+
+    opaque_vertices.reserve(VERTICES_PREALLOCATION);
+    translucent_vertices.reserve(VERTICES_PREALLOCATION);
+    opaque_triangles.reserve(TRIANGLES_PREALLOCATION);
+    translucent_triangles.reserve(TRIANGLES_PREALLOCATION);
+    translucent_quad_distances2.reserve(TRIANGLES_PREALLOCATION / 2);
 
     glm::u8vec3 local_pos;
     int block_i = -1;
@@ -303,8 +308,6 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
 
                 auto& vertices = block.getTransparence() == BlockTransparency::TRANSLUCENT ? translucent_vertices : opaque_vertices;
                 auto& triangles = block.getTransparence() == BlockTransparency::TRANSLUCENT ? translucent_triangles : opaque_triangles;
-                size_t& vertices_count = block.getTransparence() == BlockTransparency::TRANSLUCENT ? m_translucent_vertices : m_opaque_vertices;
-                size_t& triangles_count = block.getTransparence() == BlockTransparency::TRANSLUCENT ? m_translucent_triangles : m_opaque_triangles;
 
                 glm::vec3 block_center = glm::vec3(m_chunk->m_pos + glm::ivec3(local_pos)) + glm::vec3(0.5f);
                 for (int face_i = 0; face_i < 6; face_i++) {
@@ -316,20 +319,21 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
 
                     std::array<glm::vec2, 4> face_uvs = Block::getUV(block.getType(), face_i);
                     for (int i = 0; i < 4; ++i) {
-                        vertices[vertices_count].position = local_pos + face.vertices[i];
-                        vertices[vertices_count].normal = face.normal;
-                        vertices[vertices_count].uv = face_uvs[i];
-                        vertices[vertices_count].tangent = face.tangent;
-                        vertices[vertices_count].bitangent = face.bitangent;
-                        vertices_count++;
+                        vertices.push_back({local_pos + face.vertices[i],
+                                            face.normal,
+                                            face.tangent,
+                                            face.bitangent,
+                                            face_uvs[i]});
                     }
 
-                    glm::uvec3 offset(vertices_count - 4);
+                    glm::uvec3 offset(vertices.size() - 4);
                     if (block.getTransparence() == BlockTransparency::TRANSLUCENT) {
                         glm::vec3 face_centroid = block_center + 0.5f * glm::vec3(face.normal);
                         float distance_to_cam2 = glm::distance2(_cam_pos, face_centroid);
 
-                        size_t i = triangles_count / 2;
+                        triangles.push_back(MathHelpers::upvec3(0));
+                        triangles.push_back(MathHelpers::upvec3(0));
+                        size_t i = triangles.size() / 2;
                         while (i > 0 && translucent_quad_distances2[i - 1] < distance_to_cam2) {
                             triangles[i * 2] = triangles[i * 2 - 2];
                             triangles[i * 2 + 1] = triangles[i * 2 - 1];
@@ -339,10 +343,9 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                         triangles[i * 2] = face.triangles[0] + offset;
                         triangles[i * 2 + 1] = face.triangles[1] + offset;
                         translucent_quad_distances2[i] = distance_to_cam2;
-                        triangles_count += 2;
                     } else {
-                        triangles[triangles_count++] = face.triangles[0] + offset;
-                        triangles[triangles_count++] = face.triangles[1] + offset;
+                        triangles.push_back(face.triangles[0] + offset);
+                        triangles.push_back(face.triangles[1] + offset);
                     }
                 }
             }
@@ -360,6 +363,15 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_vertices * sizeof(ChunkVertex)), translucent_vertices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_translucent_EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_triangles * sizeof(MathHelpers::upvec3)), translucent_triangles.data(), GL_STATIC_DRAW);
+
+    m_opaque_vertices = opaque_vertices.size();
+    m_opaque_triangles = opaque_triangles.size();
+    m_translucent_vertices = translucent_vertices.size();
+    m_translucent_triangles = translucent_triangles.size();
+    opaque_vertices.clear();
+    opaque_triangles.clear();
+    translucent_vertices.clear();
+    translucent_triangles.clear();
 }
 
 void ChunkRenderer::renderOpaque() const {

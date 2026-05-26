@@ -20,13 +20,15 @@ struct SystemBase {
 };
 
 class ECS::PositionSystem : public SystemBase<ECS::Positionnable> {
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {}
 
     std::vector<ECS::EntityId> getOutOfBoundEntities(ComponentManager& cm, const World* _world) const {
         std::vector<ECS::EntityId> entities;
         for (ECS::EntityId entity : m_entities) {
+            if (cm.hasComponent<ECS::Controllable>(entity))
+                continue;
             const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
             if (_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr)
                 entities.push_back(entity);
@@ -37,7 +39,7 @@ class ECS::PositionSystem : public SystemBase<ECS::Positionnable> {
 };
 
 class ECS::PhysicsSystem : public SystemBase<ECS::Positionnable, ECS::Movable, ECS::Collisionnable, ECS::Groundable, ECS::PhysicsStats> {
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {}
 
@@ -71,12 +73,15 @@ class ECS::PhysicsSystem : public SystemBase<ECS::Positionnable, ECS::Movable, E
                     movable.vel.z *= 1.f - max_static_friction;
                 }
             } else {
-                glm::vec3 gravity = G * stats.weight;  // g
+                glm::vec3 gravity = G * stats.weight; // g
                 acceleration += gravity;
-                float densite_fluide = _world->findBlock(positionnable.pos)->getDensity();
-                if (densite_fluide > 0.f) {
-                    acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume);  // flottaison
-                    acceleration += densite_fluide * movable.vel * -stats.drag;                                // drag
+                const Block* block = _world->findBlock(positionnable.pos);
+                if (block != nullptr) {
+                    float densite_fluide = block->getDensity();
+                    if (densite_fluide > 0.f) {
+                        acceleration += densite_fluide * -gravity * stats.volume / (stats.weight / stats.volume); // flottaison
+                        acceleration += densite_fluide * movable.vel * -stats.drag;                               // drag
+                    }
                 }
             }
 
@@ -145,38 +150,40 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
 
                 float t;
                 glm::vec3 normal(0.);
-                if (block->hasHitbox() && block_aabb.intersectAABB(_positionnable.pos + hitbox, _deltaTime * _movable.vel, t, normal)) {
-                    if (t < res.t) {
-                        res.t = t;
-                        res.normal = normal;
-                        res.pos = _positionnable.pos + t * _deltaTime * _movable.vel;
-                        while (block_aabb.intersectAABB(res.pos + hitbox, dist)) {
-                            res.pos += dist;
-                        }
+                if (!block->hasHitbox() || !block_aabb.intersectAABB(_positionnable.pos + hitbox, _deltaTime * _movable.vel, t, normal) || t >= res.t)
+                    continue;
 
-                        glm::vec3 block_center = glm::vec3(block->getPos()) + glm::vec3(0.5f);
-                        glm::ivec3 min_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.min, block_center, normal));
-                        glm::ivec3 max_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.max, block_center, normal));
+                res.t = t;
+                res.normal = normal;
+                res.pos = _positionnable.pos + t * _deltaTime * _movable.vel;
 
-                        glm::ivec3 collision_block;
-                        res.friction = 0.f;
-                        res.restitution = 1.f;
-                        for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
-                            for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
-                                for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
-                                    const Block* block = _world->findBlock(collision_block);
-                                    if (block == nullptr || !block->hasHitbox())
-                                        continue;
-                                    res.friction = std::max(res.friction, block->getFriction());
-                                    res.restitution = std::min(res.restitution, block->getRestitution());
-                                }
-                            }
+                AABB<float> test(block_aabb);
+                test.min -= 1.e-2f;
+                test.max += 1.e-2f;
+                while (test.intersectAABB(res.pos + hitbox, dist)) {
+                    res.pos += dist;
+                }
+
+                glm::vec3 block_center = glm::vec3(block->getPos()) + glm::vec3(0.5f);
+                glm::ivec3 min_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.min, block_center, normal));
+                glm::ivec3 max_collision_block = Block::posToBlockPos(MathHelpers::projectPointOnPlane(res.pos + hitbox.max, block_center, normal));
+
+                glm::ivec3 collision_block;
+                res.friction = 0.f;
+                res.restitution = 1.f;
+                for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
+                    for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
+                        for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
+                            const Block* block = _world->findBlock(collision_block);
+                            if (block == nullptr || !block->hasHitbox())
+                                continue;
+                            res.friction = std::max(res.friction, block->getFriction());
+                            res.restitution = std::min(res.restitution, block->getRestitution());
                         }
                     }
-                    // std::cout << "\t\t\tintersection: " << "t=" << res.t << "\tnormal=" << glm::to_string(res.normal) << "\tpos=" << glm::to_string(res.pos) << std::endl;
                 }
+                // std::cout << "\t\t\tintersection: " << "t=" << res.t << "\tnormal=" << glm::to_string(res.normal) << "\tpos=" << glm::to_string(res.pos) << std::endl;
             }
-
             if (clip) {
                 // std::cout << "\t\tclip" << std::endl;
                 for (int face_i = 0; face_i < 6; face_i++)
@@ -184,7 +191,6 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
                         to_explore.push_back(block->m_neighbours[face_i]);
             }
         }
-
         return res.t <= 1.f;
     }
 
@@ -193,6 +199,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
         const ECS::Collisionnable& collisionable = cm.getComponent<ECS::Collisionnable>(_entity);
         ECS::Movable& movable = cm.getComponent<ECS::Movable>(_entity);
         ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(_entity);
+        bool is_controllable = cm.hasComponent<ECS::Controllable>(_entity);
 
         // Chunk collision detection
         CollisionsInfos collision;
@@ -200,42 +207,43 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
         //           << std::endl
         //           << std::endl
         //           << "Starting detection: dt=" << _deltaTime << std::endl;
-        while (detectCollision(_world, _deltaTime, collision, positionnable, collisionable, movable)) {
+        while ((std::abs(movable.vel.x) > 1.e-4f || std::abs(movable.vel.y) > 1.e-4f || std::abs(movable.vel.z) > 1.e-4f) && detectCollision(_world, _deltaTime, collision, positionnable, collisionable, movable)) {
             // std::cout << "\tCOLLISION: " << std::endl
-            //           << "\t\t" << size_t(collision.block->getType()) << " at " << glm::to_string(collision.block->getPos()) << std::endl
+            //           << "\t\tat " << glm::to_string(collision.pos) << std::endl
             //           << "\t\tt: " << collision.t << std::endl
             //           << "\t\tnormal: " << glm::to_string(collision.normal) << std::endl
             //           << "\t\told pos: " << glm::to_string(positionnable.pos) << std::endl
             //           << "\t\told vel: " << glm::to_string(movable.vel) << std::endl;
 
-            bounce(0.1f, collision.friction, collision.restitution, collision.normal, movable.vel);
+            if (!is_controllable || collision.normal == glm::vec3(0.f, 1.f, 0.f))
+                bounce(0.1f, collision.friction, collision.restitution, collision.normal, movable.vel);
+            else
+                bounce(0.f, 0.f, 0.f, collision.normal, movable.vel);
+
             if (collision.normal == glm::vec3(0.f, 1.f, 0.f) && movable.vel.y <= -0.05f * ECS::G.y) {
                 groundable.on_ground = true;
                 collision.pos.y += 1.e-2f;
             }
-            positionnable.pos = collision.pos;
-            if (_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr) {
+
+            if (_world->findChunk(Chunk::posToChunkPos(collision.pos)) == nullptr)
                 return;
-            }
+            positionnable.pos = collision.pos;
             _deltaTime *= (1.f - collision.t);
             // std::cout
             //     << "\t\tpos: " << glm::to_string(positionnable.pos) << std::endl
             //     << "\t\tvel: " << glm::to_string(movable.vel) << std::endl
             //     << "dt=" << _deltaTime << std::endl;
         }
-        positionnable.pos += _deltaTime * movable.vel;
+
+        glm::vec3 final_pos = positionnable.pos + _deltaTime * movable.vel;
+        if (_world->findBlock(Block::posToBlockPos(final_pos)) != nullptr)
+            positionnable.pos = final_pos;
         // std::cout << "\tAPPLIED dt=" << _deltaTime << " velocity" << std::endl
         //           << "\t\tnew pos: " << glm::to_string(positionnable.pos) << std::endl
         //           << "\t\tnew vel: " << glm::to_string(movable.vel) << std::endl;
-
-        if (_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr) {
-            return;
-        }
-
-        return;
     }
 
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {}
 
@@ -246,7 +254,7 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
 };
 
 class ECS::HitBoxDisplaySystem : public SystemBase<ECS::Positionnable, ECS::Collisionnable, ECS::CollisionDisplay> {
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {
         const ECS::Collisionnable& collisionnable = cm.getComponent<ECS::Collisionnable>(entity);
         ECS::CollisionDisplay& collision_display = cm.getComponent<ECS::CollisionDisplay>(entity);
@@ -278,7 +286,7 @@ class ECS::OrientationDisplaySystem : public SystemBase<ECS::Positionnable, ECS:
     inline static GLuint LINE_VAO{0};
     inline static GLuint LINE_VBO{0};
 
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {}
 
@@ -321,7 +329,7 @@ class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orient
     std::optional<ECS::EntityId> m_controlled_entity{};
     std::optional<glm::ivec3> m_aimed_block{};
 
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {
         if (m_controlled_entity.has_value() && m_controlled_entity.value() == entity) {
@@ -352,7 +360,7 @@ class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orient
 
         ECS::EntityId entity = m_controlled_entity.value();
         ECS::Controllable& controllable = cm.getComponent<ECS::Controllable>(entity);
-        if (controllable.type == ControlType::FreeCam || controllable.type == ControlType::FreeCamFrustum)
+        if (controllable.type == ControlType::FreeCam)
             return;
         ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
         ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
@@ -376,13 +384,15 @@ class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orient
         if (_window.getScroll().y < 0) {
             uint8_t new_block = static_cast<uint8_t>(controllable.block_in_hand);
             new_block++;
-            if (new_block >= BLOCK_TYPES_N) new_block = 1;
+            if (new_block >= BLOCK_TYPES_N)
+                new_block = 1;
             controllable.block_in_hand = static_cast<BlockType>(new_block);
             std::cout << "nouveau bloc : " << block_names[new_block] << std::endl;
         } else if (_window.getScroll().y > 0) {
             uint8_t new_block = static_cast<uint8_t>(controllable.block_in_hand);
             new_block--;
-            if (new_block == 0) new_block = BLOCK_TYPES_N - 1;
+            if (new_block == 0)
+                new_block = BLOCK_TYPES_N - 1;
             controllable.block_in_hand = static_cast<BlockType>(new_block);
             std::cout << "nouveau bloc : " << block_names[new_block] << std::endl;
         }
@@ -393,7 +403,7 @@ class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orient
         while (i < block_line.size() && !block_line[i]->hasHitbox())
             i++;
 
-        if (i == block_line.size()) {
+        if (i == block_line.size() || block_line[i] == nullptr) {
             m_aimed_block.reset();
             return;
         }
@@ -420,7 +430,7 @@ class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orient
             before_block.getType() = controllable.block_in_hand;
             world_interaction.blocks_to_change.push_back(before_block);
             world_interaction.last_interaction_time = now;
-        } 
+        }
     }
 
     inline void render(const ComponentManager& cm, ShaderProgram& _shader) const {
@@ -436,7 +446,7 @@ class ECS::ControllingSystem : public SystemBase<ECS::Positionnable, ECS::Orient
 };
 
 class ECS::WorldInteractorSystem : public SystemBase<ECS::WorldInteraction> {
-   public:
+public:
     inline void init(ComponentManager& cm, ECS::EntityId entity) {}
     inline void clear(ComponentManager& cm, ECS::EntityId entity) {
         ECS::WorldInteraction& world_interaction = cm.getComponent<ECS::WorldInteraction>(entity);
@@ -468,7 +478,7 @@ class ECS::WorldInteractorSystem : public SystemBase<ECS::WorldInteraction> {
 class ECS::SystemManager {
     ECS::SystemList m_systems;
 
-   public:
+public:
     // Convenience function to get the statically casted pointer to the System of type T.
     template <ECS::System S>
     constexpr S& getSystem() { return std::get<ECS::system_id<S>>(m_systems); }

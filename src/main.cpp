@@ -33,12 +33,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
-    glEnable(GL_DEPTH_TEST);                            // Enable depth test
-    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
-    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
+    glEnable(GL_DEPTH_TEST);                           // Enable depth test
+    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
+    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -68,7 +68,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -104,10 +104,11 @@ Lock renderer_lock;
 Lock entities_lock;
 Lock pos_lock;
 
-constexpr size_t WORLD_TPS = 10;
+constexpr size_t WORLD_TPS = 20;
 constexpr float WORLD_FRAME_TIME = 1.0f / WORLD_TPS;
 void worldThread() {
     float current_time, delta_time, last_frame = glfwGetTime();
+    std::vector<glm::vec3> pos_copy;
     while (!kill_threads) {
         current_time = glfwGetTime();
         delta_time = current_time - last_frame;
@@ -117,7 +118,6 @@ void worldThread() {
         }
         last_frame = current_time;
 
-        std::vector<glm::vec3> pos_copy;
         {
             ReadLock pos_write(pos_lock);
             pos_copy = controlled_pos;
@@ -178,18 +178,11 @@ auto makeTextureWatcher(const std::string& path, OnChange&& onChange) {
 
 int main(void) {
     globalInit(window);
-    window.toggleMouseCapture();
+    // window.toggleMouseCapture();
 
     world = std::make_unique<World>();
     world_renderer.setWorld(world.get(), camera);
     // world_renderer.reserve(world.get());
-
-    // Create player entities
-    ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
-    ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
-    ecs_manager.startControl(truc);
-    ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
-    ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
 
     // Setup key bindings
     GLenum polygon_mode{GL_FILL};
@@ -288,10 +281,17 @@ int main(void) {
     auto normalWatcher = makeTextureWatcher("ressources/textures/normals", texture_change_handler);
     auto specularWatcher = makeTextureWatcher("ressources/textures/speculars", texture_change_handler);
 
-    ShadowMap sun_shadowmap{2048, 2048};
+    ShadowMap sun_shadowmap{4096, 4096};
     sun_shadowmap.initShaderData();
 
-    {  // Pre start actions
+    { // Pre start actions
+        // Create player entities
+        ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
+        ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
+        ecs_manager.startControl(truc);
+        // ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
+        // ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
+
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
         controlled_pos.reserve(controlled_entities.size());
@@ -316,6 +316,7 @@ int main(void) {
 
         {
             WriteLock window_write(window_lock);
+            window.clearMovements();
             currentFrame = glfwGetTime();
             glfwSwapBuffers(window.getWindow());
             glfwPollEvents();
@@ -371,8 +372,8 @@ int main(void) {
         // --------------------------------------   SHADOWMAP RENDERING   -------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        glCullFace(GL_FRONT);
-        {  // TODO: pour chaque light
+        // glCullFace(GL_FRONT);
+        { // TODO: pour chaque light
             glm::mat4 VP;
             {
                 ReadLock renderer_read(renderer_lock);
@@ -396,7 +397,7 @@ int main(void) {
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glCullFace(GL_BACK);
+        // glCullFace(GL_BACK);
         {
             ReadLock window_read(window_lock);
             glViewport(0, 0, window.getEffectiveSize().x, window.getEffectiveSize().y);
@@ -462,9 +463,6 @@ int main(void) {
         }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        WriteLock window_write(window_lock);
-        window.clearMovements();
     } while (glfwWindowShouldClose(window.getWindow()) == GLFW_FALSE);
 
     kill_threads = true;
