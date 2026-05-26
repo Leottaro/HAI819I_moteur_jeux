@@ -16,13 +16,15 @@
 #include <iostream>
 
 // USUAL INCLUDES
+#include <stb_image.h>
+
 #include <mutex>
 #include <string>
 
 struct InputState {
-    bool pressed{false};  // true only on the frame it was pressed
-    bool held{false};     // true if key is held down
-    bool released{false}; // true only on the frame it was released
+    bool pressed{false};   // true only on the frame it was pressed
+    bool held{false};      // true if key is held down
+    bool released{false};  // true only on the frame it was released
 };
 struct InputCallbacks {
     std::function<void()> on_press{nullptr};
@@ -33,7 +35,7 @@ class InputHandler {
     std::unordered_map<int, InputState> m_inputs;
     std::unordered_map<int, InputCallbacks> m_callbacks;
 
-public:
+   public:
     InputHandler() {}
 
     // Register callbacks for a key (any can be null)
@@ -90,10 +92,11 @@ struct Window {
     static void _scrollCallback(GLFWwindow* w, double xoffset, double yoffset) { getWindow(w)->scrollCallback(w, xoffset, yoffset); }
     static void _keyCallback(GLFWwindow* w, int key, int scancode, int action, int mods) { getWindow(w)->keyCallback(w, key, scancode, action, mods); }
 
-private:
+   private:
     bool m_mouse_captured{false};
     std::string m_title{"Minecraft clown"};
     GLFWwindow* m_window{nullptr};
+    GLFWimage m_images[1];
     glm::ivec2 m_pos{0, 0};
     glm::ivec2 m_size{1600, 900};
     glm::ivec2 m_effective_size{1600, 900};
@@ -145,7 +148,7 @@ private:
         keyboard.handle(key, action, mods);
     }
 
-public:
+   public:
     Window() {}
     Window(Window&&) = delete;
     Window(const Window&) = delete;
@@ -156,6 +159,7 @@ public:
             glfwTerminate();
             m_window = nullptr;
         }
+        stbi_image_free(m_images[0].pixels);
     }
 
     InputHandler keyboard;
@@ -222,12 +226,16 @@ public:
 
     inline void init() {
         std::lock_guard<std::mutex> lock(glfw_mutex);
+#if defined(__linux__)
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, "Hai819I_moteur_jeux");
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "hai819i_moteur_jeux");
+#endif
         glfwWindowHint(GLFW_SAMPLES, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // To make MacOS happy; should not be needed
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE); // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
+        glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GL_FALSE);  // https://discourse.glfw.org/t/resizing-window-results-in-wrong-aspect-ratio/1268s
         glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
         m_window = glfwCreateWindow(m_size.x, m_size.y, m_title.c_str(), NULL, NULL);
@@ -236,6 +244,15 @@ public:
             m_window = nullptr;
             exit(EXIT_FAILURE);
         }
+
+        // https://stackoverflow.com/questions/44321902/load-icon-function-for-glfwsetwindowicon
+        m_images[0].pixels = stbi_load("ressources/textures/app_icon.png", &m_images[0].width, &m_images[0].height, 0, 4);
+        if (m_images[0].pixels) {
+            glfwSetWindowIcon(m_window, 1, m_images);
+        } else {
+            std::cerr << "Failed to load window icon: ressources/textures/app_icon.png" << std::endl;
+        }
+
         glfwMakeContextCurrent(m_window);
         glfwSetWindowUserPointer(m_window, this);
         glfwSetWindowSizeCallback(m_window, _sizeCallback);
@@ -245,6 +262,6 @@ public:
         glfwSetCursorPosCallback(m_window, _cursorPosCallback);
         glfwSetScrollCallback(m_window, _scrollCallback);
         glfwSetInputMode(m_window, GLFW_STICKY_KEYS, GL_TRUE);
-        glfwSwapInterval(1); // VSync
+        glfwSwapInterval(1);  // VSync
     }
 };
