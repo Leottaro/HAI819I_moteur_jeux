@@ -1,27 +1,24 @@
 #pragma once
 #include "Data.hpp"
 
-#include <queue>
 #include <functional>
 
 class ECS::EntityManager {
     std::bitset<ECS::MAX_ENTITIES> m_entities{0};
-    std::queue<ECS::EntityId> m_available_entities{};
+    std::array<ECS::EntityId, ECS::MAX_ENTITIES> m_available_entities{};
     std::array<ECS::ComponentSignature, ECS::MAX_ENTITIES> m_signatures{};
-    uint32_t m_nb_entities{};
+    uint32_t m_nb_entities{0};
 
 public:
     EntityManager() {
-        for (ECS::EntityId entity = 0; entity < ECS::MAX_ENTITIES; entity++)
-            m_available_entities.push(entity);
+        for (ECS::EntityId e = 0; e < ECS::MAX_ENTITIES; e++)
+            m_available_entities[e] = e;
     }
 
     inline ECS::EntityId createEntity(ECS::ComponentSignature signature) {
-        ECS::EntityId id = m_available_entities.front();
-        m_available_entities.pop();
+        ECS::EntityId id = m_available_entities[m_nb_entities++];
         m_entities[id] = true;
         m_signatures[id] = signature;
-        m_nb_entities++;
         return id;
     }
 
@@ -33,9 +30,8 @@ public:
         if (!m_entities[entity])
             return false;
         m_signatures[entity].reset();
-        m_available_entities.push(entity);
+        m_available_entities[--m_nb_entities] = entity;
         m_entities[entity] = false;
-        m_nb_entities--;
         return true;
     }
 

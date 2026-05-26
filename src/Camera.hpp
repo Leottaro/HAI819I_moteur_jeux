@@ -94,22 +94,38 @@ public:
     bool m_update_frustum{true};
 
 private:
-    inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Orientable& orientable, const ECS::Controllable& controllable) {
+    inline void applyPosConstraint(const World* _world, const ECS::Positionnable& positionnable, const ECS::Orientable& orientable, const ECS::Controllable& controllable) {
         glm::vec3 should_pos;
+        glm::vec3 eye_pos = positionnable.pos + orientable.eye_pos;
+        uint i = 0;
+        std::vector<const Block*> blocks;
         switch (controllable.type) {
         case ECS::ControlType::FreeCam:
             break;
         case ECS::ControlType::FirstPerson:
             // En FPS pas de mouvement elastique sinon préparer sac à vomi
-            m_cam_pos = positionnable.pos + orientable.eye_pos;
+            m_cam_pos = eye_pos;
             break;
         case ECS::ControlType::ThirdPerson:
             // update target pos
-            should_pos = positionnable.pos + orientable.eye_pos - controllable.distance_to_center * m_front;
+            should_pos = eye_pos - controllable.distance_to_center * m_front;
             m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
 
+            blocks = _world->findBlockLine(eye_pos, m_cam_pos);
+            while (i < blocks.size() && (blocks[i] == nullptr || !blocks[i]->hasHitbox()))
+                i++;
+            if (i < blocks.size() && blocks[i] != nullptr) {
+                glm::ivec3 block_pos = blocks[i]->getPos();
+                AABB<float> block_aabb(block_pos, block_pos + glm::ivec3(1));
+                float tmin, tmax;
+                uint face_min, face_max;
+                if (block_aabb.intersectRay(eye_pos, m_cam_pos - eye_pos, tmin, tmax, face_min, face_max)) {
+                    m_cam_pos = eye_pos + tmin * (m_cam_pos - eye_pos);
+                }
+            }
+
             // re update angle
-            m_front = positionnable.pos + orientable.eye_pos - should_pos;
+            m_front = eye_pos - should_pos;
             m_cam_orientation = Transformation::EuclidianToEuler(m_front);
             Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
             break;
@@ -159,7 +175,7 @@ public:
     inline const glm::mat4& getProjection() const { return m_projection; }
     inline const Frustum& getFrustum() const { return m_frustum; }
 
-    void update(Window& _window, ECSManager& _ecs_manager, float _deltaTime) {
+    void update(Window& _window, const World* _world, ECSManager& _ecs_manager, float _deltaTime) {
         ECS::ControllingSystem& controlling = _ecs_manager.getSystem<ECS::ControllingSystem>();
         bool has_entity = controlling.getControlledEntity().has_value();
 
@@ -182,7 +198,7 @@ public:
             updateRenderingData(_window.getAspectRatio());
         } else {
             orientable.orientation = m_cam_orientation;
-            applyPosConstraint(positionnable, orientable, controllable);
+            applyPosConstraint(_world, positionnable, orientable, controllable);
             updateRenderingData(_window.getAspectRatio());
         }
     }

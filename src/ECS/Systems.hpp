@@ -400,7 +400,7 @@ public:
         const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);
         std::vector<const Block*> block_line = _world->findBlockLine(positionnable.pos + orientable.eye_pos, positionnable.pos + orientable.eye_pos + 5.f * front);
         size_t i = 0;
-        while (i < block_line.size() && !block_line[i]->hasHitbox())
+        while (i < block_line.size() && (block_line[i] == nullptr || !block_line[i]->hasHitbox()))
             i++;
 
         if (i == block_line.size() || block_line[i] == nullptr) {

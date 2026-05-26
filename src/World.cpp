@@ -14,6 +14,7 @@ const Block* World::findBlock(const glm::ivec3& _block_pos) const {
                             : nullptr;
 }
 
+// Peut return nullptr à la fin du vecteur pour signifier qu'on a pas pu atteindre _end
 std::vector<const Block*> World::findBlockLine(const glm::vec3& start, const glm::vec3& end) const {
     const Chunk* start_chunk = findChunk(Chunk::posToChunkPos(start));
     return start_chunk != nullptr ? start_chunk->findBlockLine(start, end) : std::vector<const Block*>{};

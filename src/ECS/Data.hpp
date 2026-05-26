@@ -17,7 +17,7 @@
 namespace ECS {
 using ComponentId = std::uint8_t;
 using EntityId = std::uint32_t;
-constexpr EntityId MAX_ENTITIES = 1048576;
+constexpr EntityId MAX_ENTITIES = 10;
 constexpr uint64_t WORLD_INTERACTION_COOLDOWN = 100; // in ms
 constexpr glm::vec3 G{0.f, -100.f / 3.f, 0.f};
 

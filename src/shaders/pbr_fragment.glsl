@@ -2,9 +2,9 @@
 
 const float PI = 3.14159265359;
 
-uniform sampler2D albedo_atlas;
-uniform sampler2D normal_atlas;
-uniform sampler2D specular_atlas;
+uniform sampler2DArray albedo_textures;
+uniform sampler2DArray normal_textures;
+uniform sampler2DArray specular_textures;
 
 uniform vec3 camera_pos;
 uniform vec3 sun_direction;
@@ -22,12 +22,13 @@ const vec3 lightColors[nb_lights] = vec3[](vec3(1., 1., 0.), vec3(1., 0., 0.));
 in vec3 f_worldpos;
 in vec3 f_normal;
 in vec2 f_uv;
+flat in uint f_block_tex;
 in mat3 f_TBN;
 
 out vec4 out_color;
 
 // https://renderdiagrams.org/2024/12/18/shadowmap-bias/
-const int pcf_filter_size = 1;
+const int pcf_filter_size = 2;
 const float one_over_nshadows = 1. / ((2 * pcf_filter_size + 1) * (2 * pcf_filter_size + 1));
 float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shadowmap) {
   vec3 proj_coords = _fragpos_light_space.xyz / _fragpos_light_space.w;
@@ -108,7 +109,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
 
 void main() {
   // ALBEDO DATA
-  vec4 f_albedo = texture(albedo_atlas, f_uv).rgba;
+  vec4 f_albedo = texture(albedo_textures, vec3(f_uv, f_block_tex)).rgba;
   vec3 albedo = pow(f_albedo.xyz, vec3(2.2));
   float transparency = f_albedo.a;
   if (transparency == 0.)
@@ -116,7 +117,7 @@ void main() {
   out_color = vec4(0., 0., 0., transparency);
 
   // PBR DATA
-  vec4 pbr = texture(specular_atlas, f_uv).rgba;
+  vec4 pbr = texture(specular_textures, vec3(f_uv, f_block_tex)).rgba;
   float roughness = 1.f - pbr.b;
   float metallic = pbr.g;
   vec3 F0 = vec3(pbr.r);
@@ -125,7 +126,7 @@ void main() {
   F0 = mix(F0, albedo, metallic); // vec3(0.04);
 
   // NORMAL DATA
-  vec4 f_normal_map = texture(normal_atlas, f_uv).rgba;
+  vec4 f_normal_map = texture(normal_textures, vec3(f_uv, f_block_tex)).rgba;
   vec3 tangent_normal = f_normal_map.xyz * 2.0 - 1.0;
   vec3 mapped_normal = normalize(f_TBN * tangent_normal);
   vec3 N = normalize(mix(f_normal, mapped_normal, f_normal_map.a));

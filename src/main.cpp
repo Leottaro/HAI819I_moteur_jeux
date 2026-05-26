@@ -86,9 +86,9 @@ ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_frag
 ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
 ShaderProgram chunk_shadow_shader("src/shaders/chunk_shadow_vertex.glsl", "src/shaders/chunk_shadow_fragment.glsl");
 
-RGBATexture albedo_atlas;
-RGBATexture normal_atlas;
-RGBATexture specular_atlas;
+RGBATexture2DArray albedo_textures(0, 0, TEXTURE_NUMBER);
+RGBATexture2DArray normal_textures(0, 0, TEXTURE_NUMBER);
+RGBATexture2DArray specular_textures(0, 0, TEXTURE_NUMBER);
 
 // https://stackoverflow.com/questions/244316/reader-writer-locks-in-c
 typedef std::shared_mutex Lock;
@@ -154,17 +154,7 @@ void shaderReloadCallback() {
 }
 
 void textureReloadCallback() {
-    auto atlasses = RGBATexture::generateAtlasses();
-    albedo_atlas = std::move(atlasses[0]);
-    normal_atlas = std::move(atlasses[1]);
-    specular_atlas = std::move(atlasses[2]);
-
-    albedo_atlas.savePNG("build/albedo_atlas");
-    normal_atlas.savePNG("build/normal_atlas");
-    specular_atlas.savePNG("build/specular_atlas");
-    albedo_atlas.initShaderData();
-    normal_atlas.initShaderData();
-    specular_atlas.initShaderData();
+    RGBATexture2DArray::generateTextureArrays(albedo_textures, normal_textures, specular_textures);
 }
 
 template <class OnChange>
@@ -281,7 +271,7 @@ int main(void) {
     auto normalWatcher = makeTextureWatcher("ressources/textures/normals", texture_change_handler);
     auto specularWatcher = makeTextureWatcher("ressources/textures/speculars", texture_change_handler);
 
-    ShadowMap sun_shadowmap{4096, 4096};
+    ShadowMap sun_shadowmap{2048, 2048};
     sun_shadowmap.initShaderData();
 
     { // Pre start actions
@@ -300,7 +290,7 @@ int main(void) {
         }
 
         world->selfUpdate(controlled_pos);
-        camera.update(window, ecs_manager, 1.f);
+        camera.update(window, world.get(), ecs_manager, 1.f);
     }
 
     // Start world thread
@@ -345,8 +335,9 @@ int main(void) {
         {
             ReadLock window_read(window_lock);
             WriteLock camera_write(camera_lock);
+            ReadLock world_read(world_lock);
             ReadLock entities_read(entities_lock);
-            camera.update(window, ecs_manager, delta_time);
+            camera.update(window, world.get(), ecs_manager, delta_time);
             cam_pos = camera.getCamPos();
             cam_proj = camera.getProjection();
             cam_view = camera.getView();
@@ -386,7 +377,7 @@ int main(void) {
                 ReadLock renderer_read(renderer_lock);
                 chunk_shadow_shader.use();
                 chunk_shadow_shader.set("VP", VP);
-                chunk_shadow_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
+                chunk_shadow_shader.set("albedo_textures", albedo_textures.getGpuSlot());
                 world_renderer.renderChunkShadows(chunk_shadow_shader);
             }
 
@@ -422,9 +413,9 @@ int main(void) {
             chunk_shader.set("sun_color", world_renderer.getSunColor());
             chunk_shader.set("sun_shadowmap", sun_shadowmap.getGpuSlot());
             chunk_shader.set("sun_VP", sun_shadowmap.getVP());
-            chunk_shader.set("albedo_atlas", albedo_atlas.getGpuSlot());
-            chunk_shader.set("normal_atlas", normal_atlas.getGpuSlot());
-            chunk_shader.set("specular_atlas", specular_atlas.getGpuSlot());
+            chunk_shader.set("albedo_textures", albedo_textures.getGpuSlot());
+            chunk_shader.set("normal_textures", normal_textures.getGpuSlot());
+            chunk_shader.set("specular_textures", specular_textures.getGpuSlot());
             world_renderer.renderChunks(chunk_shader, cam_frustum, cam_pos);
         }
 
@@ -468,8 +459,8 @@ int main(void) {
     kill_threads = true;
     world_thread.join();
 
-    world_renderer.clear();
     ecs_manager.destroyEntities();
+    world_renderer.clear();
     world->clear();
 
     return 0;

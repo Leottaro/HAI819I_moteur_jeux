@@ -187,20 +187,14 @@ class ChunkRenderer {
         MathHelpers::i8pvec3 normal;
         MathHelpers::i8pvec3 tangent;
         MathHelpers::i8pvec3 bitangent;
+        BlockTexture block_tex;
         MathHelpers::fpvec2 uv;
     };
 
     static constexpr size_t MAX_VERTICES = Chunk::NB_BLOCKS * 6 * 4;
     static constexpr size_t MAX_TRIANGLES = Chunk::NB_BLOCKS * 6 * 2;
-
     static constexpr size_t VERTICES_PREALLOCATION = MAX_VERTICES / Chunk::CHUNK_SIZE;
-    inline static std::vector<ChunkVertex> opaque_vertices{};
-    inline static std::vector<ChunkVertex> translucent_vertices{};
-
     static constexpr size_t TRIANGLES_PREALLOCATION = MAX_VERTICES / Chunk::CHUNK_SIZE;
-    inline static std::vector<MathHelpers::upvec3> opaque_triangles{};
-    inline static std::vector<MathHelpers::upvec3> translucent_triangles{};
-    inline static std::vector<float> translucent_quad_distances2{};
 
     GLuint m_opaque_VAO{0};
     GLuint m_opaque_VBO{0};

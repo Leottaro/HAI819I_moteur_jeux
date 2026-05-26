@@ -45,26 +45,26 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> block_names = {{
     "Pierre de Lit",
 }};
 
-using Te = Textures; // Pour pas que les lignes en dessous fassent 3.5km
+using Te = BlockTexture; // Pour pas que les lignes en dessous fassent 3.5km
 
 // si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
 // clang-format off
-constexpr std::array<std::array<glm::u32vec2, 6>, BLOCK_TYPES_N - 1> UV_TABLE_DATA = {{
- // Front (-Z)                  Left (-X)              Bottom (-Y)              Back (+Z)               Right (+X)              Top (+Y)
-    {{TEX(Te::stone),            TEX(Te::stone),            TEX(Te::stone),              TEX(Te::stone),            TEX(Te::stone),           TEX(Te::stone)}},           // Stone
-    {{TEX(Te::dirt),             TEX(Te::dirt),             TEX(Te::dirt),               TEX(Te::dirt),             TEX(Te::dirt),            TEX(Te::dirt)}},            // Dirt
-    {{TEX(Te::grass_side),       TEX(Te::grass_side),       TEX(Te::dirt),               TEX(Te::grass_side),       TEX(Te::grass_side),      TEX(Te::grass_top)}},       // Grass
-    {{TEX(Te::glass),            TEX(Te::glass),            TEX(Te::glass),              TEX(Te::glass),            TEX(Te::glass),           TEX(Te::glass)}},           // Glass
-    {{TEX(Te::iron_block),       TEX(Te::iron_block),       TEX(Te::iron_block),         TEX(Te::iron_block),       TEX(Te::iron_block),      TEX(Te::iron_block)}},      // IronBlock
-    {{TEX(Te::redstone_lamp),    TEX(Te::redstone_lamp),    TEX(Te::redstone_lamp),      TEX(Te::redstone_lamp),    TEX(Te::redstone_lamp),   TEX(Te::redstone_lamp)}},   // RedstoneLamp
-    {{TEX(Te::diamond_ore),      TEX(Te::diamond_ore),      TEX(Te::diamond_ore),        TEX(Te::diamond_ore),      TEX(Te::diamond_ore),     TEX(Te::diamond_ore)}},     // DiamondOre
-    {{TEX(Te::slime_block),      TEX(Te::slime_block),      TEX(Te::slime_block),        TEX(Te::slime_block),      TEX(Te::slime_block),     TEX(Te::slime_block)}},     // SlimeBlock
-    {{TEX(Te::oak_log_side),     TEX(Te::oak_log_side),     TEX(Te::oak_log_side),       TEX(Te::oak_log_side),     TEX(Te::oak_log_side),    TEX(Te::oak_log_top)}},     // OakLog
-    {{TEX(Te::oak_leaves),       TEX(Te::oak_leaves),       TEX(Te::oak_leaves),         TEX(Te::oak_leaves),       TEX(Te::oak_leaves),      TEX(Te::oak_leaves)}},      // OakLeaves
-    {{TEX(Te::honey_block_side), TEX(Te::honey_block_side), TEX(Te::honey_block_bottom), TEX(Te::honey_block_side), TEX(Te::honey_block_side),TEX(Te::honey_block_top)}}, // Honey Block
-    {{TEX(Te::ice),              TEX(Te::ice),              TEX(Te::ice),                TEX(Te::ice),              TEX(Te::ice),             TEX(Te::ice)}},             // Ice
-    {{TEX(Te::water),            TEX(Te::water),            TEX(Te::water),              TEX(Te::water),            TEX(Te::water),           TEX(Te::water)}},           // Water
-    {{TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),      TEX(Te::pierre_de_lit),    TEX(Te::pierre_de_lit),   TEX(Te::pierre_de_lit)}},   // PierreDeLit
+constexpr std::array<std::array<Te, 6>, BLOCK_TYPES_N - 1> TEXTURE_TABLE_DATA = {{
+ //    Front (-Z)                 Left (-X)                  Bottom (-Y)                  Back (+Z)                  Right (+X)                Top (+Y)
+    {{Te::stone,            Te::stone,            Te::stone,              Te::stone,            Te::stone,           Te::stone}},           // Stone
+    {{Te::dirt,             Te::dirt,             Te::dirt,               Te::dirt,             Te::dirt,            Te::dirt}},            // Dirt
+    {{Te::grass_side,       Te::grass_side,       Te::dirt,               Te::grass_side,       Te::grass_side,      Te::grass_top}},       // Grass
+    {{Te::glass,            Te::glass,            Te::glass,              Te::glass,            Te::glass,           Te::glass}},           // Glass
+    {{Te::iron_block,       Te::iron_block,       Te::iron_block,         Te::iron_block,       Te::iron_block,      Te::iron_block}},      // IronBlock
+    {{Te::redstone_lamp,    Te::redstone_lamp,    Te::redstone_lamp,      Te::redstone_lamp,    Te::redstone_lamp,   Te::redstone_lamp}},   // RedstoneLamp
+    {{Te::diamond_ore,      Te::diamond_ore,      Te::diamond_ore,        Te::diamond_ore,      Te::diamond_ore,     Te::diamond_ore}},     // DiamondOre
+    {{Te::slime_block,      Te::slime_block,      Te::slime_block,        Te::slime_block,      Te::slime_block,     Te::slime_block}},     // SlimeBlock
+    {{Te::oak_log_side,     Te::oak_log_side,     Te::oak_log_side,       Te::oak_log_side,     Te::oak_log_side,    Te::oak_log_top}},     // OakLog
+    {{Te::oak_leaves,       Te::oak_leaves,       Te::oak_leaves,         Te::oak_leaves,       Te::oak_leaves,      Te::oak_leaves}},      // OakLeaves
+    {{Te::honey_block_side, Te::honey_block_side, Te::honey_block_bottom, Te::honey_block_side, Te::honey_block_side,Te::honey_block_top}}, // Honey Block
+    {{Te::ice,              Te::ice,              Te::ice,                Te::ice,              Te::ice,             Te::ice}},             // Ice
+    {{Te::water,            Te::water,            Te::water,              Te::water,            Te::water,           Te::water}},           // Water
+    {{Te::pierre_de_lit,    Te::pierre_de_lit,    Te::pierre_de_lit,      Te::pierre_de_lit,    Te::pierre_de_lit,   Te::pierre_de_lit}},   // PierreDeLit
 }};
 
 enum class BlockTransparency : uint8_t {

@@ -307,27 +307,28 @@ public:
         if (it != m_lookup_table.end()) {
             return m_storage[it->second.x]->at(it->second.y);
         }
+        nb_elements += 1;
 
         glm::uvec2 indices;
         if (!m_free_list.empty()) {
             indices = m_free_list.back();
             m_free_list.pop_back();
         } else {
-            indices.x = nb_elements / BATCH_SIZE;
-            indices.y = nb_elements - BATCH_SIZE * indices.x;
+            indices.x = (nb_elements - 1) / BATCH_SIZE;
+            indices.y = (nb_elements - 1) - BATCH_SIZE * indices.x;
             while (indices.x >= m_storage.size()) {
                 m_storage.push_back(std::make_unique<std::array<T, BATCH_SIZE>>());
                 m_alive.push_back(std::make_unique<std::array<bool, BATCH_SIZE>>());
             }
         }
 
+        m_alive[indices.x]->at(indices.y) = true;
+        m_lookup_table.insert({_key, indices});
+
         // Construct directly in place — no move, no copy
         T* slot = &m_storage[indices.x]->at(indices.y);
         std::construct_at(slot, args...);
 
-        m_alive[indices.x]->at(indices.y) = true;
-        m_lookup_table.insert({_key, indices});
-        nb_elements += 1;
         return *slot;
     }
 
