@@ -32,11 +32,11 @@ const int pcf_filter_size = 2;
 const float one_over_nshadows = 1. / ((2 * pcf_filter_size + 1) * (2 * pcf_filter_size + 1));
 float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shadowmap) {
   vec3 proj_coords = _fragpos_light_space.xyz / _fragpos_light_space.w;
-  proj_coords = proj_coords * 0.5f + 0.5f;
-  if (proj_coords.x < 0.f || 1.f < proj_coords.x ||
-      proj_coords.y < 0.f || 1.f < proj_coords.y ||
-      proj_coords.z < 0.f || 1.f < proj_coords.z)
-    return 1.f;
+  proj_coords = proj_coords * 0.5 + 0.5;
+  if (proj_coords.x < 0. || 1. < proj_coords.x ||
+      proj_coords.y < 0. || 1. < proj_coords.y ||
+      proj_coords.z < 0. || 1. < proj_coords.z)
+    return 1.;
   float current_depth = proj_coords.z;
 
   vec2 dUV_dx = dFdx(proj_coords.xy);
@@ -53,7 +53,7 @@ float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shado
   }
   float base_bias = 0.0005;
 
-  float shadow = 1.f;
+  float shadow = 1.;
   vec2 map_size = vec2(textureSize(_shadowmap, 0));
   vec2 texel_size = 1.0 / map_size;
   vec2 frac_coords = fract(proj_coords.xy * map_size);
@@ -121,7 +121,7 @@ void main() {
   float roughness = 1.f - pbr.r;
   float metallic = pbr.g;
   vec3 F0 = vec3(pbr.b);
-  float ao = 1.;
+  float ao = pbr.a;
   float emission = 0.;
   F0 = mix(F0, albedo, metallic); // vec3(0.04);
 
@@ -145,12 +145,12 @@ void main() {
     L /= distance;
 
     // calculate the shadow illumination
-    float shadow = 1.f;
+    float shadow = 1.;
     if (sun_light) {
       vec4 fragpos_lightspace = sun_VP * vec4(f_worldpos, 1.);
       shadow = getShadowFactor(fragpos_lightspace, dot(N, L), sun_shadowmap);
     }
-    if (shadow == 0.f)
+    if (shadow == 0.)
       continue;
 
     // Half vector etc

@@ -168,7 +168,7 @@ void Chunk::generate(GenType _type) {
             }
         }
         break;
-    case GenType::OVERWORLD:
+    case GenType::SURMONDE:
         surface_blocks.reserve(CHUNK_SIZE * CHUNK_SIZE);
         for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
             for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
