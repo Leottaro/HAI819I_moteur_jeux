@@ -36,7 +36,7 @@ public:
 
 private:
     uint m_render_distance{8};
-    int m_world_seed = 0;
+    int m_world_seed{3};
     GenType m_gentype{GenType::SUPERFLAT};
     ChunkStorage m_chunks{};
     MathHelpers::VecSet<int, 3> m_chunks_frontier{};
@@ -49,6 +49,8 @@ private:
     void generate(const std::vector<glm::vec3>& _centers);
 
 public:
+    int m_floor_height{50}, m_mountain_height{150}, m_water_height{110};
+
     World(World&&) = delete;
     World& operator=(World&&) = delete;
     World(const World&) = delete;
@@ -74,19 +76,8 @@ public:
     Chunk* addChunk(const glm::ivec3& _chunk_pos);
     bool removeChunk(const glm::ivec3& _chunk_pos);
 
-    // World time
     inline uint64_t& getWorldTime() { return m_world_time; }
-
-    // ECS manager
-    // template <ECS::Component C>
-    // inline C& getEntityComponent(ECS::EntityId entity) { return m_ecs_manager.getComponent<C>(entity); }
-    // template <ECS::Component C>
-    // inline const C& getEntityComponent(ECS::EntityId entity) const { return m_ecs_manager.getComponent<C>(entity); }
-    // inline void startControl(Window& _window, ECS::EntityId entity) { m_ecs_manager.startControl(_window, entity); }
-    // inline void stopControl(Window& _window) { m_ecs_manager.stopControl(_window); }
-    // inline bool hasEntity(ECS::EntityId entity) const { return m_ecs_manager.hasEntity(entity); }
-    // inline bool removeEntity(ECS::EntityId entity) { return m_ecs_manager.destroyEntity(entity); }
-    // inline ECS::EntityId addTestEntity(const glm::vec3& _pos) { return m_ecs_manager.createEntity<ECS::TestEntity>({ECS::Positionnable{this, _pos}}); }
+    inline GenType getGenType() { return m_gentype; }
 
     // Update
     void selfUpdate(const std::vector<glm::vec3>& _centers);

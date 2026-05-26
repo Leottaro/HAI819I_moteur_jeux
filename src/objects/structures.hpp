@@ -84,4 +84,4 @@ constexpr std::array<BlockPos, 67> TREE_DATA = {{
 }};
 
 // TODO : c'est nul de faire avec de la chance
-constexpr float TREE_CHANCE = 0.001f * RAND_MAX;
+constexpr int TREE_CHANCE = RAND_MAX / 100;

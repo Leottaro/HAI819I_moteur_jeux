@@ -24,10 +24,11 @@ class WorldRenderer {
     glm::vec3 m_sun_direction{0.f};
 
     uint64_t m_last_time{0};
-    uint m_last_render_distance{0};
+    float m_shadowmap_radius{Chunk::CHUNK_SIZE}; // in blocks
 
 public:
-    glm::vec3 m_sky_color{0.f}, m_sun_color{0.f};
+    glm::vec3 m_sky_color{0.f},
+        m_sun_color{0.f};
 
     WorldRenderer(WorldRenderer&& other) = delete;
     WorldRenderer& operator=(WorldRenderer&& other) = delete;
@@ -49,15 +50,14 @@ public:
     void renderChunks(ShaderProgram& _chunk_shader, const Camera::Frustum& _frustum, const glm::vec3& _cam_pos);
     void renderDebugBoxes(ShaderProgram& _line_shader) const;
 
-    void updateInterface(World* _world, const std::vector<glm::vec3>& world_gen_pos);
+    bool updateInterface(World* _world, const std::vector<glm::vec3>& world_gen_pos);
 
     inline const glm::vec3& getSunDirection() const { return m_sun_direction; }
     inline const glm::vec3& getSunColor() const { return m_sun_color; }
     inline glm::mat4 sunVP(const glm::vec3& _cam_pos) const {
-        float frustum_half_size = 1 * Chunk::CHUNK_SIZE;
-        glm::vec3 light_pos = _cam_pos - (-m_sun_direction) * frustum_half_size;
+        glm::vec3 light_pos = _cam_pos - (-m_sun_direction) * m_shadowmap_radius;
         glm::mat4 view = glm::lookAt(light_pos, _cam_pos, glm::vec3(1.f, 0.f, 0.f));
-        glm::mat4 proj = glm::ortho(-frustum_half_size, frustum_half_size, -frustum_half_size, frustum_half_size, 0.1f, 2.f * frustum_half_size);
+        glm::mat4 proj = glm::ortho(-m_shadowmap_radius, m_shadowmap_radius, -m_shadowmap_radius, m_shadowmap_radius, 0.1f, 2.f * m_shadowmap_radius);
         return proj * view;
     }
     inline void renderChunkShadows(ShaderProgram& _shadow_shader) const {

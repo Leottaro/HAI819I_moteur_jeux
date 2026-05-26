@@ -126,13 +126,10 @@ void Chunk::updateBlockNeighbours(uint8_t _face_i) {
     }
 }
 
-void Chunk::generate(GenType _type) {
+void Chunk::generate(GenType _type, int floor_height, int mountain_height, int water_height) {
     glm::ivec3 world_pos;
     std::vector<glm::u8vec3> surface_blocks;
     size_t block_i = 0;
-    constexpr int FLOOR_HEIGHT = 50;
-    constexpr int MOUTAINT_HEIGHT = 150;
-    constexpr int WATER_HEIGHT = 60;
     const BlockType holy_chosen_block = static_cast<BlockType>(1 + m_world->getWorldSeed() % (BLOCK_TYPES_N - 1));
     // std::cout << "chosen block: " << getBlockTypeName(holy_chosen_block) << std::endl;
     switch (_type) {
@@ -175,12 +172,12 @@ void Chunk::generate(GenType _type) {
         for (world_pos.x = m_pos.x; world_pos.x < m_pos.x + CHUNK_SIZE; world_pos.x++) {
             for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
                 float perlin_height = stb_perlin_noise3_seed(float(world_pos.x) / CHUNK_SIZE, 0.f, float(world_pos.z) / CHUNK_SIZE, 0.f, 0.f, 0., m_world->getWorldSeed());
+                perlin_height = (perlin_height + 1.f) * 0.5f;
+                perlin_height = sqrt(perlin_height);
+                const int ground_height = floor_height + perlin_height * (mountain_height - floor_height);
 
-                perlin_height = (cos(M_PI * (1.f - perlin_height)) + 1.f) * 0.5f;
-                const int ground_height = FLOOR_HEIGHT + perlin_height * (MOUTAINT_HEIGHT - FLOOR_HEIGHT);
-
-                if (ground_height > WATER_HEIGHT)
-                    surface_blocks.push_back(glm::vec3(world_pos.x, ground_height, world_pos.z));
+                if (ground_height > water_height)
+                    surface_blocks.push_back(glm::ivec3(world_pos.x, ground_height, world_pos.z) - m_pos);
 
                 for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
                     // std::cout << world_pos << "/" << ground_height << "\n";
@@ -195,7 +192,7 @@ void Chunk::generate(GenType _type) {
                         block.getType() = BlockType::Dirt;
                     } else if (world_pos.y == ground_height) {
                         block.getType() = BlockType::Grass;
-                    } else if (world_pos.y <= WATER_HEIGHT) {
+                    } else if (world_pos.y <= water_height) {
                         block.getType() = BlockType::Water;
                     }
                 }
@@ -223,7 +220,7 @@ void Chunk::generate(GenType _type) {
 
 Chunk::Chunk(World* _world, const glm::ivec3& _chunk_pos, GenType _type) : m_world(_world), m_pos(_chunk_pos), m_aabb(glm::vec3(m_pos), glm::vec3(m_pos) + glm::vec3(CHUNK_SIZE)) {
     // m_heightmap.emplace("ressources/textures/heightmap.png");
-    generate(_type);
+    generate(_type, _world->m_floor_height, _world->m_mountain_height, _world->m_water_height);
 }
 
 // -------------------------------------------------------------------------

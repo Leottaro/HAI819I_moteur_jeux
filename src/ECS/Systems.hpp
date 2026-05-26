@@ -79,9 +79,10 @@ public:
                 if (block != nullptr) {
                     float densite_fluide = block->getDensity();
                     if (densite_fluide > 0.f) {
-                        float entity_density = (groundable.wants_to_float ? .75f : 1.f) * (stats.weight / stats.volume);
+                        float entity_density = (groundable.float_request ? .75f : 1.f) * (stats.weight / stats.volume);
                         acceleration += densite_fluide * -gravity * stats.volume / entity_density; // flottaison
                         acceleration += densite_fluide * movable.vel * -stats.drag;                // drag
+                        groundable.float_request = false;
                     }
                 }
             }
@@ -378,13 +379,11 @@ public:
 
         movable.vel += (groundable.on_ground ? groundable.walk_speed : groundable.air_control_speed) * (motion.x * right + motion.y * flat_front);
         if (_window.keyboard.isHeld(GLFW_KEY_SPACE)) {
-            groundable.wants_to_float = true;
+            groundable.float_request = true;
             if (groundable.on_ground) {
                 movable.vel += MathHelpers::VEC_UP * groundable.jump_force;
                 groundable.on_ground = false;
             }
-        } else {
-            groundable.wants_to_float = false;
         }
 
         if (_window.getScroll().y < 0) {

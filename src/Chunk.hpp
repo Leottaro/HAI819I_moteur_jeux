@@ -102,7 +102,7 @@ private:
     }
 
     inline Block& getBlock(const glm::ivec3& _block_pos) { return m_blocks[posToBlockI(_block_pos - m_pos)]; }
-    void generate(GenType _type);
+    void generate(GenType _type, int floor_height, int mountain_height, int water_height);
 
 public:
     std::array<Chunk*, 6> m_neighbours{nullptr};

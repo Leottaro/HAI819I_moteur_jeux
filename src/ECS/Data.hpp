@@ -44,7 +44,7 @@ struct Movable {
 };
 struct Groundable {
     bool on_ground{false};
-    bool wants_to_float{false};
+    bool float_request{false};
     float air_control_speed{0.1f};
     float walk_speed{3.0f};
     float jump_force{10.0f};

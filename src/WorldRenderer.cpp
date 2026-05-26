@@ -33,7 +33,6 @@ void WorldRenderer::updateWorld(World* _world) {
     _world->m_removed_chunks.clear();
     _world->m_added_chunks.clear();
     m_last_time = _world->m_world_time;
-    m_last_render_distance = _world->m_render_distance;
 
     float angle = (static_cast<float>(_world->m_world_time % DAY_LENGTH) / DAY_LENGTH) * 2.f * M_PIf;
     float t = (sin(angle) + 1.f) * 0.5f;
@@ -118,10 +117,11 @@ void WorldRenderer::renderDebugBoxes(ShaderProgram& _line_shader) const {
     }
 }
 
-void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>& world_gen_pos) {
+bool WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>& world_gen_pos) {
+    bool cleared = false;
     if (!ImGui::Begin("World Info")) {
         ImGui::End();
-        return;
+        return cleared;
     }
 
     int current_type = static_cast<int>(_world->m_gentype);
@@ -129,12 +129,16 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
         _world->m_gentype = static_cast<GenType>(current_type);
         clear();
         _world->clear();
-        _world->generate(world_gen_pos);
+        cleared = true;
     }
 
     uint render_distance = _world->m_render_distance;
     if (ImGui::InputScalar("Render distance", ImGuiDataType_U32, &render_distance)) {
         _world->m_render_distance = std::max(render_distance, 2U);
+    }
+
+    if (ImGui::DragFloat("Shadowmap radius", &m_shadowmap_radius, 0.5f, 1.f)) {
+        m_shadowmap_radius = std::max(m_shadowmap_radius, 1.f);
     }
 
     ImGui::Spacing();
@@ -181,8 +185,13 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
         clear();
         _world->clear();
         _world->setWorldSeed(new_seed_val);
-        _world->generate(world_gen_pos);
+        cleared = true;
     }
 
+    ImGui::DragInt("floor height", &_world->m_floor_height, 1.f);
+    ImGui::DragInt("mountain height", &_world->m_mountain_height, 1.f);
+    ImGui::DragInt("water height", &_world->m_water_height, 1.f);
+
     ImGui::End();
+    return cleared;
 }

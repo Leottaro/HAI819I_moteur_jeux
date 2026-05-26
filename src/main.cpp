@@ -452,7 +452,19 @@ int main(void) {
         {
             WriteLock world_write(world_lock);
             WriteLock renderer_write(renderer_lock);
-            world_renderer.updateInterface(world.get(), pos_copy);
+            if (world_renderer.updateInterface(world.get(), pos_copy)) {
+                WriteLock entities_write(entities_lock);
+                WriteLock pos_write(pos_lock);
+                const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
+                controlled_pos.clear();
+                controlled_pos.reserve(controlled_entities.size());
+                for (ECS::EntityId entity : controlled_entities) {
+                    glm::vec3& pos = ecs_manager.getComponent<ECS::Positionnable>(entity).pos;
+                    pos.y = world->getGenType() == GenType::SURMONDE ? world->m_mountain_height + 1.f : 10.f;
+                    controlled_pos.push_back(pos);
+                }
+                world->selfUpdate(controlled_pos);
+            }
         }
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
