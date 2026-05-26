@@ -350,13 +350,10 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                         glm::vec3 face_centroid = block_center + 0.5f * glm::vec3(face.normal);
                         float distance_to_cam2 = glm::distance2(_cam_pos, face_centroid);
 
-                        // Find the insertion point in descending order
                         auto dist_it = std::lower_bound(translucent_quad_distances2.begin(), translucent_quad_distances2.end(), distance_to_cam2, std::greater<float>());
                         const size_t i = static_cast<size_t>(std::distance(translucent_quad_distances2.begin(), dist_it));
-
                         translucent_quad_distances2.insert(dist_it, distance_to_cam2);
-                        const auto tri_it = triangles.begin() + static_cast<ptrdiff_t>(i * 2);
-                        triangles.insert(tri_it, {face.triangles[0] + offset, face.triangles[1] + offset});
+                        triangles.insert(triangles.begin() + i * 2, {face.triangles[0] + offset, face.triangles[1] + offset});
                     } else {
                         triangles.push_back(face.triangles[0] + offset);
                         triangles.push_back(face.triangles[1] + offset);

@@ -42,7 +42,7 @@ public:
     inline void forEach(std::function<void(ECS::EntityId)> _f) const {
         ECS::EntityId entity = 0;
         size_t nb_entities = 0;
-        while (nb_entities != m_nb_entities) {
+        while (nb_entities < m_nb_entities) {
             if (m_entities[entity]) {
                 _f(entity);
                 nb_entities++;

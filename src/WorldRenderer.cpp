@@ -66,22 +66,25 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Fru
     });
     m_last_cam_chunk = cam_chunk;
 
-    std::vector<std::pair<float, const ChunkRenderer*>> draw_list;
+    std::vector<const ChunkRenderer*> draw_list;
+    std::vector<float> draw_list_distances2;
     draw_list.reserve(m_render_chunks.size());
-
-    m_render_chunks.forEach([&draw_list, _frustum, _cam_pos](const ChunkRenderer& chunk_renderer) {
+    draw_list_distances2.reserve(m_render_chunks.size());
+    m_render_chunks.forEach([&draw_list, &draw_list_distances2, _frustum, _cam_pos](const ChunkRenderer& chunk_renderer) {
         if ((chunk_renderer.getOpaqueTriangles() > 0 || chunk_renderer.getTranslucentTriangles() > 0) // on skip les chunks sans triangles
             && _frustum.isVisible(chunk_renderer.getAABB())                                           // On skip les chunk hors du frustum
         ) {
-            float dist = glm::distance(_cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
-            draw_list.push_back({dist, &chunk_renderer});
+            float dist_squared = glm::distance2(_cam_pos, glm::vec3(chunk_renderer.getPos()) + glm::vec3(Chunk::CHUNK_SIZE * 0.5f));
+            auto dist_it = std::lower_bound(draw_list_distances2.begin(), draw_list_distances2.end(), dist_squared, std::greater<float>());
+            const size_t i = static_cast<size_t>(std::distance(draw_list_distances2.begin(), dist_it));
+
+            draw_list_distances2.insert(dist_it, dist_squared);
+            draw_list.insert(draw_list.begin() + i, &chunk_renderer);
         }
     });
-    std::sort(draw_list.begin(), draw_list.end(),
-              [](auto& a, auto& b) { return a.first > b.first; });
 
     // --- PASS 3: draw (sequential pointer chasing, unavoidable) ---
-    for (auto [_, chunk_renderer] : draw_list) {
+    for (const ChunkRenderer* chunk_renderer : draw_list) {
         if (chunk_renderer->getOpaqueTriangles() > 0) {
             _chunk_shader.set("chunk_pos", chunk_renderer->getPos());
             chunk_renderer->renderOpaque();
@@ -89,7 +92,7 @@ void WorldRenderer::renderChunks(ShaderProgram& _chunk_shader, const Camera::Fru
     }
     glDepthMask(GL_FALSE);
     glEnable(GL_BLEND);
-    for (auto& [_, chunk_renderer] : draw_list) {
+    for (const ChunkRenderer* chunk_renderer : draw_list) {
         if (chunk_renderer->getTranslucentTriangles() > 0) {
             _chunk_shader.set("chunk_pos", chunk_renderer->getPos());
             chunk_renderer->renderTranslucent();
