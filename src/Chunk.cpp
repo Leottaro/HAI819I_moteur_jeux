@@ -128,7 +128,8 @@ void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     std::vector<glm::u8vec3> surface_blocks;
     size_t block_i = 0;
-    constexpr uint32_t MOUTAINT_HEIGHT = 10.f;
+    constexpr uint32_t MOUTAINT_HEIGHT = 10;
+    constexpr uint32_t WATER_HEIGHT = 10;
     const BlockType holy_chosen_block = static_cast<BlockType>(m_world->getWorldSeed() % BLOCK_TYPES_N);
     // std::cout << "chosen block: " << block_names[static_cast<size_t>(m_world->getWorldSeed())] << std::endl;
     switch (_type) {
@@ -138,19 +139,12 @@ void Chunk::generate(GenType _type) {
                 for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
                     Block& block = m_blocks[block_i++];
                     block.getPos() = world_pos;
-                    if (world_pos.y <= -45) {
-                        block.getType() = BlockType::Air;
-                    } else if (world_pos.y <= 0) {
-                        block.getType() = BlockType::Stone;
-                    } else if (world_pos.y <= 3) {
-                        block.getType() = BlockType::Dirt;
-                    } else if (world_pos.y <= 4) {
+                    if (world_pos.y == 0) {
+                        block.getType() = BlockType::PierreDeLit;
+                    } else if (world_pos.y == 1) {
                         uint truc = (world_pos.y * 43 + world_pos.z) * 37 + world_pos.x;
                         block.getType() = BlockType(truc % BLOCK_TYPES_N);
-                    } else {
-                        block.getType() = BlockType::Air;
                     }
-                    // block.getType() = world_pos.x % 2 == world_pos.y % 2 && world_pos.y % 2 == world_pos.z % 2 ? BlockType::Stone : BlockType::Air;
                 }
             }
         }
@@ -161,16 +155,13 @@ void Chunk::generate(GenType _type) {
                 for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
                     Block& block = m_blocks[block_i++];
                     block.getPos() = world_pos;
-                    if (world_pos.y <= -45) {
-                        block.getType() = BlockType::Air;
+                    if (-100 <= world_pos.y) {
                     } else if (world_pos.y <= 0) {
                         block.getType() = BlockType::Stone;
                     } else if (world_pos.y <= 3) {
                         block.getType() = BlockType::Dirt;
                     } else if (world_pos.y <= 4) {
                         block.getType() = holy_chosen_block;
-                    } else {
-                        block.getType() = BlockType::Air;
                     }
                 }
             }
@@ -182,27 +173,24 @@ void Chunk::generate(GenType _type) {
             for (world_pos.z = m_pos.z; world_pos.z < m_pos.z + CHUNK_SIZE; world_pos.z++) {
                 glm::vec3 world_float = glm::vec3(world_pos) / Chunk::CHUNK_SIZE;
                 const float perlin_height = stb_perlin_noise3_seed(world_float.x, 0.f, world_float.z, 0.f, 0.f, 0., m_world->getWorldSeed());
-                const int ground_height = static_cast<int>((perlin_height + 1) * MOUTAINT_HEIGHT);
+                const int ground_height = static_cast<int>((perlin_height + 0.5) * MOUTAINT_HEIGHT);
                 for (world_pos.y = m_pos.y; world_pos.y < m_pos.y + CHUNK_SIZE; world_pos.y++) {
                     // std::cout << world_pos << "/" << ground_height << "\n";
                     Block& block = m_blocks[block_i++];
                     block.getPos() = world_pos;
-                    if (world_pos.y <= -100) {
+                    if (world_pos.y <= -101) {
                         block.getType() = BlockType::Air;
-                    } else if (world_pos.y <= -99) {
+                    } else if (world_pos.y <= -100) {
                         block.getType() = BlockType::PierreDeLit;
-                    } else if (world_pos.y <= ground_height) {
-                        if (rand() < ONE_IN_THOUSAND)
-                            block.getType() = BlockType::DiamondOre;
-                        else
-                            block.getType() = BlockType::Stone;
-                    } else if (world_pos.y <= ground_height + 3) {
+                    } else if (world_pos.y <= ground_height - 4) {
+                        block.getType() = rand() < ONE_IN_THOUSAND ? BlockType::DiamondOre : BlockType::Stone;
+                    } else if (world_pos.y <= ground_height - 3) {
                         block.getType() = BlockType::Dirt;
-                    } else if (world_pos.y <= ground_height + 4) {
+                    } else if (world_pos.y <= ground_height) {
                         block.getType() = BlockType::Grass;
                         surface_blocks.push_back(world_pos - m_pos);
-                    } else {
-                        block.getType() = BlockType::Air;
+                    } else if (world_pos.y <= WATER_HEIGHT) {
+                        block.getType() = BlockType::Water;
                     }
                 }
             }
@@ -340,7 +328,7 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                             face.normal,
                             face.tangent,
                             face.bitangent,
-                            Block::getTexture(block.getType(), face_i),
+                            block.getTexture(face_i),
                             uvs[i],
                         });
                     }

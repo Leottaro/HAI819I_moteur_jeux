@@ -118,9 +118,9 @@ void main() {
 
   // PBR DATA
   vec4 pbr = texture(specular_textures, vec3(f_uv, f_block_tex)).rgba;
-  float roughness = 1.f - pbr.b;
+  float roughness = 1.f - pbr.r;
   float metallic = pbr.g;
-  vec3 F0 = vec3(pbr.r);
+  vec3 F0 = vec3(pbr.b);
   float ao = 1.;
   float emission = 0.;
   F0 = mix(F0, albedo, metallic); // vec3(0.04);

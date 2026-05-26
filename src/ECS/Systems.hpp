@@ -387,14 +387,14 @@ public:
             if (new_block >= BLOCK_TYPES_N)
                 new_block = 1;
             controllable.block_in_hand = static_cast<BlockType>(new_block);
-            std::cout << "nouveau bloc : " << block_names[new_block] << std::endl;
+            std::cout << "nouveau bloc : " << BLOCK_NAMES[new_block] << std::endl;
         } else if (_window.getScroll().y > 0) {
             uint8_t new_block = static_cast<uint8_t>(controllable.block_in_hand);
             new_block--;
             if (new_block == 0)
                 new_block = BLOCK_TYPES_N - 1;
             controllable.block_in_hand = static_cast<BlockType>(new_block);
-            std::cout << "nouveau bloc : " << block_names[new_block] << std::endl;
+            std::cout << "nouveau bloc : " << BLOCK_NAMES[new_block] << std::endl;
         }
 
         const ECS::Positionnable& positionnable = cm.getComponent<ECS::Positionnable>(entity);

@@ -28,8 +28,12 @@ enum class BlockTexture : uint8_t {
 };
 
 constexpr uint8_t TEXTURE_NUMBER = static_cast<uint8_t>(BlockTexture::NUMBER_OF_TEXTURES);
+constexpr unsigned firstSquare(unsigned x, unsigned dims = 0) {
+    return dims * dims < x ? firstSquare(x, dims + 1) : dims;
+}
+constexpr uint32_t ATLAS_DIMS = firstSquare(TEXTURE_NUMBER);
 
-constexpr std::array<std::string_view, TEXTURE_NUMBER> texture_names = {{"stone",
+constexpr std::array<std::string_view, TEXTURE_NUMBER> TEXTURE_NAMES = {{"stone",
                                                                          "dirt",
                                                                          "grass_side",
                                                                          "grass_top",
