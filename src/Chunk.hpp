@@ -31,8 +31,6 @@ class Chunk {
 public:
     static constexpr uint8_t CHUNK_SIZE = 32; // The size of a cubic chunk
     static constexpr size_t NB_BLOCKS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-    static constexpr size_t MAX_VERTICES = NB_BLOCKS * 6 * 4;
-    static constexpr size_t MAX_TRIANGLES = NB_BLOCKS * 6 * 2;
 
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
         glm::ivec3(0, 0, -CHUNK_SIZE), // Front (-Z)
@@ -53,8 +51,10 @@ public:
             (_block_pos.z < 0 && _block_pos.z % CHUNK_SIZE != 0 ? _block_pos.z / CHUNK_SIZE - 1 : _block_pos.z / CHUNK_SIZE) * CHUNK_SIZE);
     }
 
-    static constexpr float chunkSquaredDistance(const glm::ivec3& _chunk1, const glm::ivec3& _chunk2) {
-        float dist = std::pow(_chunk1.x - _chunk2.x, 2) + std::pow(_chunk1.y - _chunk2.y, 2) + std::pow(_chunk1.z - _chunk2.z, 2);
+    static constexpr uint chunkSquaredDistance(const glm::ivec3& _chunk1, const glm::ivec3& _chunk2) {
+        uint dist = (_chunk1.x - _chunk2.x) * (_chunk1.x - _chunk2.x) +
+                    (_chunk1.y - _chunk2.y) * (_chunk1.y - _chunk2.y) +
+                    (_chunk1.z - _chunk2.z) * (_chunk1.z - _chunk2.z);
         return dist / (CHUNK_SIZE * CHUNK_SIZE);
     }
 
@@ -190,12 +190,17 @@ class ChunkRenderer {
         MathHelpers::fpvec2 uv;
     };
 
-    // Si mes comptes sont bons on a 39.75MiB pour tout les chunks (c'est OK)
-    inline static std::array<ChunkVertex, Chunk::MAX_VERTICES> opaque_vertices{};
-    inline static std::array<MathHelpers::upvec3, Chunk::MAX_TRIANGLES> opaque_triangles{};
-    inline static std::array<ChunkVertex, Chunk::MAX_VERTICES> translucent_vertices{};
-    inline static std::array<MathHelpers::upvec3, Chunk::MAX_TRIANGLES> translucent_triangles{};
-    inline static std::array<float, Chunk::MAX_TRIANGLES / 2> translucent_quad_distances2{};
+    static constexpr size_t MAX_VERTICES = Chunk::NB_BLOCKS * 6 * 4;
+    static constexpr size_t MAX_TRIANGLES = Chunk::NB_BLOCKS * 6 * 2;
+
+    static constexpr size_t VERTICES_PREALLOCATION = MAX_VERTICES / Chunk::CHUNK_SIZE;
+    inline static std::vector<ChunkVertex> opaque_vertices{};
+    inline static std::vector<ChunkVertex> translucent_vertices{};
+
+    static constexpr size_t TRIANGLES_PREALLOCATION = MAX_VERTICES / Chunk::CHUNK_SIZE;
+    inline static std::vector<MathHelpers::upvec3> opaque_triangles{};
+    inline static std::vector<MathHelpers::upvec3> translucent_triangles{};
+    inline static std::vector<float> translucent_quad_distances2{};
 
     GLuint m_opaque_VAO{0};
     GLuint m_opaque_VBO{0};

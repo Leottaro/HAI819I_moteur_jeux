@@ -93,8 +93,10 @@ void World::generate(const std::vector<glm::vec3>& _centers) {
         if (findChunk(chunk_pos) == nullptr)
             addChunk(chunk_pos);
 
-    std::vector<glm::ivec3> chunks_to_remove;
-    m_chunks.forEach([&chunks_to_remove, &chunk_centers, squared_render_distance](Chunk& chunk) {
+    std::optional<glm::ivec3> chunk_to_remove;
+    m_chunks.forEach([&chunk_to_remove, &chunk_centers, squared_render_distance](Chunk& chunk) {
+        if (chunk_to_remove.has_value())
+            return;
         bool should_remove = true;
         for (const glm::ivec3& chunk_pos : chunk_centers) {
             if (Chunk::chunkSquaredDistance(chunk.getPos(), chunk_pos) <= squared_render_distance) {
@@ -103,25 +105,30 @@ void World::generate(const std::vector<glm::vec3>& _centers) {
             }
         }
         if (should_remove)
-            chunks_to_remove.push_back(chunk.getPos());
+            chunk_to_remove = chunk.getPos();
     });
-    for (const glm::ivec3& chunk_pos : chunks_to_remove)
-        removeChunk(chunk_pos);
+    if (chunk_to_remove.has_value()) {
+        removeChunk(chunk_to_remove.value());
+    }
 
-    std::vector<std::map<float, glm::ivec3>> chunk_to_add(_centers.size());
+    std::vector<std::pair<float, glm::ivec3>> chunk_to_add(_centers.size(), {std::numeric_limits<uint>::max(), glm::ivec3(0)});
     for (const glm::ivec3& chunk_pos : m_chunks_frontier) {
         for (uint i = 0; i < _centers.size(); i++) {
-            float squared_dist = Chunk::chunkSquaredDistance(chunk_centers[i], chunk_pos);
-            if (squared_dist <= squared_render_distance) {
-                float real_squared_dist = glm::distance2(_centers[i], glm::vec3(chunk_pos) + glm::vec3(Chunk::CHUNK_SIZE / 2)) / (Chunk::CHUNK_SIZE * Chunk::CHUNK_SIZE);
-                chunk_to_add[i].insert({real_squared_dist, chunk_pos});
+            uint squared_dist = Chunk::chunkSquaredDistance(chunk_centers[i], chunk_pos);
+            if (squared_dist > squared_render_distance)
+                continue;
+
+            float real_squared_dist = glm::distance2(_centers[i], glm::vec3(chunk_pos) + glm::vec3(Chunk::CHUNK_SIZE / 2));
+            if (real_squared_dist < chunk_to_add[i].first) {
+                chunk_to_add[i].first = real_squared_dist;
+                chunk_to_add[i].second = chunk_pos;
             }
         }
     }
 
     for (uint i = 0; i < _centers.size(); i++)
-        if (!chunk_to_add[i].empty())
-            addChunk(chunk_to_add[i].begin()->second);
+        if (chunk_to_add[i].first < std::numeric_limits<float>::max())
+            addChunk(chunk_to_add[i].second);
 }
 
 void World::selfUpdate(const std::vector<glm::vec3>& _centers) {

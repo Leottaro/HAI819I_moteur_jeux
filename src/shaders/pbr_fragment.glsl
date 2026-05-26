@@ -33,7 +33,8 @@ float getShadowFactor(vec4 _fragpos_light_space, float N_dot_L, sampler2D _shado
   vec3 proj_coords = _fragpos_light_space.xyz / _fragpos_light_space.w;
   proj_coords = proj_coords * 0.5f + 0.5f;
   if (proj_coords.x < 0.f || 1.f < proj_coords.x ||
-      proj_coords.y < 0.f || 1.f < proj_coords.y)
+      proj_coords.y < 0.f || 1.f < proj_coords.y ||
+      proj_coords.z < 0.f || 1.f < proj_coords.z)
     return 1.f;
   float current_depth = proj_coords.z;
 

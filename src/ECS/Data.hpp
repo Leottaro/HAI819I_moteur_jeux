@@ -24,7 +24,6 @@ constexpr glm::vec3 G{0.f, -100.f / 3.f, 0.f};
 enum class ControlType : uint8_t {
     FirstPerson = 0,
     ThirdPerson,
-    FreeCamFrustum,
     FreeCam,
     __COUNT
 };

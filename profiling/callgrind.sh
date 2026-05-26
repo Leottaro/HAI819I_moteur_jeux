@@ -6,7 +6,6 @@ if make -j hai819i_moteur_jeux_opt; then
         --callgrind-out-file=valgrind_callgrind.out \
         --collect-jumps=yes \
         --simulate-cache=yes \
-        --dump-instr=yes \
         ./build/hai819i_moteur_jeux_opt
     kcachegrind valgrind_callgrind.out
 else

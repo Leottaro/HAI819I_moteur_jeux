@@ -24,7 +24,7 @@ enum class Gamerules : uint8_t {
     NB_GAMERULES
 };
 
-constexpr size_t CHUNK_BATCH_SIZE{128 * 1024 * 1024}; // 128MiB
+constexpr size_t CHUNK_BATCH_SIZE{16 * 1024 * 1024}; // 16MiB
 using ChunkStorage = ContiguousStorage<Chunk, CHUNK_BATCH_SIZE, glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 using ChunkRendererStorage = ContiguousStorage<ChunkRenderer, ChunkStorage::BATCH_SIZE * sizeof(ChunkRenderer), glm::ivec3, MathHelpers::glmVecLexicoGraphic<int, 3>>;
 

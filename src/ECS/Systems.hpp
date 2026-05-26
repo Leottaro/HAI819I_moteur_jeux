@@ -227,26 +227,23 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
                 groundable.on_ground = true;
                 collision.pos.y += 1.e-2f;
             }
-            positionnable.pos = collision.pos;
-            if (_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr) {
+
+            if (_world->findChunk(Chunk::posToChunkPos(collision.pos)) == nullptr)
                 return;
-            }
+            positionnable.pos = collision.pos;
             _deltaTime *= (1.f - collision.t);
             // std::cout
             //     << "\t\tpos: " << glm::to_string(positionnable.pos) << std::endl
             //     << "\t\tvel: " << glm::to_string(movable.vel) << std::endl
             //     << "dt=" << _deltaTime << std::endl;
         }
-        positionnable.pos += _deltaTime * movable.vel;
+
+        glm::vec3 final_pos = positionnable.pos + _deltaTime * movable.vel;
+        if (_world->findBlock(Block::posToBlockPos(final_pos)) != nullptr)
+            positionnable.pos = final_pos;
         // std::cout << "\tAPPLIED dt=" << _deltaTime << " velocity" << std::endl
         //           << "\t\tnew pos: " << glm::to_string(positionnable.pos) << std::endl
         //           << "\t\tnew vel: " << glm::to_string(movable.vel) << std::endl;
-
-        if (_world->findChunk(Chunk::posToChunkPos(positionnable.pos)) == nullptr) {
-            return;
-        }
-
-        return;
     }
 
 public:
@@ -366,7 +363,7 @@ public:
 
         ECS::EntityId entity = m_controlled_entity.value();
         const ECS::Controllable& controllable = cm.getComponent<ECS::Controllable>(entity);
-        if (controllable.type == ControlType::FreeCam || controllable.type == ControlType::FreeCamFrustum)
+        if (controllable.type == ControlType::FreeCam)
             return;
         ECS::Movable& movable = cm.getComponent<ECS::Movable>(entity);
         ECS::Groundable& groundable = cm.getComponent<ECS::Groundable>(entity);
@@ -393,7 +390,7 @@ public:
         while (i < block_line.size() && !block_line[i]->hasHitbox())
             i++;
 
-        if (i == block_line.size()) {
+        if (i == block_line.size() || block_line[i] == nullptr) {
             m_aimed_block.reset();
             return;
         }

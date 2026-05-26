@@ -99,10 +99,11 @@ Lock renderer_lock;
 Lock entities_lock;
 Lock pos_lock;
 
-constexpr size_t WORLD_TPS = 10;
+constexpr size_t WORLD_TPS = 20;
 constexpr float WORLD_FRAME_TIME = 1.0f / WORLD_TPS;
 void worldThread() {
     float current_time, delta_time, last_frame = glfwGetTime();
+    std::vector<glm::vec3> pos_copy;
     while (!kill_threads) {
         current_time = glfwGetTime();
         delta_time = current_time - last_frame;
@@ -112,7 +113,6 @@ void worldThread() {
         }
         last_frame = current_time;
 
-        std::vector<glm::vec3> pos_copy;
         {
             ReadLock pos_write(pos_lock);
             pos_copy = controlled_pos;
@@ -150,7 +150,7 @@ void shaderReloadCallback() {
 
 int main(void) {
     globalInit(window);
-    window.toggleMouseCapture();
+    // window.toggleMouseCapture();
 
     world = std::make_unique<World>();
     world_renderer.setWorld(world.get(), camera);

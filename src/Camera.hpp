@@ -91,13 +91,13 @@ public:
     float m_free_cam_speed = 16.f;
     float m_zoom_rate{0.05f};
     float m_elasticity{0.5f};
+    bool m_update_frustum{true};
 
 private:
     inline void applyPosConstraint(const ECS::Positionnable& positionnable, const ECS::Orientable& orientable, const ECS::Controllable& controllable) {
         glm::vec3 should_pos;
         switch (controllable.type) {
         case ECS::ControlType::FreeCam:
-        case ECS::ControlType::FreeCamFrustum:
             break;
         case ECS::ControlType::FirstPerson:
             // En FPS pas de mouvement elastique sinon préparer sac à vomi
@@ -123,12 +123,8 @@ private:
     inline void updateRenderingData(float _aspect_ratio) {
         m_projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
         m_view = glm::lookAt(m_cam_pos, m_cam_pos + m_front, m_real_up);
-        m_frustum.updatePlanes(m_projection, m_view);
-    }
-    inline void updateFreeFrustum(float _aspect_ratio, const glm::vec3& pos, const glm::vec3& front, const glm::vec3& real_up) {
-        glm::mat4 projection = glm::perspective(m_fovy, _aspect_ratio, m_near_far[0], m_near_far[1]);
-        glm::mat4 view = glm::lookAt(pos, pos + front, real_up);
-        m_frustum.updatePlanes(projection, view);
+        if (m_update_frustum)
+            m_frustum.updatePlanes(m_projection, m_view);
     }
 
     inline void updateFreeKeyboardInput(Window& _window, float _deltaTime) {
@@ -181,14 +177,9 @@ public:
         const ECS::Positionnable& positionnable = _ecs_manager.getComponent<ECS::Positionnable>(entity);
         ECS::Orientable& orientable = _ecs_manager.getComponent<ECS::Orientable>(entity);
         const ECS::Controllable& controllable = _ecs_manager.getComponent<ECS::Controllable>(entity);
-        if (controllable.type == ECS::ControlType::FreeCam || controllable.type == ECS::ControlType::FreeCamFrustum) {
+        if (controllable.type == ECS::ControlType::FreeCam) {
             updateFreeKeyboardInput(_window, _deltaTime);
             updateRenderingData(_window.getAspectRatio());
-            if (controllable.type != ECS::ControlType::FreeCam) {
-                glm::vec3 front, right, real_up;
-                Transformation::getViewVectors(orientable.orientation, front, right, real_up);
-                updateFreeFrustum(_window.getAspectRatio(), positionnable.pos, front, real_up);
-            }
         } else {
             orientable.orientation = m_cam_orientation;
             applyPosConstraint(positionnable, orientable, controllable);
@@ -200,7 +191,7 @@ public:
 
     void updateInterface(ECSManager& _ecs_manager) {
         m_disable_mouse_actions = false;
-        ECS::ControlType fallback_type{ECS::ControlType::FreeCamFrustum};
+        ECS::ControlType fallback_type{ECS::ControlType::FreeCam};
         float fallback_distance{0.f};
         glm::vec3 fallback_pos{0.f};
 
@@ -229,20 +220,22 @@ public:
 
         ImGui::Separator();
 
-        ImGui::BeginDisabled(control_type == ECS::ControlType::FreeCam || control_type == ECS::ControlType::FreeCamFrustum);
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
         ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
         ImGui::EndDisabled();
 
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam && control_type != ECS::ControlType::FreeCamFrustum);
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
         if (ImGui::Button("Snap entity to Pos")) {
             entity_pos = m_cam_pos;
         }
         ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::Checkbox("update frustum", &m_update_frustum);
         ImGui::Separator();
 
         // Orientation Controls
         glm::vec2 angles_degree = glm::degrees(m_cam_orientation);
-        bool pitch_changed = ImGui::DragFloat("Pitch", &angles_degree[0], 1.f, -89.943f, 89.943f, "%.3f°");
+        bool pitch_changed = ImGui::DragFloat("Pitch", &angles_degree[0], .5f, -89.943f, 89.943f, "%.3f°");
         bool yaw_changed = ImGui::DragFloat("Yaw", &angles_degree[1], -1.f, -180.f, 180.f, "%.3f°");
         if (pitch_changed || yaw_changed) {
             m_cam_orientation = glm::radians(angles_degree);
@@ -259,12 +252,12 @@ public:
             m_fovy = glm::radians(fovy_degree);
         }
         ImGui::DragFloat2("nearFar", glm::value_ptr(m_near_far), 1.e-4f, 0.f, 1.e8f);
-        ImGui::DragFloat("rotationSpeed", &m_rotation_speed, 1.e-4f, 0.f, 1.e2f);
+        ImGui::DragFloat("rotationSpeed", &m_rotation_speed, 1.e-2f, 0.f, 1.e2f);
 
         ImGui::Separator();
 
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam && control_type != ECS::ControlType::FreeCamFrustum);
-        ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.e-4f, 0.f, 1.e8f);
+        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.f, 0.f, 1.e8f);
         ImGui::EndDisabled();
 
         // Distance to center
