@@ -17,7 +17,7 @@
 namespace ECS {
 using ComponentId = std::uint8_t;
 using EntityId = std::uint32_t;
-constexpr EntityId MAX_ENTITIES = 10;
+constexpr EntityId MAX_ENTITIES = 1048576;
 constexpr uint64_t WORLD_INTERACTION_COOLDOWN = 100; // in ms
 constexpr glm::vec3 G{0.f, -100.f / 3.f, 0.f};
 
@@ -63,9 +63,9 @@ struct Orientable {
     glm::vec3 eye_pos{0.f};
 };
 struct Controllable {
-    BlockType block_in_hand{BlockType::Stone};
     ControlType type{ControlType::ThirdPerson};
     float distance_to_center{5.f}; // Only in third person
+    BlockType block_in_hand{BlockType::Stone};
 };
 struct WorldInteraction {
     uint64_t last_interaction_time{};

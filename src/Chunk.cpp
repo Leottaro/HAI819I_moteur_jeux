@@ -4,6 +4,8 @@
 #include <stb_perlin.h>
 
 #include <stdexcept>
+#include <algorithm>
+#include <utility>
 
 #include "World.hpp"
 #include "objects/blocks.hpp"
@@ -128,9 +130,9 @@ void Chunk::generate(GenType _type) {
     glm::ivec3 world_pos;
     std::vector<glm::u8vec3> surface_blocks;
     size_t block_i = 0;
-    constexpr uint32_t FLOOR_HEIGHT = 50;
-    constexpr uint32_t MOUTAINT_HEIGHT = 150;
-    constexpr uint32_t WATER_HEIGHT = 60;
+    constexpr int FLOOR_HEIGHT = 50;
+    constexpr int MOUTAINT_HEIGHT = 150;
+    constexpr int WATER_HEIGHT = 60;
     const BlockType holy_chosen_block = static_cast<BlockType>(1 + m_world->getWorldSeed() % (BLOCK_TYPES_N - 1));
     // std::cout << "chosen block: " << getBlockTypeName(holy_chosen_block) << std::endl;
     switch (_type) {
@@ -189,9 +191,9 @@ void Chunk::generate(GenType _type) {
                         block.getType() = BlockType::PierreDeLit;
                     } else if (world_pos.y <= ground_height - 4) {
                         block.getType() = rand() < ONE_IN_THOUSAND ? BlockType::DiamondOre : BlockType::Stone;
-                    } else if (world_pos.y <= ground_height - 3) {
+                    } else if (world_pos.y <= ground_height - 1) {
                         block.getType() = BlockType::Dirt;
-                    } else if (world_pos.y <= ground_height) {
+                    } else if (world_pos.y == ground_height) {
                         block.getType() = BlockType::Grass;
                     } else if (world_pos.y <= WATER_HEIGHT) {
                         block.getType() = BlockType::Water;

@@ -134,7 +134,7 @@ void WorldRenderer::updateInterface(World* _world, const std::vector<glm::vec3>&
 
     uint render_distance = _world->m_render_distance;
     if (ImGui::InputScalar("Render distance", ImGuiDataType_U32, &render_distance)) {
-        _world->m_render_distance = std::max(render_distance, 1U);
+        _world->m_render_distance = std::max(render_distance, 2U);
     }
 
     ImGui::Spacing();

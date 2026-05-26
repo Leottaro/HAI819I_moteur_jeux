@@ -109,9 +109,7 @@ private:
         case ECS::ControlType::ThirdPerson:
             // update target pos
             should_pos = eye_pos - controllable.distance_to_center * m_front;
-            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
-
-            blocks = _world->findBlockLine(eye_pos, m_cam_pos);
+            blocks = _world->findBlockLine(eye_pos, should_pos);
             while (i < blocks.size() && (blocks[i] == nullptr || !blocks[i]->hasHitbox()))
                 i++;
             if (i < blocks.size() && blocks[i] != nullptr) {
@@ -119,12 +117,13 @@ private:
                 AABB<float> block_aabb(block_pos, block_pos + glm::ivec3(1));
                 float tmin, tmax;
                 uint face_min, face_max;
-                if (block_aabb.intersectRay(eye_pos, m_cam_pos - eye_pos, tmin, tmax, face_min, face_max)) {
-                    m_cam_pos = eye_pos + tmin * (m_cam_pos - eye_pos);
+                if (block_aabb.intersectRay(eye_pos, should_pos - eye_pos, tmin, tmax, face_min, face_max)) {
+                    float new_t = (tmin * controllable.distance_to_center - 1.f) / controllable.distance_to_center;
+                    should_pos = eye_pos + new_t * (should_pos - eye_pos);
                 }
             }
 
-            // re update angle
+            m_cam_pos = (1.f - m_elasticity) * m_cam_pos + m_elasticity * should_pos;
             m_front = eye_pos - should_pos;
             m_cam_orientation = Transformation::EuclidianToEuler(m_front);
             Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
@@ -207,47 +206,37 @@ public:
 
     void updateInterface(ECSManager& _ecs_manager) {
         m_disable_mouse_actions = false;
-        ECS::ControlType fallback_type{ECS::ControlType::FreeCam};
-        float fallback_distance{0.f};
-        glm::vec3 fallback_pos{0.f};
+        ECS::Controllable fallback_controllable{};
+        fallback_controllable.type = ECS::ControlType::FreeCam;
+        ECS::Positionnable fallback_positionnable;
 
         ECS::ControllingSystem& controlling = _ecs_manager.getSystem<ECS::ControllingSystem>();
-        bool has_entity = controlling.getControlledEntity().has_value();
-        ECS::ControlType& control_type = has_entity ? _ecs_manager.getComponent<ECS::Controllable>(controlling.getControlledEntity().value()).type
-                                                    : fallback_type;
-        float& distance_to_center = has_entity ? _ecs_manager.getComponent<ECS::Controllable>(controlling.getControlledEntity().value()).distance_to_center
-                                               : fallback_distance;
-        glm::vec3& entity_pos = has_entity ? _ecs_manager.getComponent<ECS::Positionnable>(controlling.getControlledEntity().value()).pos
-                                           : fallback_pos;
+        std::optional<ECS::EntityId> controlled_entity = controlling.getControlledEntity();
+        ECS::Controllable& controllable = controlled_entity.has_value() ? _ecs_manager.getComponent<ECS::Controllable>(controlled_entity.value())
+                                                                        : fallback_controllable;
+        ECS::Positionnable& positionnable = controlled_entity.has_value() ? _ecs_manager.getComponent<ECS::Positionnable>(controlling.getControlledEntity().value())
+                                                                          : fallback_positionnable;
+
+        m_disable_mouse_actions = ImGui::IsWindowHovered() || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
 
         if (!ImGui::Begin("Camera Interface")) {
             ImGui::End();
             return;
         }
-        m_disable_mouse_actions = ImGui::IsWindowHovered() || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused();
 
         // Camera Type Selection
-        ImGui::BeginDisabled(!has_entity);
-        int control_type_int = static_cast<int>(control_type);
+        ImGui::BeginDisabled(!controlled_entity.has_value());
+        int control_type_int = static_cast<int>(controllable.type);
         if (ImGui::Combo("Camera Type", &control_type_int, ECS::CONTROL_TYPES_STR)) {
-            control_type = static_cast<ECS::ControlType>(control_type_int);
+            controllable.type = static_cast<ECS::ControlType>(control_type_int);
         }
         ImGui::EndDisabled();
 
         ImGui::Separator();
 
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        ImGui::BeginDisabled(controllable.type != ECS::ControlType::FreeCam);
         ImGui::DragFloat3("Position", &m_cam_pos[0], 0.1f);
         ImGui::EndDisabled();
-
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
-        if (ImGui::Button("Snap entity to Pos")) {
-            entity_pos = m_cam_pos;
-        }
-        ImGui::EndDisabled();
-        ImGui::SameLine();
-        ImGui::Checkbox("update frustum", &m_update_frustum);
-        ImGui::Separator();
 
         // Orientation Controls
         glm::vec2 angles_degree = glm::degrees(m_cam_orientation);
@@ -258,6 +247,8 @@ public:
             Transformation::clampOrientation(m_cam_orientation);
             Transformation::getViewVectors(m_cam_orientation, m_front, m_right, m_real_up);
         }
+
+        ImGui::Checkbox("update frustum", &m_update_frustum);
 
         ImGui::Separator();
 
@@ -272,15 +263,38 @@ public:
 
         ImGui::Separator();
 
-        ImGui::BeginDisabled(control_type != ECS::ControlType::FreeCam);
+        ImGui::BeginDisabled(controllable.type != ECS::ControlType::FreeCam);
         ImGui::DragFloat("freeCamSpeed", &m_free_cam_speed, 1.f, 0.f, 1.e8f);
         ImGui::EndDisabled();
 
-        // Distance to center
-        ImGui::BeginDisabled(control_type != ECS::ControlType::ThirdPerson);
-        ImGui::DragFloat("Distance to Center", &distance_to_center, 0.1f, 1.e-4f, 1.e4f);
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::BeginDisabled(!controlled_entity.has_value());
+        uint64_t entity = controlled_entity.has_value() ? static_cast<uint64_t>(controlled_entity.value()) : 0;
+        if (ImGui::DragScalar("Controlled entity", ImGuiDataType_U64, &entity, 0.1f, 0, &ECS::MAX_ENTITIES)) {
+            _ecs_manager.startControl(std::clamp(entity, uint64_t{0}, controlling.m_entities.size() - 1));
+        }
+        ImGui::EndDisabled();
+
+        ImGui::BeginDisabled(!controlled_entity.has_value() || controllable.type != ECS::ControlType::FreeCam);
+        if (ImGui::Button("Snap to cam")) {
+            positionnable.pos = m_cam_pos;
+        }
+        ImGui::EndDisabled();
+
+        ImGui::BeginDisabled(!controlled_entity.has_value() || controllable.type != ECS::ControlType::ThirdPerson);
+        ImGui::DragFloat("Distance to Center", &controllable.distance_to_center, 0.1f, 1.e-4f, 1.e4f);
         ImGui::DragFloat("Zoom Rate", &m_zoom_rate, 1.e-4f, 0.f, 1.f);
         ImGui::DragFloat("elasticity", &m_elasticity, 1.e-4f, 0.f, 1.f);
+        ImGui::EndDisabled();
+
+        ImGui::BeginDisabled(!controlled_entity.has_value() || controllable.type == ECS::ControlType::FreeCam);
+        int block = static_cast<int>(controllable.block_in_hand);
+        if (ImGui::Combo("Block in hand", &block, static_cast<const char*>(BLOCK_NAMES_STRING.data()))) {
+            controllable.block_in_hand = static_cast<BlockType>(block);
+        }
         ImGui::EndDisabled();
 
         ImGui::End();

@@ -44,7 +44,22 @@ constexpr std::array<std::string_view, BLOCK_TYPES_N> BLOCK_NAMES = {{
     "Ice",
     "Water",
 }};
+
 constexpr std::string_view getBlockTypeName(BlockType block_type) { return BLOCK_NAMES[static_cast<uint8_t>(block_type)]; }
+
+// for IMGUI
+constexpr auto buildBlockNamesString() {
+    std::array<char, 256> result = {};
+    size_t pos = 0;
+    for (const auto& name : BLOCK_NAMES) {
+        for (char c : name) {
+            result[pos++] = c;
+        }
+        result[pos++] = '\0';
+    }
+    return result;
+}
+constexpr auto BLOCK_NAMES_STRING = buildBlockNamesString();
 
 using Te = BlockTexture; // Pour pas que les lignes en dessous fassent 3.5km
 

@@ -282,8 +282,8 @@ int main(void) {
         ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
         ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
         ecs_manager.startControl(truc);
-        // ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
-        // ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
+        ECS::EntityId truc2 = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
+        ecs_manager.getComponent<ECS::Movable>(truc2).vel = glm::vec3(-3.f, 0.f, 0.f);
 
         const std::unordered_set<ECS::EntityId>& controlled_entities = ecs_manager.getSystem<ECS::ControllingSystem>().m_entities;
         controlled_pos.clear();
@@ -325,7 +325,6 @@ int main(void) {
 
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
-
         {
             WriteLock window_write(window_lock);
             ReadLock world_read(world_lock);

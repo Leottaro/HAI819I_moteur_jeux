@@ -37,7 +37,7 @@ public:
 private:
     uint m_render_distance{8};
     int m_world_seed = 0;
-    GenType m_gentype{GenType::SURMONDE};
+    GenType m_gentype{GenType::SUPERFLAT};
     ChunkStorage m_chunks{};
     MathHelpers::VecSet<int, 3> m_chunks_frontier{};
 

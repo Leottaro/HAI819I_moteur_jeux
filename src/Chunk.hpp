@@ -151,19 +151,20 @@ public:
 
     inline void setBlockType(const glm::ivec3& _block_pos, BlockType _type) {
         Block& block = getBlock(_block_pos);
-        BlockType& block_type = block.getType();
-        if (block_type == BlockType::PierreDeLit) {
+        BlockType old_type = block.getType();
+        if (old_type == BlockType::PierreDeLit) {
             std::cout << "On ne casse pas de pierre de lit..." << std::endl;
             return;
         }
-        if (block_type == _type)
+        if (old_type == _type)
             return;
+        block.getType() = _type;
 
         if (m_should_rebuild_mesh != nullptr) {
             *m_should_rebuild_mesh = true;
         }
 
-        if (getBlockTypeData(block_type).transparence == getBlockTypeData(_type).transparence) // On skip si ils ont la même transparence parce que pas besoin d'actualiser la mesh des potentiels chunks d'à côté
+        if (getBlockTypeData(old_type).transparence == getBlockTypeData(_type).transparence) // On skip si ils ont la même transparence parce que pas besoin d'actualiser la mesh des potentiels chunks d'à côté
             return;
         for (uint axis = 0; axis < 3; axis++) {
             uint face_axis = (axis + 1) % 3; // pour match l'ordre des faces
@@ -172,7 +173,6 @@ public:
             if (_block_pos[axis] == m_pos[axis] + CHUNK_SIZE - 1 && m_neighbours[face_axis + 3] != nullptr && m_neighbours[face_axis + 3]->m_should_rebuild_mesh != nullptr)
                 *m_neighbours[face_axis + 3]->m_should_rebuild_mesh = true;
         }
-        block_type = _type;
     }
 
     void updateBlockNeighbours(uint8_t _face_i);
