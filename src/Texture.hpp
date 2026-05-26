@@ -245,74 +245,88 @@ public:
     }
 };
 
-using GrayScaleTexture = Texture<1, GL_R>;
-using RGTexture = Texture<2, GL_RG>;
-using RGBTexture = Texture<3, GL_RGB>;
-using RGBATexture = Texture<4, GL_RGBA>;
+template <bool __GL_DEPTH>
+class FBO {
+    static constexpr GLint NB_CHANNELS = __GL_DEPTH ? 1 : 3;
+    static constexpr GLint GPU_FORMAT = __GL_DEPTH ? GL_DEPTH_COMPONENT32F : GL_RGB;
+    static constexpr GLint CPU_FORMAT = __GL_DEPTH ? GL_DEPTH_COMPONENT : GL_RGB;
+    static constexpr GLenum TEX_TYPE = __GL_DEPTH ? GL_FLOAT : GL_UNSIGNED_BYTE;
+    static constexpr GLenum ATTACHMENT = __GL_DEPTH ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0;
 
-using GrayScaleTexture2DArray = Texture2DArray<1, GL_R>;
-using RGTexture2DArray = Texture2DArray<2, GL_RG>;
-using RGBTexture2DArray = Texture2DArray<3, GL_RGB>;
-using RGBATexture2DArray = Texture2DArray<4, GL_RGBA>;
-
-class ShadowMap {
-    GLuint m_FBO{0}, m_texture_i{0}, m_texture_gpu_slot{0};
+    GLuint m_FBO{0}, m_texture_i{0}, m_texture_gpu_slot{0}, m_rbo{0};
     int m_width, m_height;
-    glm::mat4 m_VP;
 
 public:
-    ShadowMap(ShadowMap&&) = delete;
-    ShadowMap& operator=(ShadowMap&&) = delete;
-    ShadowMap(const ShadowMap&) = delete;
-    ShadowMap& operator=(const ShadowMap&) = delete;
-    ~ShadowMap() {
+    FBO(FBO&&) = delete;
+    FBO& operator=(FBO&&) = delete;
+    FBO(const FBO&) = delete;
+    FBO& operator=(const FBO&) = delete;
+    ~FBO() {
         clearShaderData();
     };
 
-    ShadowMap() {}
-    ShadowMap(int w, int h) : m_width(w), m_height(h) {}
+    FBO() {}
+    FBO(int w, int h) : m_width(w), m_height(h) {}
 
     inline const GLuint getGpuSlot() const { return m_texture_gpu_slot; }
-    inline const glm::mat4& getVP() const { return m_VP; }
 
     inline bool initShaderData() {
         glGenFramebuffers(1, &m_FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 
-        // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+        // If we need have colors, we need to register a depth buffer alongside it
+        if constexpr (!__GL_DEPTH) {
+            glGenRenderbuffers(1, &m_rbo);
+            glBindRenderbuffer(GL_RENDERBUFFER, m_rbo);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_width, m_height);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_rbo);
+        }
+
+        // La texture sur laquelle on écrit, on peut la sample avec m_texture_gpu_slot
         m_texture_gpu_slot = gpu_slot++;
         glActiveTexture(GL_TEXTURE0 + m_texture_gpu_slot);
         glGenTextures(1, &m_texture_i);
         glBindTexture(GL_TEXTURE_2D, m_texture_i);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GPU_FORMAT, m_width, m_height, 0, CPU_FORMAT, TEX_TYPE, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        if constexpr (__GL_DEPTH) {
+            constexpr float BORDER_COLOR[] = {1.f, 1.f, 1.f, 1.f};
+            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, BORDER_COLOR);
+        } else {
+            constexpr float BORDER_COLOR[] = {255, 0, 255};
+            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, BORDER_COLOR);
+        }
+        glFramebufferTexture(GL_FRAMEBUFFER, ATTACHMENT, m_texture_i, 0);
 
-        constexpr float bordercolor[] = {1.f, 1.f, 1.f, 1.f};
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, bordercolor);
+        // Les paramètres de rendering
+        if constexpr (__GL_DEPTH) {
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+        } else {
+            glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_texture_i, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-
+        // Petit check des familles
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             return true;
         } else {
-            std::cout << "PROBLEM IN FBO FBO_ShadowMap::allocate() : FBO NOT successfully created" << std::endl;
+            std::cout << "PROBLEM IN FBO FBO_FrameBufferObject::allocate() : FBO NOT successfully created" << std::endl;
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             return false;
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
-    inline void bind(const glm::mat4& _VP) {
-        m_VP = _VP;
+    inline void bind() {
+        // On doit bind avant
         glViewport(0, 0, m_width, m_height);
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        if constexpr (__GL_DEPTH)
+            glClear(GL_DEPTH_BUFFER_BIT);
+        else
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
     inline void savePNG(const std::string& _filename) const {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO); // ensure it's bound
@@ -327,9 +341,30 @@ public:
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
     inline void clearShaderData() {
+        if (m_rbo) {
+            glDeleteRenderbuffers(1, &m_rbo);
+            m_rbo = 0;
+        }
+        if (m_texture_i) {
+            glDeleteTextures(1, &m_texture_i);
+            m_texture_i = 0;
+        }
         if (m_FBO) {
             glDeleteFramebuffers(1, &m_FBO);
             m_FBO = 0;
         }
     }
 };
+
+using GrayScaleTexture = Texture<1, GL_R>;
+using RGTexture = Texture<2, GL_RG>;
+using RGBTexture = Texture<3, GL_RGB>;
+using RGBATexture = Texture<4, GL_RGBA>;
+
+using GrayScaleTexture2DArray = Texture2DArray<1, GL_R>;
+using RGTexture2DArray = Texture2DArray<2, GL_RG>;
+using RGBTexture2DArray = Texture2DArray<3, GL_RGB>;
+using RGBATexture2DArray = Texture2DArray<4, GL_RGBA>;
+
+using ShadowMap = FBO<true>;
+using FrameBufferObject = FBO<false>;

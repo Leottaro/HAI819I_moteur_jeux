@@ -19,10 +19,10 @@ enum class BlockType : uint8_t {
     SlimeBlock,
     OakLog,
     OakLeaves,
-    PierreDeLit, // On ne plagie toujours pas minecraft !
     HoneyBlock,
     Ice,
     Water,
+    PierreDeLit, // On ne plagie toujours pas minecraft !
     __NUMBER_OF_TYPES
 };
 constexpr uint8_t BLOCK_TYPES_N = static_cast<uint8_t>(BlockType::__NUMBER_OF_TYPES);

@@ -85,6 +85,7 @@ GLGlobalContext gl_global_context;
 ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
 ShaderProgram chunk_shader("src/shaders/chunk_vertex.glsl", "src/shaders/pbr_fragment.glsl");
 ShaderProgram chunk_shadow_shader("src/shaders/chunk_shadow_vertex.glsl", "src/shaders/chunk_shadow_fragment.glsl");
+ShaderProgram post_processing_shader("src/shaders/viewport_vertex.glsl", "src/shaders/post_processing_fragment.glsl.glsl");
 
 RGBATexture2DArray albedo_textures(0, 0, TEXTURE_NUMBER);
 RGBATexture2DArray normal_textures(0, 0, TEXTURE_NUMBER);
@@ -304,12 +305,14 @@ int main(void) {
         // ----------------------------------------   OBJECTS UPDATES   ---------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
+        glm::ivec2 frame_size;
         {
             WriteLock window_write(window_lock);
             window.clearMovements();
             currentFrame = glfwGetTime();
             glfwSwapBuffers(window.getWindow());
             glfwPollEvents();
+            frame_size = window.getEffectiveSize();
         }
 
         if (shader_reload_requested.exchange(false, std::memory_order_acq_rel)) {
@@ -364,19 +367,19 @@ int main(void) {
         // ----------------------------------------------------------------------------------------------------
 
         // glCullFace(GL_FRONT);
+        glm::mat4 sun_VP;
         { // TODO: pour chaque light
-            glm::mat4 VP;
             {
                 ReadLock renderer_read(renderer_lock);
-                VP = world_renderer.sunVP(cam_pos);
-                sun_shadowmap.bind(VP);
+                sun_VP = world_renderer.sunVP(cam_pos);
+                sun_shadowmap.bind();
             }
 
             // TODO: pour chaque objets
             {
                 ReadLock renderer_read(renderer_lock);
                 chunk_shadow_shader.use();
-                chunk_shadow_shader.set("VP", VP);
+                chunk_shadow_shader.set("VP", sun_VP);
                 chunk_shadow_shader.set("albedo_textures", albedo_textures.getGpuSlot());
                 world_renderer.renderChunkShadows(chunk_shadow_shader);
             }
@@ -386,23 +389,21 @@ int main(void) {
                 sun_shadowmap.savePNG("sun_shadowmap");
             }
         }
-
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // glCullFace(GL_BACK);
-        {
-            ReadLock window_read(window_lock);
-            glViewport(0, 0, window.getEffectiveSize().x, window.getEffectiveSize().y);
-        }
 
         // ----------------------------------------------------------------------------------------------------
         // ----------------------------------------   FINAL RENDERING   ---------------------------------------
         // ----------------------------------------------------------------------------------------------------
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         {
             ReadLock renderer_read(renderer_lock);
             glClearColor(world_renderer.m_sky_color.r, world_renderer.m_sky_color.g, world_renderer.m_sky_color.b, 1.f);
         }
+
+        FrameBufferObject frame{frame_size.x, frame_size.y};
+        frame.initShaderData();
+        frame.bind();
         {
             WriteLock renderer_write(renderer_lock);
             chunk_shader.use();
@@ -412,7 +413,7 @@ int main(void) {
             chunk_shader.set("sun_direction", world_renderer.getSunDirection());
             chunk_shader.set("sun_color", world_renderer.getSunColor());
             chunk_shader.set("sun_shadowmap", sun_shadowmap.getGpuSlot());
-            chunk_shader.set("sun_VP", sun_shadowmap.getVP());
+            chunk_shader.set("sun_VP", sun_VP);
             chunk_shader.set("albedo_textures", albedo_textures.getGpuSlot());
             chunk_shader.set("normal_textures", normal_textures.getGpuSlot());
             chunk_shader.set("specular_textures", specular_textures.getGpuSlot());
@@ -434,6 +435,24 @@ int main(void) {
             ReadLock entities_read(entities_lock);
             ecs_manager.render(line_shader);
         }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // ----------------------------------------------------------------------------------------------------
+        // ----------------------------------------   POST PROCESSING   ---------------------------------------
+        // ----------------------------------------------------------------------------------------------------
+
+        // POST PROCESSING
+        glDisable(GL_DEPTH_TEST);
+        glClear(GL_COLOR_BUFFER_BIT); // clear default framebuffer
+
+        post_processing_shader.use();
+        post_processing_shader.set("screen_texture", frame.getGpuSlot());
+        post_processing_shader.set("screen_size", glm::vec2(frame_size));
+        post_processing_shader.set("added_color", glm::vec4(1.f, 0.f, 0.f, 0.5f));
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glEnable(GL_DEPTH_TEST);
+        frame.clearShaderData();
 
         // ----------------------------------------------------------------------------------------------------
         // ----------------------------------------   IMGUI RENDERING   ---------------------------------------
