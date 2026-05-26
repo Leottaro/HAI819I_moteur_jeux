@@ -283,6 +283,24 @@ void ChunkRenderer::initShaderData() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_translucent_EBO);
 }
 
+constexpr std::array<std::array<glm::vec2, 4>, 12> PERMUTATED_UV{{
+    {{{0.f, 1.f}, {1.f, 1.f}, {1.f, 0.f}, {0.f, 0.f}}}, // 0° pas flip
+    {{{1.f, 1.f}, {0.f, 1.f}, {0.f, 0.f}, {1.f, 0.f}}}, // 0° flip X
+    {{{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}}}, // 0° flip Y
+
+    {{{1.f, 1.f}, {1.f, 0.f}, {0.f, 0.f}, {0.f, 1.f}}}, // 90° pas flip
+    {{{0.f, 1.f}, {0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}}}, // 90° flip X
+    {{{1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}, {0.f, 0.f}}}, // 90° flip Y
+
+    {{{1.f, 0.f}, {0.f, 0.f}, {0.f, 1.f}, {1.f, 1.f}}}, // 180° pas flip
+    {{{0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}}}, // 180° flip X
+    {{{1.f, 1.f}, {0.f, 1.f}, {0.f, 0.f}, {1.f, 0.f}}}, // 180° flip Y
+
+    {{{0.f, 0.f}, {0.f, 1.f}, {1.f, 1.f}, {1.f, 0.f}}}, // 270° pas flip
+    {{{1.f, 0.f}, {1.f, 1.f}, {0.f, 1.f}, {0.f, 0.f}}}, // 270° flip X
+    {{{0.f, 1.f}, {0.f, 0.f}, {1.f, 0.f}, {1.f, 1.f}}}, // 270° flip Y
+}};
+
 void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
     m_should_rebuild_mesh = false;
 
@@ -311,7 +329,10 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                 auto& vertices = block.getTransparence() == BlockTransparency::TRANSLUCENT ? translucent_vertices : opaque_vertices;
                 auto& triangles = block.getTransparence() == BlockTransparency::TRANSLUCENT ? translucent_triangles : opaque_triangles;
 
-                glm::vec3 block_center = glm::vec3(m_chunk->m_pos + glm::ivec3(local_pos)) + glm::vec3(0.5f);
+                glm::ivec3 world_pos = m_chunk->m_pos + glm::ivec3(local_pos);
+                glm::vec3 block_center = glm::vec3(world_pos) + glm::vec3(0.5f);
+                int uv_permutation = (world_pos.x * 73856093 + world_pos.y * 19349663 + world_pos.z * 83492791) % PERMUTATED_UV.size();
+
                 for (int face_i = 0; face_i < 6; face_i++) {
                     const Block* neighbour = block.m_neighbours[face_i];
                     if (neighbour != nullptr &&
@@ -319,12 +340,12 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                         continue;
                     const Block::FaceData& face = Block::FACE_DATA[face_i];
 
-                    constexpr std::array<glm::vec2, 4> uvs = {
-                        glm::vec2(0.f, 1.f),
-                        glm::vec2(1.f, 1.f),
-                        glm::vec2(1.f, 0.f),
-                        glm::vec2(0.f, 0.f),
-                    };
+                    const BlockTextureData& block_texture_data = getBlockTextureData(block.getTexture(face_i));
+                    int face_uv_permutation = ((block_texture_data.can_rotate ? uv_permutation / 3 : 0) * 3) +
+                                              (((uv_permutation % 3 == 1 && block_texture_data.can_flip_x) ||
+                                                (uv_permutation % 3 == 2 && block_texture_data.can_flip_y))
+                                                   ? (uv_permutation % 3)
+                                                   : 0);
                     for (int i = 0; i < 4; ++i) {
                         vertices.push_back({
                             local_pos + face.vertices[i],
@@ -332,13 +353,13 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
                             face.tangent,
                             face.bitangent,
                             block.getTexture(face_i),
-                            uvs[i],
+                            PERMUTATED_UV[face_uv_permutation][i],
                         });
                     }
 
                     glm::uvec3 offset(vertices.size() - 4);
                     if (block.getTransparence() == BlockTransparency::TRANSLUCENT) {
-                        glm::vec3 face_centroid = block_center + 0.5f * glm::vec3(face.normal);
+                        glm::vec3 face_centroid = block_center + 5.f * glm::vec3(face.normal);
                         float distance_to_cam2 = glm::distance2(_cam_pos, face_centroid);
 
                         auto dist_it = std::lower_bound(translucent_quad_distances2.begin(), translucent_quad_distances2.end(), distance_to_cam2, std::greater<float>());

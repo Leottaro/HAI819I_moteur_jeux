@@ -164,15 +164,16 @@ public:
             *m_should_rebuild_mesh = true;
         }
 
-        if (getBlockTypeData(old_type).transparence == getBlockTypeData(_type).transparence) // On skip si ils ont la même transparence parce que pas besoin d'actualiser la mesh des potentiels chunks d'à côté
-            return;
-        for (uint axis = 0; axis < 3; axis++) {
-            uint face_axis = (axis + 1) % 3; // pour match l'ordre des faces
-            if (_block_pos[axis] == m_pos[axis] && m_neighbours[face_axis] != nullptr && m_neighbours[face_axis]->m_should_rebuild_mesh != nullptr)
-                *m_neighbours[face_axis]->m_should_rebuild_mesh = true;
-            if (_block_pos[axis] == m_pos[axis] + CHUNK_SIZE - 1 && m_neighbours[face_axis + 3] != nullptr && m_neighbours[face_axis + 3]->m_should_rebuild_mesh != nullptr)
-                *m_neighbours[face_axis + 3]->m_should_rebuild_mesh = true;
-        }
+        // // On update les chunks d'a côté pour qu'ils update leur mesh
+        // if (getBlockTypeData(old_type).transparence != getBlockTypeData(_type).transparence) {
+        //     for (uint axis = 0; axis < 3; axis++) {
+        //         uint face_axis = (axis + 1) % 3; // pour match l'ordre des faces
+        //         if (_block_pos[axis] == m_pos[axis] && m_neighbours[face_axis] != nullptr && m_neighbours[face_axis]->m_should_rebuild_mesh != nullptr)
+        //             m_neighbours[face_axis]->updateBlockNeighbours(OPPOSITE_FACE[face_axis]);
+        //         if (_block_pos[axis] == m_pos[axis] + CHUNK_SIZE - 1 && m_neighbours[face_axis + 3] != nullptr && m_neighbours[face_axis + 3]->m_should_rebuild_mesh != nullptr)
+        //             m_neighbours[OPPOSITE_FACE[face_axis]]->updateBlockNeighbours(face_axis);
+        //     }
+        // }
     }
 
     void updateBlockNeighbours(uint8_t _face_i);

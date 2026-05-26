@@ -37,8 +37,8 @@ public:
     static constexpr void generateAtlasses(Texture& albedo_atlases, Texture& normal_atlases, Texture& specular_atlases) {
         int x = 0, y = 0;
         int width = 0, height = 0;
-        for (const std::string_view c : TEXTURE_NAMES) {
-            std::string name(c);
+        for (const BlockTextureData& texture_data : BLOCK_TEXTURE_DATA) {
+            std::string name(texture_data.name);
             std::string path_albedo = "ressources/textures/albedos/" + name + ".png";
             std::string path_normal = "ressources/textures/normals/" + name + ".png";
             std::string path_specular = "ressources/textures/speculars/" + name + ".png";
@@ -183,8 +183,8 @@ public:
 
         uint slot = 0;
         bool first = true;
-        for (const std::string_view c : TEXTURE_NAMES) {
-            std::string name(c);
+        for (const BlockTextureData& texture_data : BLOCK_TEXTURE_DATA) {
+            std::string name(texture_data.name);
             std::string path_albedo = "ressources/textures/albedos/" + name + ".png";
             std::string path_normal = "ressources/textures/normals/" + name + ".png";
             std::string path_specular = "ressources/textures/speculars/" + name + ".png";
