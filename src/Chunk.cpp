@@ -363,7 +363,7 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
 
                     glm::uvec3 offset(vertices.size() - 4);
                     if (block.getTransparence() == BlockTransparency::TRANSLUCENT) {
-                        glm::vec3 face_centroid = block_center + 5.f * glm::vec3(face.normal);
+                        glm::vec3 face_centroid = block_center + 0.5f * glm::vec3(face.normal);
                         float distance_to_cam2 = glm::distance2(_cam_pos, face_centroid);
 
                         auto dist_it = std::lower_bound(translucent_quad_distances2.begin(), translucent_quad_distances2.end(), distance_to_cam2, std::greater<float>());

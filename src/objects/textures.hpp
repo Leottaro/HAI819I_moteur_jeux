@@ -49,7 +49,7 @@ constexpr std::array<BlockTextureData, TEXTURE_NUMBER> BLOCK_TEXTURE_DATA{{
     {"glass", false, false, false},
     {"iron_block", false, true, true},
     {"redstone_lamp", true, true, true},
-    {"diamond_ore", true, true, true},
+    {"diamond_ore", false, false, false},
     {"slime_block", true, true, true},
     {"oak_log_side", false, true, true},
     {"oak_log_top", true, true, true},
