@@ -118,24 +118,27 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
     bool detectCollision(const World* _world, float _deltaTime, CollisionsInfos& res, const ECS::Positionnable& _positionnable, const ECS::Collisionnable& _collisionnable, const ECS::Movable& _movable) {
         res.t = std::numeric_limits<float>::max();
 
+        // Broad phase
         std::vector<const Block*> to_explore;
         for (const AABB<float>& hitbox : _collisionnable.hitboxes) {
-            glm::ivec3 min_block = Block::posToBlockPos(_positionnable.pos + hitbox.min);
-            glm::ivec3 max_block = Block::posToBlockPos(_positionnable.pos + hitbox.max);
-            for (uint y : {min_block.y - 1, min_block.y, max_block.y, max_block.y + 1})
-                for (uint z : {min_block.z - 1, min_block.z, max_block.z, max_block.z + 1})
-                    for (uint x : {min_block.x - 1, min_block.x, max_block.x, max_block.x + 1}) {
-                        const Block* block = _world->findBlock(glm::ivec3(x, y, z));
-                        if (block != nullptr)
-                            to_explore.push_back(block);
+            glm::vec3 offset;
+            for (offset.y = hitbox.min.y - 0.9f; offset.y <= hitbox.max.y + 0.9f; offset.y += 0.9f) {
+                for (offset.z = hitbox.min.z - 0.9f; offset.z <= hitbox.max.z + 0.9f; offset.z += 0.9f) {
+                    for (offset.x = hitbox.min.x - 0.9f; offset.x <= hitbox.max.x + 0.9f; offset.x += 0.9f) {
+                        std::vector<const Block*> temp = _world->findBlockLine(offset + _positionnable.pos, offset + _positionnable.pos + _deltaTime * _movable.vel);
+                        if (!temp.empty()) {
+                            to_explore.insert(to_explore.end(), temp.begin(), temp.end());
+                        }
                     }
+                }
+            }
         }
 
         std::set<const Block*> explored;
         while (!to_explore.empty()) {
             const Block* block = to_explore.back();
             to_explore.pop_back();
-            if (!explored.insert(block).second)
+            if (block == nullptr || !explored.insert(block).second)
                 continue;
 
             glm::ivec3 block_pos = block->getPos();
