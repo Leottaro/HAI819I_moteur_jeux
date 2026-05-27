@@ -173,9 +173,9 @@ class ECS::WorldCollisionSystem : public SystemBase<ECS::Positionnable, ECS::Col
                 glm::ivec3 collision_block;
                 res.friction = 0.f;
                 res.restitution = 1.f;
-                for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
+                for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
                     for (collision_block.z = min_collision_block.z; collision_block.z <= max_collision_block.z; collision_block.z++) {
-                        for (collision_block.x = min_collision_block.x; collision_block.x <= max_collision_block.x; collision_block.x++) {
+                        for (collision_block.y = min_collision_block.y; collision_block.y <= max_collision_block.y; collision_block.y++) {
                             const Block* block = _world->findBlock(collision_block);
                             if (block == nullptr || !block->hasHitbox())
                                 continue;

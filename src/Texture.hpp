@@ -255,7 +255,7 @@ public:
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, Tex::GL_FORMAT, m_width, m_height, m_nb_textures, 0, Tex::GL_FORMAT, GL_UNSIGNED_BYTE, nullptr);
     }
     inline void applyTexture(uint i, const Tex& _texture) const {

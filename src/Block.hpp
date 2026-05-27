@@ -105,4 +105,13 @@ public:
     constexpr bool hasHitbox() const { return getBlockTypeData(m_type).has_hitbox; }
     constexpr BlockTransparency getTransparence() const { return getBlockTypeData(m_type).transparence; }
     constexpr BlockTexture getTexture(int face_i) const { return getBlockTypeTexture(m_type, face_i); }
+
+    inline bool update(int face_i) {
+        if (m_type == BlockType::Grass && face_i == 5 && m_neighbours[face_i]->getTransparence() == BlockTransparency::SOLID) { // grass and +Z
+            m_type = BlockType::Dirt;
+            return true;
+        }
+
+        return false;
+    }
 };

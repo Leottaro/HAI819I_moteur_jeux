@@ -331,7 +331,11 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
 
                 glm::ivec3 world_pos = m_chunk->m_pos + glm::ivec3(local_pos);
                 glm::vec3 block_center = glm::vec3(world_pos) + glm::vec3(0.5f);
-                int uv_permutation = (world_pos.x * 73856093 + world_pos.y * 19349663 + world_pos.z * 83492791) % PERMUTATED_UV.size();
+                uint32_t hash = world_pos.x;
+                hash ^= (hash << 13) ^ world_pos.y;
+                hash ^= (hash >> 7) ^ world_pos.z;
+                hash ^= (hash << 17);
+                int uv_permutation = hash % PERMUTATED_UV.size();
 
                 for (int face_i = 0; face_i < 6; face_i++) {
                     const Block* neighbour = block.m_neighbours[face_i];
@@ -375,6 +379,11 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
         }
     }
 
+    m_opaque_vertices = opaque_vertices.size();
+    m_opaque_triangles = opaque_triangles.size();
+    m_translucent_vertices = translucent_vertices.size();
+    m_translucent_triangles = translucent_triangles.size();
+
     glBindVertexArray(m_opaque_VAO);
     glBindBuffer(GL_ARRAY_BUFFER, m_opaque_VBO);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_opaque_vertices * sizeof(ChunkVertex)), opaque_vertices.data(), GL_STATIC_DRAW);
@@ -387,10 +396,6 @@ void ChunkRenderer::updateShaderData(const glm::vec3& _cam_pos) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_translucent_EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_translucent_triangles * sizeof(MathHelpers::upvec3)), translucent_triangles.data(), GL_STATIC_DRAW);
 
-    m_opaque_vertices = opaque_vertices.size();
-    m_opaque_triangles = opaque_triangles.size();
-    m_translucent_vertices = translucent_vertices.size();
-    m_translucent_triangles = translucent_triangles.size();
     opaque_vertices.clear();
     opaque_triangles.clear();
     translucent_vertices.clear();

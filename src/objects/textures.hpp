@@ -42,12 +42,12 @@ struct BlockTextureData {
 
 constexpr std::array<BlockTextureData, TEXTURE_NUMBER> BLOCK_TEXTURE_DATA{{
     // NAME CAN_ROTATE  CAN_FLIP_X  CAN_FLIP_Y
-    {"stone", true, true, true},
+    {"stone", false, true, true},
     {"dirt", true, true, true},
     {"grass_side", false, true, false},
     {"grass_top", true, true, true},
     {"glass", false, false, false},
-    {"iron_block", true, true, true},
+    {"iron_block", false, true, true},
     {"redstone_lamp", true, true, true},
     {"diamond_ore", true, true, true},
     {"slime_block", true, true, true},
@@ -58,7 +58,7 @@ constexpr std::array<BlockTextureData, TEXTURE_NUMBER> BLOCK_TEXTURE_DATA{{
     {"honey_block_side", true, true, true},
     {"honey_block_bottom", true, true, true},
     {"ice", true, true, true},
-    {"water", true, true, true},
-    {"pierre_de_lit", true, true, true},
+    {"water", false, true, true},
+    {"pierre_de_lit", false, true, true},
 }};
 constexpr const BlockTextureData& getBlockTextureData(BlockTexture texture) { return BLOCK_TEXTURE_DATA[static_cast<uint8_t>(texture)]; }
