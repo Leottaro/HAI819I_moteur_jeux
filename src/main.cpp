@@ -9,6 +9,9 @@
 // FILEWATCH
 #include <FileWatch.hpp>
 
+// NBTParser
+#include <parsenbt/NBTStruct.hpp>
+
 // USUAL INCLUDES
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,12 +36,12 @@
 using namespace std;
 
 void initOpenGL() {
-    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);              // Dark blue background
-    glEnable(GL_DEPTH_TEST);                           // Enable depth test
-    glDepthFunc(GL_LESS);                              // Accept fragment if it closer to the camera than the former one
-    glEnable(GL_BLEND);                                // Enable color blending (for alpha)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Set a blending function
-    glEnable(GL_CULL_FACE);                            // Cull triangles which normal is not towards the camera
+    glClearColor(0.1f, 0.1f, 0.3f, 0.0f);               // Dark blue background
+    glEnable(GL_DEPTH_TEST);                            // Enable depth test
+    glDepthFunc(GL_LESS);                               // Accept fragment if it closer to the camera than the former one
+    glEnable(GL_BLEND);                                 // Enable color blending (for alpha)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Set a blending function
+    glEnable(GL_CULL_FACE);                             // Cull triangles which normal is not towards the camera
 }
 
 void globalInit(Window& window) {
@@ -68,7 +71,7 @@ void globalInit(Window& window) {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);  // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     initOpenGL();
@@ -80,6 +83,8 @@ std::unique_ptr<World> world;
 WorldRenderer world_renderer;
 ECSManager ecs_manager;
 GLGlobalContext gl_global_context;
+std::string structure_path = "./ressources/blueprints/houseEnt";
+NBTStruct customStruct = NBTStruct::fromFile(structure_path);
 
 // Create and compile our GLSL program from the shaders
 ShaderProgram line_shader("src/shaders/line_vertex.glsl", "src/shaders/line_fragment.glsl");
@@ -220,6 +225,14 @@ int main(void) {
             shaderReloadCallback();
         },
         nullptr);
+    window.keyboard.bind(
+        GLFW_KEY_B,
+        [&]() {
+            glm::vec3 cam_pos = camera.getCamPos();
+            std::cout << "Placing structure at x: " << cam_pos.x << ", y: " << cam_pos.y << ", z: " << cam_pos.z << std::endl;
+            world->placeStructure(customStruct, cam_pos);
+        },
+        nullptr);
 
     bool save_shadowmap = false;
     window.keyboard.bind(GLFW_KEY_P, [&save_shadowmap]() { save_shadowmap = true; }, nullptr);
@@ -277,7 +290,7 @@ int main(void) {
     ShadowMap sun_shadowmap{2048, 2048};
     sun_shadowmap.initShaderData();
 
-    { // Pre start actions
+    {  // Pre start actions
         // Create player entities
         ECS::EntityId truc = ecs_manager.createEntity<ECS::TestEntity>({glm::vec3(16.5f, 100.f, 16.5f)});
         ecs_manager.getComponent<ECS::Movable>(truc).vel = glm::vec3(1.f, 0.f, 0.f);
@@ -366,7 +379,7 @@ int main(void) {
         // ----------------------------------------------------------------------------------------------------
 
         // glCullFace(GL_FRONT);
-        { // TODO: pour chaque light
+        {  // TODO: pour chaque light
             glm::mat4 VP;
             {
                 ReadLock renderer_read(renderer_lock);

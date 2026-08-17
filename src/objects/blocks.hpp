@@ -9,7 +9,7 @@
 
 enum class BlockType : uint8_t {
     Air = 0,
-    PierreDeLit, // On ne plagie toujours pas minecraft !
+    PierreDeLit,  // On ne plagie toujours pas minecraft !
     Stone,
     Dirt,
     Grass,
@@ -28,7 +28,7 @@ enum class BlockType : uint8_t {
 constexpr uint8_t BLOCK_TYPES_N = static_cast<uint8_t>(BlockType::__NUMBER_OF_TYPES);
 
 constexpr std::array<std::string_view, BLOCK_TYPES_N> BLOCK_NAMES = {{
-    "air",
+    "Air",
     "Pierre de Lit",
     "Stone",
     "Dirt",
@@ -61,7 +61,7 @@ constexpr auto buildBlockNamesString() {
 }
 constexpr auto BLOCK_NAMES_STRING = buildBlockNamesString();
 
-using Te = BlockTexture; // Pour pas que les lignes en dessous fassent 3.5km
+using Te = BlockTexture;  // Pour pas que les lignes en dessous fassent 3.5km
 
 // si on met pas le clang off ça massacre sans aucun scrupules cette belle indentation
 // clang-format off
@@ -117,3 +117,37 @@ constexpr std::array<BlockTypeData, BLOCK_TYPES_N> BLOCK_TYPE_DATA{{
     {0.2f, 0.f, 0.05f, 1250.f, false, BlockTransparency::TRANSLUCENT},      // Water
 }};
 constexpr const BlockTypeData& getBlockTypeData(BlockType type) { return BLOCK_TYPE_DATA[static_cast<uint8_t>(type)]; }
+
+// https://stackoverflow.com/questions/16388510/evaluate-a-string-with-a-switch-in-c
+constexpr unsigned int str2int(const std::string& str, int h = 0)
+{
+    return !str[h] ? 5381 : (str2int(str, h+1) * 33) ^ str[h];
+}
+
+constexpr const BlockType minecraftTranslation(const std::string& mc_id) {
+    switch (str2int(mc_id))
+    {
+    case str2int("minecraft:grass_block"):
+        return BlockType::Grass;
+    
+    case str2int("minecraft:dirt"):
+    case str2int("minecraft:coarse_dirt"):
+    case str2int("minecraft:dirt_path"):
+    case str2int("minecraft:rooted_dirt"):
+        return BlockType::Dirt;
+    
+    case str2int("minecraft:stone"):
+    case str2int("minecraft:deepslate"):
+        return BlockType::Stone;
+    
+    case str2int("minecraft:glass"):
+    case str2int("minecraft:glass_pane"):
+        return BlockType::Glass;
+    
+    case str2int("minecraft:oak_log"):
+        return BlockType::OakLog;
+    
+    default:
+        return BlockType::PierreDeLit;
+    }
+}

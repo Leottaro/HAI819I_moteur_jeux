@@ -1,4 +1,5 @@
 /build
 /CMakeLists.txt.user
 /imgui.ini
+/.idea
 /.qtcreator

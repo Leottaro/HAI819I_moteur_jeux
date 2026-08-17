@@ -122,3 +122,10 @@ add_subdirectory(external/stb)
 include_directories(external/stb)
 target_link_libraries(${APP_TARGET_DEBUG} stb)
 target_link_libraries(${APP_TARGET_OPT} stb)
+
+# parsenbt
+# todo: improve
+add_subdirectory(external/parsenbt)
+include_directories(external/parsenbt)
+target_link_libraries(${APP_TARGET_DEBUG} NBTParser)
+target_link_libraries(${APP_TARGET_OPT} NBTParser)

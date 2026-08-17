@@ -7,7 +7,7 @@
 constexpr std::array<int, 6> OPPOSITE_FACE{3, 4, 5, 0, 1, 2};
 
 class Block {
-public:
+   public:
     static constexpr glm::ivec3 posToBlockPos(const glm::vec3& _pos) {
         return glm::ivec3(std::floor(_pos.x), std::floor(_pos.y), std::floor(_pos.z));
     }
@@ -29,19 +29,19 @@ public:
     }};
 
     static constexpr std::array<glm::ivec3, 6> NEIGHBOURS_POS{
-        glm::ivec3(0, 0, -1), // Front (-Z)
-        glm::ivec3(-1, 0, 0), // Left  (-X)
-        glm::ivec3(0, -1, 0), // Bottom(-Y)
-        glm::ivec3(0, 0, 1),  // Back  (+Z)
-        glm::ivec3(1, 0, 0),  // Right (+X)
-        glm::ivec3(0, 1, 0),  // Top   (+Y)
+        glm::ivec3(0, 0, -1),  // Front (-Z)
+        glm::ivec3(-1, 0, 0),  // Left  (-X)
+        glm::ivec3(0, -1, 0),  // Bottom(-Y)
+        glm::ivec3(0, 0, 1),   // Back  (+Z)
+        glm::ivec3(1, 0, 0),   // Right (+X)
+        glm::ivec3(0, 1, 0),   // Top   (+Y)
     };
 
-private:
+   private:
     BlockType m_type;
     glm::ivec3 m_pos;
 
-public:
+   public:
     std::array<Block*, 6> m_neighbours{nullptr};
 
     Block(Block&& other) noexcept : m_type(other.m_type), m_pos(other.m_pos), m_neighbours(other.m_neighbours) {
@@ -107,7 +107,7 @@ public:
     constexpr BlockTexture getTexture(int face_i) const { return getBlockTypeTexture(m_type, face_i); }
 
     inline bool update(int face_i) {
-        if (m_type == BlockType::Grass && face_i == 5 && m_neighbours[face_i]->getTransparence() == BlockTransparency::SOLID) { // grass and +Z
+        if (m_type == BlockType::Grass && face_i == 5 && m_neighbours[face_i]->getTransparence() == BlockTransparency::SOLID) {  // grass and +Z
             m_type = BlockType::Dirt;
             return true;
         }

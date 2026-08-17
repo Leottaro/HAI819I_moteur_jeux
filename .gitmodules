@@ -1,0 +1,3 @@
+[submodule "external/parsenbt"]
+	path = external/parsenbt
+	url = https://github.com/TroutFario/ParseNBT
